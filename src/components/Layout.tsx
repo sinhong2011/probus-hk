@@ -139,6 +139,14 @@ export function SplitPage(props: {
   aside: JSX.Element;
   children: JSX.Element;
   dock?: JSX.Element;
+  /**
+   * Hand the pane's height to its contents instead of scrolling it.
+   *
+   * A long list inside a card looks wrong when the pane scrolls: the card's own
+   * top and bottom edges slide out of the window with it. Set this and the card
+   * can fill the pane and scroll its rows inside its own frame.
+   */
+  mainFills?: boolean;
 }) {
   return (
     <Page wide dock={props.dock} fill>
@@ -162,7 +170,12 @@ export function SplitPage(props: {
         </div>
         {/* The half that scrolls. On a phone there is only one column, so the
             page scrolls as usual. */}
-        <div class="mb-scroll flex min-w-0 flex-col gap-6 pb-2 lg:h-full lg:min-h-0 lg:gap-8 lg:overflow-y-auto lg:[&>*]:shrink-0">
+        <div
+          class={[
+            "mb-scroll flex min-w-0 flex-col gap-6 pb-2 lg:h-full lg:min-h-0 lg:gap-8",
+            props.mainFills ? "lg:overflow-hidden" : "lg:overflow-y-auto lg:[&>*]:shrink-0",
+          ]}
+        >
           {props.children}
         </div>
       </div>

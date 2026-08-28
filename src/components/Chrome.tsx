@@ -80,8 +80,8 @@ export function LivePill(props: { label: string }) {
 /** Screen title block: large Chinese over a small roman subtitle. */
 export function ScreenTitle(props: { title: string; subtitle: string; trailing?: JSX.Element }) {
   return (
-    <div class="flex items-end justify-between">
-      <div class="flex flex-col gap-[3px]">
+    <div class="flex items-end justify-between gap-4">
+      <div class="flex min-w-0 shrink-0 flex-col gap-[3px]">
         <span class="text-[1.7rem] font-bold leading-[1.05] tracking-[-0.035em] text-foreground">
           {props.title}
         </span>
@@ -89,7 +89,9 @@ export function ScreenTitle(props: { title: string; subtitle: string; trailing?:
           {props.subtitle}
         </span>
       </div>
-      <Show when={props.trailing}>{props.trailing}</Show>
+      <Show when={props.trailing}>
+        <div class="flex min-w-0 justify-end">{props.trailing}</div>
+      </Show>
     </div>
   );
 }

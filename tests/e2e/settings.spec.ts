@@ -54,3 +54,25 @@ test("refresh interval is a real choice that sticks", async ({ page }) => {
     timeout: 10_000,
   });
 });
+
+test("a change in one tab reaches the others", async ({ context, page }) => {
+  await mockTransit(page);
+  await page.goto("/settings");
+  await expect(page.getByRole("radio", { name: "繁中" })).toHaveAttribute("aria-checked", "true", {
+    timeout: 10_000,
+  });
+
+  // A second tab of the same app, as a person on a desktop actually has.
+  const other = await context.newPage();
+  await mockTransit(other);
+  await other.goto("/settings");
+  await other.getByRole("radio", { name: "EN" }).click();
+
+  // Storage events only fire in the *other* tabs, which is exactly the case a
+  // load-once store never handled: the first tab used to sit on stale settings
+  // until it was reloaded.
+  await expect(page.getByRole("radio", { name: "EN" })).toHaveAttribute("aria-checked", "true", {
+    timeout: 10_000,
+  });
+  await other.close();
+});

@@ -43,19 +43,21 @@ export default function Nearby() {
 
   return (
     <Page wide>
-      <header class="-mb-2 flex items-center gap-3">
-        <div class="flex min-w-0 grow items-center gap-2 text-primary">
-          <PinIcon size={17} />
-          <div class="flex min-w-0 flex-col gap-px">
-            <span class="truncate text-[0.8rem] font-bold tracking-[-0.01em] text-foreground">
-              {nearestName() ?? t(status() === "ready" ? "noNearby" : "locating", lang())}
-            </span>
-          </div>
-        </div>
-      </header>
-
+      {/* Two rows, not four: where you are belongs beside the title rather than
+          on a line of its own above it. */}
       <div class="flex flex-col gap-3.5">
-        <ScreenTitle title={t("nearby", lang())} subtitle="Nearby" />
+        <ScreenTitle
+          title={t("nearby", lang())}
+          subtitle="Nearby"
+          trailing={
+            <div class="flex min-w-0 items-center gap-1.5 pb-1 text-primary">
+              <PinIcon size={15} />
+              <span class="truncate text-[0.75rem] font-bold tracking-[-0.01em] text-foreground">
+                {nearestName() ?? t(status() === "ready" ? "noNearby" : "locating", lang())}
+              </span>
+            </div>
+          }
+        />
 
         <div class="flex items-center gap-2">
           <Show when={status() === "ready"}>

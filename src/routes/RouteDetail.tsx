@@ -452,6 +452,7 @@ export default function RouteDetail() {
     <Show when={route()} fallback={<EmptyState title={t("noResults", lang())} />}>
       {(r) => (
         <SplitPage
+          mainFills
           aside={
             <>
               {/* A real top bar rather than a button floated over the map: the map
@@ -577,7 +578,9 @@ export default function RouteDetail() {
            * the answer behind a control, and the page opens scrolled to where
            * you are standing anyway.
            */}
-          <Card>
+          {/* The card is the frame; the rows move inside it. */}
+          <Card class="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+            <div class="mb-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <For each={stops()}>
               {(entry, index) => {
                 const seq = () => index() + 1;
@@ -597,9 +600,10 @@ export default function RouteDetail() {
                 );
               }}
             </For>
+            </div>
           </Card>
 
-          <p class="-mt-2 text-center text-[0.6rem] font-medium text-faint-foreground">
+          <p class="-mt-2 shrink-0 text-center text-[0.6rem] font-medium text-faint-foreground">
             {t("tapForEta", lang())}
           </p>
         </SplitPage>

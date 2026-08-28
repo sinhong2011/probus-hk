@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from "solid-js";
+import { installPersistence, persistedSignal } from "./persisted";
 
 const KEY = "motherbus:frequent";
 /** Anything untouched for two months has stopped being a habit. */
@@ -11,22 +11,9 @@ interface Visit {
   last: number;
 }
 
-function load(): Visit[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const parsed = raw ? (JSON.parse(raw) as Visit[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+const revive = (raw: unknown): Visit[] => (Array.isArray(raw) ? (raw as Visit[]) : []);
 
-/*
- * These are app-wide stores, written from event handlers, effects and component
- * setup alike. Solid 2 flags a write from inside an owned scope unless the
- * signal says that is intentional - which for a store it is.
- */
-const [visits, setVisits] = createSignal<Visit[]>(load(), { ownedWrite: true });
+const [visits, setVisits] = persistedSignal<Visit[]>(KEY, [], revive);
 
 /**
  * Which routes this person actually uses, learned rather than configured.
@@ -72,14 +59,5 @@ export const frequent = {
 };
 
 export function installFrequentEffects() {
-  createEffect(
-    () => visits(),
-    (list) => {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(list));
-      } catch {
-        // Storage unavailable: habits last for the session only.
-      }
-    },
-  );
+  installPersistence(KEY, visits, setVisits, revive);
 }

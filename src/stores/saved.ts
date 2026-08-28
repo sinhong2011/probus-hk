@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from "solid-js";
+import { installPersistence, persistedSignal } from "./persisted";
 import type { Company } from "~/data/types";
 
 const KEY = "motherbus:saved";
@@ -18,22 +18,10 @@ export function savedId(routeKey: string, stopId: string): string {
   return `${routeKey}@${stopId}`;
 }
 
-function load(): SavedItem[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const parsed = raw ? (JSON.parse(raw) as SavedItem[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+/** A stored list that is not a list is not a bookmark list. */
+const revive = (raw: unknown): SavedItem[] => (Array.isArray(raw) ? (raw as SavedItem[]) : []);
 
-/*
- * These are app-wide stores, written from event handlers, effects and component
- * setup alike. Solid 2 flags a write from inside an owned scope unless the
- * signal says that is intentional - which for a store it is.
- */
-const [items, setItems] = createSignal<SavedItem[]>(load(), { ownedWrite: true });
+const [items, setItems] = persistedSignal<SavedItem[]>(KEY, [], revive);
 
 export const saved = {
   items,
@@ -88,14 +76,5 @@ export const saved = {
 };
 
 export function installSavedEffects() {
-  createEffect(
-    () => items(),
-    (list) => {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(list));
-      } catch {
-        // Storage unavailable: pins last for the session only.
-      }
-    },
-  );
+  installPersistence(KEY, items, setItems, revive);
 }

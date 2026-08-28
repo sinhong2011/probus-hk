@@ -385,8 +385,18 @@
   .mb-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
+  /*
+   * The floor is for a phone in standalone mode, where the status bar is drawn
+   * over the page. A desktop window has nothing above the viewport, so the same
+   * padding there is just an empty band across the top of every screen.
+   */
   .mb-safe-top {
     padding-top: max(2.75rem, env(safe-area-inset-top));
+  }
+  @media (min-width: 64rem) {
+    .mb-safe-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
   }
   .mb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);

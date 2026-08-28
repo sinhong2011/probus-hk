@@ -1,4 +1,5 @@
-import { createEffect, createSignal } from "solid-js";
+import { createEffect } from "solid-js";
+import { installPersistence, persistedSignal } from "./persisted";
 import type { Lang } from "~/lib/i18n";
 
 export type ThemeChoice = "auto" | "light" | "dark";
@@ -22,28 +23,24 @@ const DEFAULTS: Persisted = {
   showScheduled: true,
 };
 
-function load(): Persisted {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) } : DEFAULTS;
-  } catch {
-    // Private mode or a corrupt value: the defaults are a fine answer.
-    return DEFAULTS;
-  }
+/** A stored value missing a key, or written by an older build, keeps working. */
+const revive = (raw: unknown): Persisted => ({ ...DEFAULTS, ...(raw as Partial<Persisted>) });
+
+const [stored, setStored] = persistedSignal<Persisted>(KEY, DEFAULTS, revive);
+
+/** One field of the settings object, read and written like its own signal. */
+function field<K extends keyof Persisted>(key: K) {
+  return [
+    () => stored()[key],
+    (value: Persisted[K]) => setStored((prev) => ({ ...prev, [key]: value })),
+  ] as const;
 }
 
-const initial = load();
-
-/*
- * These are app-wide stores, written from event handlers, effects and component
- * setup alike. Solid 2 flags a write from inside an owned scope unless the
- * signal says that is intentional - which for a store it is.
- */
-const [lang, setLang] = createSignal<Lang>(initial.lang, { ownedWrite: true });
-const [theme, setTheme] = createSignal<ThemeChoice>(initial.theme, { ownedWrite: true });
-const [radiusM, setRadiusM] = createSignal(initial.radiusM, { ownedWrite: true });
-const [refreshSeconds, setRefreshSeconds] = createSignal(initial.refreshSeconds, { ownedWrite: true });
-const [showScheduled, setShowScheduled] = createSignal(initial.showScheduled, { ownedWrite: true });
+const [lang, setLang] = field("lang");
+const [theme, setTheme] = field("theme");
+const [radiusM, setRadiusM] = field("radiusM");
+const [refreshSeconds, setRefreshSeconds] = field("refreshSeconds");
+const [showScheduled, setShowScheduled] = field("showScheduled");
 
 export const settings = {
   lang,
@@ -68,22 +65,7 @@ export const REFRESH_CHOICES = [10, 20, 30] as const;
  * the second performs the side effects with that value and is not tracked.
  */
 export function installSettingsEffects() {
-  createEffect(
-    (): Persisted => ({
-      lang: lang(),
-      theme: theme(),
-      radiusM: radiusM(),
-      refreshSeconds: refreshSeconds(),
-      showScheduled: showScheduled(),
-    }),
-    (value) => {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(value));
-      } catch {
-        // Storage unavailable: the session still works, it just will not persist.
-      }
-    },
-  );
+  installPersistence(KEY, stored, setStored, revive);
 
   createEffect(
     () => ({ theme: theme(), lang: lang() }),
