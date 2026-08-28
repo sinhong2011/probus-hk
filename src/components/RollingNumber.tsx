@@ -15,10 +15,14 @@ export function RollingNumber(props: { value: number }) {
   const digits = () => String(Math.max(0, Math.trunc(props.value))).split("");
 
   return (
-    // The surrounding countdown already carries the spoken value; ten stacked
-    // digits per column would be nonsense to read out.
-    <span class="inline-flex" aria-hidden="true">
-      <For each={digits()}>{(digit) => <Digit value={Number(digit)} />}</For>
+    <span class="inline-flex">
+      {/* The strips carry all ten digits each, so copying a row used to yield
+          "0123456789" per column. The real value is here for text and for
+          assistive tech; the strips are decoration. */}
+      <span class="sr-only">{props.value}</span>
+      <span class="inline-flex select-none" aria-hidden="true">
+        <For each={digits()}>{(digit) => <Digit value={Number(digit)} />}</For>
+      </span>
     </span>
   );
 }

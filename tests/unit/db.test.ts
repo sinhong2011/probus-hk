@@ -8,6 +8,7 @@ import {
   routeStops,
   routesAtStop,
   searchRoutes,
+  searchStops,
   stopIndex,
 } from "~/data/db";
 import type { RouteDb } from "~/data/types";
@@ -147,5 +148,37 @@ describe("routeStops", () => {
   it("carries one fewer fare than stops, since the terminus has no onward fare", () => {
     const route = routeAt(db, KMB_1)!;
     expect(route.fares?.length).toBe((route.stops.kmb?.length ?? 0) - 1);
+  });
+});
+
+describe("searchStops ranking", () => {
+  /** Two stops whose names both contain the query, one far busier. */
+  const named: RouteDb = {
+    holidays: [],
+    serviceDayMap: {},
+    stopMap: {},
+    stopList: {
+      ADM: { name: { zh: "金鐘", en: "Admiralty" }, location: { lat: 22.279, lng: 114.164 } },
+      BUS: {
+        name: { zh: "金鐘 - 太古廣場, 金鐘道", en: "Admiralty - Pacific Place, Queensway" },
+        location: { lat: 22.278, lng: 114.165 },
+      },
+    },
+    routeList: {
+      "1+1+A+B": { co: ["kmb"], route: "1", bound: { kmb: "O" }, serviceType: 1, orig: { zh: "A", en: "A" }, dest: { zh: "B", en: "B" }, fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null, seq: 1, stops: { kmb: ["BUS"] } },
+      "2+1+A+B": { co: ["kmb"], route: "2", bound: { kmb: "O" }, serviceType: 1, orig: { zh: "A", en: "A" }, dest: { zh: "B", en: "B" }, fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null, seq: 1, stops: { kmb: ["BUS"] } },
+      "3+1+A+B": { co: ["kmb"], route: "3", bound: { kmb: "O" }, serviceType: 1, orig: { zh: "A", en: "A" }, dest: { zh: "B", en: "B" }, fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null, seq: 1, stops: { kmb: ["BUS"] } },
+      "TWL+1+Central+Tsuen Wan": { co: ["mtr"], route: "TWL", bound: { mtr: "UT" }, serviceType: 1, orig: { zh: "中環", en: "Central" }, dest: { zh: "荃灣", en: "Tsuen Wan" }, fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null, seq: 1, stops: { mtr: ["ADM"] } },
+    },
+  } as unknown as RouteDb;
+
+  it("puts an exact name ahead of a busier partial match", () => {
+    // Ranking by route count alone buried every railway station: the bus stop
+    // here is three times busier, and its name merely contains what was typed.
+    expect(searchStops(named, "金鐘")[0]?.stopId).toBe("ADM");
+  });
+
+  it("still prefers the busier stop when neither is an exact match", () => {
+    expect(searchStops(named, "金鐘道")[0]?.stopId).toBe("BUS");
   });
 });

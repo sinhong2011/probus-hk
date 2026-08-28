@@ -71,3 +71,19 @@ test("a line's direction opens that direction's route", async ({ page }) => {
   await expect(page).toHaveURL(/\/route\/TWL/);
   await expect(page.getByText("往 荃灣").first()).toBeVisible();
 });
+
+test("a station can be bookmarked like any other stop", async ({ page }) => {
+  await page.goto("/route/TWL%2B1%2BCentral%2BTsuen%20Wan");
+  await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
+
+  await page.locator("[data-stop-seq]").nth(2).getByRole("button").first().click();
+  const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+
+  // Bookmarks are route-agnostic, but a railway station is the one place where
+  // that had never actually been exercised.
+  await page.goto("/saved");
+  await expect(page.getByText("往 荃灣").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("TWL").first()).toBeVisible();
+});

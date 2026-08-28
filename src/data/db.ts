@@ -324,7 +324,24 @@ export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[]
     out.push({ stopId, stop, routeCount });
   }
 
-  return out.sort((a, b) => b.routeCount - a.routeCount).slice(0, limit);
+  /*
+   * How well the name matches comes first, and only then how busy the stop is.
+   * Ranking by route count alone buried every railway station: searching 金鐘
+   * returned six bus stops whose names contain it - 28 to 66 routes each - and
+   * dropped Admiralty station itself, which is called exactly that and is
+   * served by four lines.
+   */
+  const rank = (stop: StopEntry) => {
+    const zh = stop.name.zh.toLowerCase();
+    const en = stop.name.en.toLowerCase();
+    if (zh === q || en === q) return 0;
+    if (zh.startsWith(q) || en.startsWith(q)) return 1;
+    return 2;
+  };
+
+  return out
+    .sort((a, b) => rank(a.stop) - rank(b.stop) || b.routeCount - a.routeCount)
+    .slice(0, limit);
 }
 
 /** Routes whose origin or destination contains the query, in either language. */
