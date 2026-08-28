@@ -285,7 +285,9 @@ function StopRow(props: {
             {stripStopCode(pick(props.stop.name, props.lang === "zh" ? "en" : "zh"))}
           </span>
 
-          <Show when={fareChanged() || props.open}>
+          {/* Rail carries no per-stop fare in this dataset, and an open row
+              was printing the empty value as "車費 null". */}
+          <Show when={fare() !== null && (fareChanged() || props.open)}>
             <span class="tnum truncate text-[0.6rem] font-semibold text-subtle-foreground">
               {[
                 `${t("fareFull", props.lang)} ${fare()}`,

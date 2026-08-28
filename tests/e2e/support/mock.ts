@@ -137,6 +137,34 @@ export async function mockTransit(page: Page, options: MockOptions = {}) {
   await page.route("**/data.etagmb.gov.hk/**", (route) => eta(route, gmbRows()));
   await page.route("**/rt.data.gov.hk/**", (route) => eta(route, ctbRows()));
 
+  /*
+   * Heavy rail shares rt.data.gov.hk with Citybus but answers a completely
+   * different shape, so it is registered afterwards to take precedence. It also
+   * reports the platform, which is half of what a rail arrival means.
+   */
+  await page.route("**/transport/mtr/getSchedule.php**", (route) => {
+    const url = new URL(route.request().url());
+    const line = url.searchParams.get("line") ?? "TWL";
+    const sta = url.searchParams.get("sta") ?? "ADM";
+    const train = (offset: number, seq: number, plat: string) => ({
+      seq: String(seq),
+      dest: "TSW",
+      plat,
+      time: hkIso(offset).replace("T", " ").slice(0, 19),
+      ttnt: String(Math.round(offset)),
+      valid: "Y",
+    });
+    return eta(route, {
+      status: 1,
+      data: {
+        [`${line}-${sta}`]: {
+          UP: [train(2.5, 1, "2"), train(6.5, 2, "2")],
+          DOWN: [train(3.5, 1, "1"), train(8.5, 2, "1")],
+        },
+      },
+    });
+  });
+
   await page.route("**/specialtrafficnews.xml", (route) =>
     options.noticesFail
       ? route.fulfill({ status: 503, body: "" })

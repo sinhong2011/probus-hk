@@ -8,7 +8,7 @@ import { routeHref } from "~/components/RouteRow";
 import { useDb } from "~/data/context";
 import { CATEGORIES } from "~/data/categories";
 import { nextRouteChars, routeAt, searchDestinations, searchRoutes, searchStops } from "~/data/db";
-import type { KeyedRoute } from "~/data/types";
+import type { KeyedRoute, RouteDb } from "~/data/types";
 import { fareLabel } from "~/lib/format";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { operatorLabel } from "~/lib/operators";
@@ -23,28 +23,22 @@ import { settings } from "~/stores/settings";
  * The system keyboard is still one tap away, because stop and place names are
  * the other way people search and those need real text entry.
  */
-const KEYS = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "0",
-  "A",
-  "B",
-  "C",
-  "K",
-  "M",
-  "N",
-  "P",
-  "R",
-  "S",
-  "X",
-];
+/**
+ * The keys, taken from the route numbers that exist.
+ *
+ * They used to be a hand-written list, and it was missing D, E, F, G, H, I, L,
+ * T, U and W - which between them are every MTR line code. Ten lines of railway
+ * were unreachable from the keypad and nothing said so.
+ */
+function keypadKeys(db: RouteDb): string[] {
+  const letters = new Set<string>();
+  for (const key in db.routeList) {
+    for (const char of db.routeList[key]?.route ?? "") {
+      if (/[A-Z]/.test(char)) letters.add(char);
+    }
+  }
+  return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ...[...letters].sort()];
+}
 
 const MAX_RESULTS = 40;
 
@@ -90,6 +84,7 @@ export default function Search() {
   });
 
   const allowed = createMemo(() => nextRouteChars(db(), query()));
+  const keys = createMemo(() => keypadKeys(db()));
   const empty = () => query().trim() === "";
   const nothing = () =>
     !empty() && routes().length === 0 && stops().length === 0 && destinations().length === 0;
@@ -114,6 +109,7 @@ export default function Search() {
             <div class="mx-auto w-full max-w-[27rem] rounded-2xl border border-border bg-card p-3 shadow-card">
               <Keypad
                 lang={lang()}
+                keys={keys()}
                 keyEnabled={(key) => empty() || allowed().has(key)}
                 onPress={press}
                 onBackspace={() => setQuery((q) => q.slice(0, -1))}
@@ -179,6 +175,7 @@ export default function Search() {
           <div class="-mt-2 hidden lg:block">
             <Keypad
               lang={lang()}
+              keys={keys()}
               keyEnabled={(key) => empty() || allowed().has(key)}
               onPress={press}
               onBackspace={() => setQuery((q) => q.slice(0, -1))}
@@ -341,6 +338,7 @@ function EmptyView(props: { lang: "zh" | "en"; routes: KeyedRoute[] }) {
  */
 function Keypad(props: {
   lang: Lang;
+  keys: string[];
   keyEnabled: (key: string) => boolean;
   onPress: (key: string) => void;
   onBackspace: () => void;
@@ -351,7 +349,7 @@ function Keypad(props: {
        instead of stretching each key to a couple of hundred pixels. */
     <div class="flex w-full flex-col gap-2">
       <div class="grid grid-cols-5 gap-2">
-        <For each={KEYS}>
+        <For each={props.keys}>
           {(key) => {
             const enabled = () => props.keyEnabled(key);
             return (
@@ -360,7 +358,11 @@ function Keypad(props: {
                 disabled={!enabled()}
                 onClick={() => props.onPress(key)}
                 class={[
-                  "flex h-11 items-center justify-center rounded-lg text-[1.05rem] font-bold transition-colors duration-100",
+                  // Digits carry most of Hong Kong's route numbers and keep the
+                  // thumb-sized row; the twenty letters behind them would
+                  // otherwise take half a phone screen.
+                  "mb-press flex items-center justify-center rounded-xl font-bold transition-colors duration-press",
+                  /\d/.test(key) ? "h-12 text-[1.05rem]" : "h-10 text-[0.95rem]",
                   {
                     "bg-secondary text-foreground active:bg-primary active:text-primary-foreground":
                       enabled(),
