@@ -16,6 +16,7 @@ import IconRoute from "~icons/lineicons/route-1";
 import IconSearch from "~icons/lineicons/search-alt";
 import IconShip from "~icons/lineicons/ship";
 import IconTimer from "~icons/lineicons/timer";
+import IconTrain from "~icons/lineicons/train-1";
 import IconTrash from "~icons/lineicons/trash-can";
 import IconXmark from "~icons/lineicons/xmark";
 
@@ -71,5 +72,6 @@ export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
 export const BusIcon = wrap(IconBus as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
 export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);
+export const TrainIcon = wrap(IconTrain as IconComponent);
 export const FerryIcon = wrap(IconShip as IconComponent);
 export const TrashIcon = wrap(IconTrash as IconComponent);

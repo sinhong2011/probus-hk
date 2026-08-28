@@ -125,5 +125,6 @@
   "close": "Close",
   "nearest_stop": "Nearest stop",
   "platform": "Platform",
-  "cars": "car"
+  "cars": "car",
+  "rail": "Rail"
 }

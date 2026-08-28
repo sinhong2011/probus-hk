@@ -125,5 +125,6 @@
   "close": "關閉",
   "nearest_stop": "最近車站",
   "platform": "月台",
-  "cars": "卡"
+  "cars": "卡",
+  "rail": "鐵路"
 }

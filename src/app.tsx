@@ -21,6 +21,7 @@ const StopDetail = lazy(() => import("~/routes/StopDetail"));
 const Browse = lazy(() => import("~/routes/Browse"));
 const Plan = lazy(() => import("~/routes/Plan"));
 const Notices = lazy(() => import("~/routes/Notices"));
+const Rail = lazy(() => import("~/routes/Rail"));
 
 const Router = createRouter({
   routes: [
@@ -28,6 +29,7 @@ const Router = createRouter({
     { path: "/search", component: Search },
     { path: "/plan", component: Plan },
     { path: "/notices", component: Notices },
+    { path: "/rail", component: Rail },
     { path: "/browse", component: Browse },
     { path: "/browse/:id", component: Browse },
     { path: "/saved", component: Saved },

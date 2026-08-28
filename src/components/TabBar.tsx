@@ -9,6 +9,7 @@ import {
   MegaphoneIcon,
   PinIcon,
   SearchIcon,
+  TrainIcon,
   SettingsIcon,
   type IconProps,
 } from "./Icons";
@@ -17,6 +18,7 @@ const TABS: { href: string; label: MessageKey; Icon: (p: IconProps) => JSX.Eleme
   { href: "/", label: "nearby", Icon: PinIcon },
   { href: "/saved", label: "saved", Icon: BookmarkIcon },
   { href: "/search", label: "search", Icon: SearchIcon },
+  { href: "/rail", label: "rail", Icon: TrainIcon },
   { href: "/notices", label: "notices", Icon: MegaphoneIcon },
   { href: "/settings", label: "settings", Icon: SettingsIcon },
 ];
@@ -24,7 +26,7 @@ const TABS: { href: string; label: MessageKey; Icon: (p: IconProps) => JSX.Eleme
 /**
  * A bottom bar on a phone; a side rail on a wide screen.
  *
- * Five destinations pinned to the bottom of a 1400px window leave a thin strip
+ * Six destinations pinned to the bottom of a 1400px window leave a thin strip
  * of controls marooned under a very empty page. A vertical rail puts them where
  * a pointer expects them and gives the labels room to breathe.
  */

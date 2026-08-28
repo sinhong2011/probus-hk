@@ -128,6 +128,7 @@ const MESSAGES = {
   routeInfo: m.route_info,
   navigation: m.navigation,
   close: m.close,
+  rail: m.rail,
   platform: m.platform,
   cars: m.cars,
   nearestStop: m.nearest_stop,

@@ -7,6 +7,7 @@ const TABS: Record<string, MessageKey> = {
   "/": "nearby",
   "/saved": "saved",
   "/search": "search",
+  "/rail": "rail",
   "/notices": "notices",
   "/settings": "settings",
 };

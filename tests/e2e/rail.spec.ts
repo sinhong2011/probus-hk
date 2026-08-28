@@ -45,3 +45,29 @@ test("a rail arrival says which platform", async ({ page }) => {
   // from the other side of the island.
   await expect(page.getByText(/月台\s*\d/).first()).toBeVisible({ timeout: 15_000 });
 });
+
+/**
+ * The railway had no front door. It was reachable only as fifty entries in a
+ * category list sorted by route number, which put all twenty-seven light rail
+ * routes above the ten MTR lines - so in practice the underground was missing.
+ */
+test("the railway has a screen of its own, organised as lines", async ({ page }) => {
+  await page.goto("/rail");
+
+  // A line, not a pair of routes: "Central to Tsuen Wan" is not what anyone
+  // calls it.
+  await expect(page.getByText("荃灣綫")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("16 個站")).toBeVisible();
+
+  const tabs = page.getByRole("navigation", { name: "導覽" });
+  await expect(tabs.getByRole("link", { name: "鐵路" })).toHaveAttribute("aria-current", "page");
+});
+
+test("a line's direction opens that direction's route", async ({ page }) => {
+  await page.goto("/rail");
+  await expect(page.getByText("荃灣綫")).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("link", { name: /往 荃灣/ }).first().click();
+  await expect(page).toHaveURL(/\/route\/TWL/);
+  await expect(page.getByText("往 荃灣").first()).toBeVisible();
+});
