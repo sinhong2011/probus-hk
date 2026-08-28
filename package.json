@@ -1,0 +1,43 @@
+{
+  "name": "motherbus",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview",
+    "check": "vp check",
+    "test": "vp test --run",
+    "test:watch": "vp test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide"
+  },
+  "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@kobalte/core": "2.0.0-alpha.0",
+    "@solidjs/router": "^2.0.0-next.18",
+    "@solidjs/web": "2.0.0-rc.3",
+    "date-fns": "^4.4.0",
+    "es-toolkit": "^1.51.0",
+    "maplibre-gl": "^6.6.0",
+    "solid-js": "^2.0.0-rc.3"
+  },
+  "devDependencies": {
+    "@iconify-json/lineicons": "^1.2.6",
+    "@inlang/paraglide-js": "^2.24.1",
+    "@playwright/test": "^1.62.1",
+    "@serwist/vite": "^9.5.12",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.4.0",
+    "jsdom": "^30.0.1",
+    "serwist": "^9.5.12",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "unplugin-icons": "^23.0.1",
+    "vite-plugin-solid": "^3.0.0-next.27",
+    "vite-plus": "^0.3.0"
+  }
+}

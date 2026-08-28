@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import type { Eta } from "~/data/types";
+import { concessionFare, countdown, fareAt, fareLabel, followingMinutes, formatFare } from "~/lib/format";
+
+const NOW = new Date("2026-03-01T12:00:00Z").getTime();
+
+function eta(minutesFromNow: number, source: Eta["source"] = "live"): Eta {
+  return { at: new Date(NOW + minutesFromNow * 60_000), source, co: "kmb" };
+}
+
+describe("countdown", () => {
+  it("rounds down, so a bus is never shown as later than it is", () => {
+    // 3 minutes 50 seconds away is still "3", because you can still catch it.
+    const at = new Date(NOW + 3 * 60_000 + 50_000);
+    expect(countdown({ at, source: "live", co: "kmb" }, NOW).minutes).toBe(3);
+  });
+
+  it("becomes 'arriving' inside the last minute", () => {
+    expect(countdown(eta(0.5), NOW).kind).toBe("arriving");
+    expect(countdown(eta(0.99), NOW).kind).toBe("arriving");
+  });
+
+  it("treats a bus one minute out as a number, not as arriving", () => {
+    expect(countdown(eta(1), NOW).kind).toBe("minutes");
+  });
+
+  it("marks departures well in the past as gone", () => {
+    expect(countdown(eta(-2), NOW).kind).toBe("gone");
+  });
+
+  it("keeps a just-missed bus visible briefly rather than flickering out", () => {
+    expect(countdown(eta(-0.2), NOW).kind).toBe("arriving");
+  });
+
+  it("carries the timetable flag through so the UI can mark it", () => {
+    expect(countdown(eta(10, "scheduled"), NOW).scheduled).toBe(true);
+    expect(countdown(eta(10, "live"), NOW).scheduled).toBe(false);
+  });
+});
+
+describe("followingMinutes", () => {
+  it("lists the arrivals after the first", () => {
+    expect(followingMinutes([eta(3), eta(11), eta(24)], NOW)).toBe("11 · 24");
+  });
+
+  it("is empty when there is only one arrival", () => {
+    expect(followingMinutes([eta(3)], NOW)).toBe("");
+  });
+});
+
+describe("fares", () => {
+  it("formats to one decimal place", () => {
+    expect(formatFare("6.7")).toBe("$6.7");
+    expect(formatFare("12")).toBe("$12.0");
+  });
+
+  it("returns null rather than NaN for missing values", () => {
+    expect(formatFare(null)).toBeNull();
+    expect(formatFare("")).toBeNull();
+    expect(formatFare("abc")).toBeNull();
+  });
+
+  it("indexes fares by stop, and has none for the terminus", () => {
+    // 25 stops carry 24 fares: the last stop has no onward fare.
+    const fares = Array.from({ length: 24 }, (_, i) => String(i + 1));
+    expect(fareAt(fares, 1)).toBe("$1.0");
+    expect(fareAt(fares, 24)).toBe("$24.0");
+    expect(fareAt(fares, 25)).toBeNull();
+  });
+});
+
+describe("concessionFare", () => {
+  it("is a flat $2 up to ten dollars", () => {
+    // Values checked against what the operators actually charge.
+    expect(concessionFare("5.1")).toBe("$2.0");
+    expect(concessionFare("8.6")).toBe("$2.0");
+    expect(concessionFare("9.3")).toBe("$2.0");
+    expect(concessionFare("10")).toBe("$2.0");
+  });
+
+  it("is a fifth of the fare above ten dollars", () => {
+    expect(concessionFare("10.8")).toBe("$2.2");
+    expect(concessionFare("11.8")).toBe("$2.4");
+    expect(concessionFare("15.4")).toBe("$3.1");
+    expect(concessionFare("17.9")).toBe("$3.6");
+    expect(concessionFare("19.3")).toBe("$3.9");
+    expect(concessionFare("21.8")).toBe("$4.4");
+  });
+
+  it("has nothing to say about a missing fare", () => {
+    expect(concessionFare(null)).toBeNull();
+    expect(concessionFare("")).toBeNull();
+    expect(concessionFare("free")).toBeNull();
+  });
+});
+
+describe("fareLabel", () => {
+  it("shows the full fare beside the concession", () => {
+    expect(fareLabel("9.3")).toBe("$9.3 · $2.0");
+    expect(fareLabel("21.8")).toBe("$21.8 · $4.4");
+  });
+
+  it("is null when there is no fare at all", () => {
+    expect(fareLabel(null)).toBeNull();
+  });
+});

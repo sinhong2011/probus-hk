@@ -1,0 +1,13 @@
+node_modules/
+dist/
+shots/
+test-results/
+playwright-report/
+.playwright-mcp/
+# Compiled by Paraglide from messages/*.json at build time.
+src/paraglide/
+.inlang/
+
+# Design canvases: the seeded pages embed a ~2 MB editor payload each, and the
+# published artifact is the shareable copy.
+design/

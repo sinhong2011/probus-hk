@@ -1,0 +1,7 @@
+node_modules
+dist
+test-results
+shots
+design
+.playwright-mcp
+.git

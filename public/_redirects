@@ -1,0 +1,3 @@
+# Single-page app: every path is served by the shell, which then routes.
+# Read by both Netlify and Cloudflare Pages.
+/*    /index.html   200
