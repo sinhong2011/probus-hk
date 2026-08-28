@@ -97,12 +97,77 @@ export function operatorRank(co: Company): number {
   return index < 0 ? PRECEDENCE.length : index;
 }
 
-/** Airport Express is styled apart from the rest of the MTR. */
-const AEL_COLOR = "#00888a";
+/**
+ * Every MTR line has its own colour, and riders navigate by them - "take the
+ * red line" is how the network is actually described. One maroon plate for all
+ * ten lines threw that away.
+ *
+ * Values are the ones hkbus/hk-independent-bus-eta publishes, so a route looks
+ * the same here as in the dataset this app's route logic comes from.
+ */
+const MTR_LINES: Record<string, string> = {
+  AEL: "#00888E",
+  TCL: "#F3982D",
+  TML: "#9C2E00",
+  TKL: "#7E3C93",
+  EAL: "#5EB7E8",
+  SIL: "#CBD300",
+  TWL: "#E60012",
+  ISL: "#0075C2",
+  KTL: "#00A040",
+  DRL: "#EB6EA5",
+};
+
+/** The light rail routes carry their own colours too, from the same source. */
+const LIGHT_RAIL_LINES: Record<string, string> = {
+  "505": "#DA2127",
+  "507": "#00A652",
+  "610": "#551C15",
+  "614": "#00BFF3",
+  "614P": "#F4858E",
+  "615": "#FFDD00",
+  "615P": "#016682",
+  "705": "#73BF43",
+  "706": "#B47AB5",
+  "751": "#F48221",
+  "761P": "#6F2D91",
+};
+
+const INK_DARK = "#101012";
+const INK_LIGHT = "#ffffff";
+
+/**
+ * Ink that can actually be read on this background.
+ *
+ * White by default, because that is how the operators print their own route
+ * numbers - but only while white clears 3:1, the threshold for large text.
+ * Below that it flips to dark: white on Tung Chung orange or on light rail 614
+ * measures about 2.2:1, which is unreadable however conventional it looks.
+ *
+ * Measured rather than listed, because there are twenty-one of these and
+ * judging each by eye is twenty-one chances to get one wrong.
+ */
+function readableInk(hex: string): string {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const channel = (shift: number) => {
+    const c = ((value >> shift) & 0xff) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  return whiteContrast >= 3 ? INK_LIGHT : INK_DARK;
+}
 
 export function plateStyle(co: Company[], route: string): { background: string; color: string } {
   const primary = co[0] ?? "kmb";
-  if (primary === "mtr" && route === "AEL") return { background: AEL_COLOR, color: "#ffffff" };
+
+  const line =
+    primary === "mtr"
+      ? MTR_LINES[route]
+      : primary === "lightRail"
+        ? LIGHT_RAIL_LINES[route]
+        : undefined;
+  if (line) return { background: line, color: readableInk(line) };
 
   const a = OPERATORS[primary];
   const second = co[1];

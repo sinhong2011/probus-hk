@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Eta } from "~/data/types";
 import { concessionFare, countdown, fareAt, fareLabel, followingMinutes, formatFare } from "~/lib/format";
+import { plateStyle } from "~/lib/operators";
 
 const NOW = new Date("2026-03-01T12:00:00Z").getTime();
 
@@ -102,5 +103,55 @@ describe("fareLabel", () => {
 
   it("is null when there is no fare at all", () => {
     expect(fareLabel(null)).toBeNull();
+  });
+});
+
+describe("line colours", () => {
+  it("gives every MTR line its own plate", () => {
+    const twl = plateStyle(["mtr"], "TWL").background;
+    const ktl = plateStyle(["mtr"], "KTL").background;
+    const ael = plateStyle(["mtr"], "AEL").background;
+    // Riders navigate by line colour; one maroon plate for ten lines threw
+    // away the only thing that tells them apart at a glance.
+    expect(new Set([twl, ktl, ael]).size).toBe(3);
+  });
+
+  it("picks ink that can be read on the line's own colour", () => {
+    // South Island is lime and Tsuen Wan is red: the same ink cannot serve both.
+    expect(plateStyle(["mtr"], "SIL").color).toBe("#101012");
+    expect(plateStyle(["mtr"], "TWL").color).toBe("#ffffff");
+    expect(plateStyle(["lightRail"], "615").color).toBe("#101012");
+  });
+
+  it("leaves a bus route on its operator's colour", () => {
+    expect(plateStyle(["kmb"], "TWL").background).toBe("#d71920");
+  });
+
+  it("never leaves a plate below the 3:1 floor for large text", () => {
+    const luminance = (hex: string) => {
+      const v = Number.parseInt(hex.slice(1), 16);
+      const ch = (s: number) => {
+        const c = ((v >> s) & 0xff) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * ch(16) + 0.7152 * ch(8) + 0.0722 * ch(0);
+    };
+    const contrast = (bg: string, ink: string) => {
+      const [a, b] = [luminance(bg) + 0.05, luminance(ink) + 0.05].sort((x, y) => y - x);
+      return (a as number) / (b as number);
+    };
+
+    // Convention says white on every operator's route number; measurement says
+    // white on Tung Chung orange is about 2.2:1. Legibility wins.
+    const lines = ["TWL", "KTL", "ISL", "TKL", "TCL", "AEL", "EAL", "TML", "SIL", "DRL"];
+    const light = ["505", "507", "610", "614", "614P", "615", "615P", "705", "706", "751", "761P"];
+    for (const route of lines) {
+      const { background, color } = plateStyle(["mtr"], route);
+      expect(contrast(background, color), route).toBeGreaterThanOrEqual(3);
+    }
+    for (const route of light) {
+      const { background, color } = plateStyle(["lightRail"], route);
+      expect(contrast(background, color), route).toBeGreaterThanOrEqual(3);
+    }
   });
 });

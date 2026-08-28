@@ -38,6 +38,12 @@ export function EtaCountdown(props: {
 }) {
   const size = () => props.size ?? "md";
 
+  /** Platform and train length, from the next arrival that reports them. */
+  const rail = createMemo(() => {
+    const next = props.etas?.find((eta) => eta.platform);
+    return next?.platform ? { platform: next.platform, cars: next.cars } : null;
+  });
+
   /*
    * A feed can keep reporting a bus for a while after it has gone. Showing a
    * negative countdown is worse than showing nothing, so departed arrivals are
@@ -121,6 +127,28 @@ export function EtaCountdown(props: {
         {/* In a list every row would repeat this; the dashed underline already
             marks a timetable estimate, so the words are only worth the space
             where several arrivals are stacked. */}
+        {/*
+         * Where to stand. A rail arrival is not answered by a number of minutes
+         * alone - the platform is the rest of the answer, and it was being
+         * thrown away by the adapter that already parsed it.
+         */}
+        <Show when={rail()}>
+          {(info) => (
+            <span class="flex items-center gap-1 rounded-full bg-secondary px-1.5 py-px text-[0.58rem] font-bold text-muted-foreground">
+              <span class="tnum">
+                {t("platform", props.lang)} {info().platform}
+              </span>
+              <Show when={info().cars}>
+                {(cars) => (
+                  <span class="tnum text-faint-foreground">
+                    · {cars()} {t("cars", props.lang)}
+                  </span>
+                )}
+              </Show>
+            </span>
+          )}
+        </Show>
+
         <Show when={upcoming().length > 1 && upcoming().some((s) => s.scheduled)}>
           <span class="text-[0.58rem] font-semibold text-faint-foreground">
             {t("scheduled", props.lang)}

@@ -85,4 +85,12 @@ export interface Eta {
   remark?: Bilingual;
   /** Company that reported it — matters on joint routes. */
   co: Company;
+  /**
+   * Platform to stand on, where the operator reports one. Rail only: a bus
+   * stops where it stops, but on a railway this is the difference between
+   * catching the train and watching it leave from the other side.
+   */
+  platform?: string;
+  /** Light rail runs one- and two-car trains; the short ones fill up. */
+  cars?: number;
 }

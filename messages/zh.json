@@ -123,5 +123,7 @@
   "navigation": "導覽",
   "choose_origin": "選擇起點",
   "close": "關閉",
-  "nearest_stop": "最近車站"
+  "nearest_stop": "最近車站",
+  "platform": "月台",
+  "cars": "卡"
 }

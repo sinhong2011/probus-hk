@@ -123,5 +123,7 @@
   "navigation": "Navigation",
   "choose_origin": "Choose a starting point",
   "close": "Close",
-  "nearest_stop": "Nearest stop"
+  "nearest_stop": "Nearest stop",
+  "platform": "Platform",
+  "cars": "car"
 }

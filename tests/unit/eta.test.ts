@@ -304,3 +304,36 @@ describe("MTR feeder bus", () => {
     await expect(fetchLrtFeederEta(query("lrtfeeder", r, 1, "K1"))).resolves.toEqual([]);
   });
 });
+
+describe("MTR platforms", () => {
+  it("keeps the platform a train arrives at", async () => {
+    const route = {
+      route: "TWL",
+      co: ["mtr"],
+      bound: { mtr: "UT" },
+      stops: { mtr: ["ADM"] },
+      dest: { zh: "荃灣", en: "Tsuen Wan" },
+      serviceType: 1,
+    } as unknown as KeyedRoute;
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 1,
+          data: {
+            "TWL-ADM": {
+              UP: [
+                { seq: "1", dest: "TSW", plat: "2", time: "2026-03-04 10:05:00", ttnt: "3", valid: "Y" },
+              ],
+            },
+          },
+        }),
+      ) as Response,
+    );
+
+    const etas = await fetchMtrRailEta({ route, seq: 1, stopId: "ADM", co: "mtr" });
+    // A rail arrival with no platform is half an answer: the train may be
+    // leaving from the other side of the island.
+    expect(etas[0]?.platform).toBe("2");
+  });
+});

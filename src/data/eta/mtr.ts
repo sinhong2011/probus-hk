@@ -46,7 +46,7 @@ export async function fetchMtrRailEta(q: EtaQuery): Promise<Eta[]> {
     .flatMap((t) => {
       const at = parseHkTime(t.time);
       if (!at) return [];
-      return [{ at, source: "live" as const, co: q.co }];
+      return [{ at, source: "live" as const, co: q.co, platform: t.plat || undefined }];
     });
 }
 
@@ -97,7 +97,13 @@ export async function fetchLightRailEta(q: EtaQuery): Promise<Eta[]> {
 
       const mins = parseLrtMinutes(row.time_en) ?? parseLrtMinutes(row.time_ch);
       if (mins === null) continue;
-      out.push({ at: inMinutes(mins), source: "live", co: q.co });
+      out.push({
+        at: inMinutes(mins),
+        source: "live",
+        co: q.co,
+        platform: String(platform.platform_id),
+        cars: row.train_length || undefined,
+      });
     }
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime());

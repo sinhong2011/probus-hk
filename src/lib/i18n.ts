@@ -128,6 +128,8 @@ const MESSAGES = {
   routeInfo: m.route_info,
   navigation: m.navigation,
   close: m.close,
+  platform: m.platform,
+  cars: m.cars,
   nearestStop: m.nearest_stop,
   chooseOrigin: m.choose_origin,
   mapMyLocation: m.map_my_location,
