@@ -129,7 +129,17 @@ function PageShell(props: { children: JSX.Element }) {
   let shell!: HTMLDivElement;
 
   /** Which screen a path belongs to - `/route/1+...` and `/route/1+...` are one. */
-  const screen = (path: string) => path.split("/")[1] ?? "";
+  const screen = (path: string) => {
+    const first = path.split("/")[1] ?? "";
+    /*
+     * Searching and planning are two halves of one screen, and the switch
+     * between them is a control sitting on it - not a way out of it. Replaying
+     * the page-enter there faded the title, the switch the rider had just
+     * pressed and both columns back in from nothing, which is what the whole
+     * app reloading looks like.
+     */
+    return first === "plan" ? "search" : first;
+  };
 
   createEffect(
     () => location.pathname,

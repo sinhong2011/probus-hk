@@ -131,3 +131,32 @@ test("the pill still marks the half you are on after switching", async ({ page }
   await expect(pill).toHaveAttribute("data-ready", "true");
   await expect.poll(async () => (await box()).x).toBe(onSearch.x);
 });
+
+/*
+ * The page-enter animation says "you have arrived somewhere else". Searching
+ * and planning are two halves of one screen, so replaying it on the switch
+ * faded the title, the switch itself and both columns back in from nothing -
+ * pressing a control on a page should not look like the page reloading.
+ */
+test("switching halves does not replay the page entrance", async ({ page }) => {
+  const shell = page.locator("[class*='max-w-[110rem]']");
+  await shell.evaluate((el) => {
+    (window as unknown as { __replays: number }).__replays = 0;
+    new MutationObserver(() => {
+      if (el.classList.contains("mb-page-in"))
+        (window as unknown as { __replays: number }).__replays += 1;
+    }).observe(el, { attributes: true, attributeFilter: ["class"] });
+  });
+  const replays = () => page.evaluate(() => (window as unknown as { __replays: number }).__replays);
+
+  await page.locator('[role="tab"][href="/plan"]').click();
+  await expect(page).toHaveURL(/\/plan$/);
+  await page.locator('[role="tab"][href="/search"]').click();
+  await expect(page).toHaveURL(/\/search$/);
+  expect(await replays()).toBe(0);
+
+  // Leaving for a screen that really is elsewhere still announces itself.
+  await page.locator('a[href="/saved"]').first().click();
+  await expect(page).toHaveURL(/\/saved$/);
+  await expect.poll(replays).toBeGreaterThan(0);
+});
