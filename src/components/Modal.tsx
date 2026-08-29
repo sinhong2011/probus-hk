@@ -87,7 +87,7 @@ export function Modal(props: {
         class="mb-sheet relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-card outline-none sm:max-h-[80dvh] sm:max-w-[32rem] sm:rounded-3xl"
       >
         <header class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <span class="truncate text-[0.85rem] font-bold tracking-[-0.01em] text-foreground">
+          <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
             {props.title}
           </span>
           <button

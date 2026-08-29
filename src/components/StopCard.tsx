@@ -7,7 +7,7 @@ import { createAsyncMemo } from "~/lib/async";
 import { formatDistance } from "~/lib/geo";
 import { pick, stripStopCode, type Lang } from "~/lib/i18n";
 import { etaTick } from "~/stores/clock";
-import { Card, Chip, Hairline } from "./Chrome";
+import { Card, Chip, Hairline, StopCode } from "./Chrome";
 import { RouteLine } from "./RouteRow";
 
 /**
@@ -65,18 +65,22 @@ export function StopCard(props: {
   });
 
   const name = () => stripStopCode(pick(props.stop.name, props.lang));
-  const other = () =>
-    stripStopCode(pick(props.stop.name, props.lang === "zh" ? "en" : "zh"));
 
   return (
     <Card>
       <a href={`/stop/${encodeURIComponent(props.stopId)}`} class="flex items-center gap-2.5 px-3.5 pb-2.5 pt-3">
-        <div class="flex min-w-0 grow flex-col gap-0.5">
-          <span class="truncate text-[0.8rem] font-bold tracking-[-0.01em] text-foreground">{name()}</span>
-          <span class="truncate text-[0.63rem] font-medium text-subtle-foreground">{other()}</span>
+        {/* One language, and the pole code beside it. The name in the other
+            language said nothing a rider standing here did not already know;
+            the code is what distinguishes this pole from the one across the
+            road with the same name on it. */}
+        <div class="flex min-w-0 grow items-center gap-1.5">
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">{name()}</span>
+          <StopCode name={props.stop.name} lang={props.lang} />
         </div>
+        {/* The distance never gives way to the name: it is the shorter of the
+            two and the one the name is being measured against. */}
         <Show when={props.metres !== undefined}>
-          <Chip>
+          <Chip class="shrink-0">
             <span class="tnum">{formatDistance(props.metres as number)}</span>
           </Chip>
         </Show>

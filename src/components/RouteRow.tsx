@@ -52,10 +52,10 @@ export function RouteLine(props: LineProps) {
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 
       <div class="flex min-w-0 grow flex-col gap-0.5">
-        <span class="truncate text-[0.82rem] font-bold tracking-[-0.01em] text-foreground">
+        <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
           {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
         </span>
-        <span class="truncate text-[0.63rem] font-medium text-subtle-foreground">{subtitleFor(props)}</span>
+        <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">{subtitleFor(props)}</span>
       </div>
 
       <EtaCountdown

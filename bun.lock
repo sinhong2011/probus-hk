@@ -5,12 +5,13 @@
     "": {
       "name": "motherbus",
       "dependencies": {
-        "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+        "@fontsource-variable/geist": "^5.3.0",
         "@kobalte/core": "2.0.0-alpha.0",
         "@solidjs/router": "^2.0.0-next.18",
         "@solidjs/web": "2.0.0-rc.3",
         "date-fns": "^4.4.0",
         "es-toolkit": "^1.51.0",
+        "idb": "^8.0.3",
         "maplibre-gl": "^6.6.0",
         "solid-js": "^2.0.0-rc.3",
       },
@@ -109,7 +110,7 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
-    "@fontsource-variable/ibm-plex-sans": ["@fontsource-variable/ibm-plex-sans@5.3.0", "", {}, "sha512-agG8tXFEo0hD9+J7npa4vbbWult52eMLVaQ6WQRlhs/iCAojrMAoejru85W9HTVXHfyUj96KM7gp/KGAS87XaQ=="],
+    "@fontsource-variable/geist": ["@fontsource-variable/geist@5.3.0", "", {}, "sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA=="],
 
     "@iconify-json/lineicons": ["@iconify-json/lineicons@1.2.6", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-XDOzb5xUNxpOj0j2JPadPq4udrhYb92d6jT7jey9CAJfGhSyYMzk5vmNqWormZy0ETxiHojs2ERpY9KjLjt7rA=="],
 

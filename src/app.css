@@ -1,6 +1,23 @@
+/*
+ * Geist, weight axis only, self-hosted through Fontsource.
+ *
+ * Vercel's interface grotesque: a large x-height and open apertures, which is
+ * what a countdown read at arm's length on a moving bus needs, and a variable
+ * weight axis from 100 to 900 so the app's four weights cost one file. Google
+ * Fonts would mean a second round trip to another origin before any text could
+ * paint, and would leave the app depending on that origin to look right
+ * offline; Fontsource ships the same faces as a package the build can inline.
+ *
+ * Imported here rather than from `main.tsx` so the @font-face rules ship inside
+ * the stylesheet the browser already has to fetch: from JavaScript they were
+ * only discovered once the bundle had parsed, a whole round trip of fallback
+ * text on a cold start. Fontsource splits the family by writing system and
+ * gives each face a unicode-range, so only the Latin file is ever downloaded -
+ * Chinese never comes from this family at all, it comes from the system faces
+ * further down `--font-sans`.
+ */
+@import "@fontsource-variable/geist/wght.css";
 @import "tailwindcss";
-
-
 
 /* ---- design tokens --------------------------------------------------------
  * The vocabulary follows the minikyu project's system: background/foreground,
@@ -50,27 +67,47 @@
   --ring: oklch(0.705 0.015 286.067);
   --map: oklch(0.94 0.004 286.3);
 
+  /*
+   * The type ramp, in the arbitrary values the components spell out. Six steps
+   * below 1rem and nothing between them:
+   *
+   *   0.69rem  11px  a code, a badge, a tab label - nothing that carries a
+   *                  sentence, and the floor for anything at all
+   *   0.75rem  12px  the second line of a row: the stop, the walk, the group
+   *   0.81rem  13px  chips, buttons, small labels
+   *   0.88rem  14px  body
+   *   0.94rem  15px  the title of a card
+   *   1rem     16px  a countdown that is not the hero
+   *
+   * The floor is 11px because of Chinese, not in spite of it. A stop name is
+   * dense strokes inside one em square, so it needs more pixels than Latin
+   * does for the same legibility - and this app is read at arm's length,
+   * one-handed, on a bus that is moving. There were twenty-one distinct sizes
+   * here, four of them under 10px; the drift was why nothing looked deliberate.
+   */
   --radius: 0.45rem;
   /* Height of the bottom navigation, so a sticky control can clear it. */
   --tabbar-height: calc(3.7rem + env(safe-area-inset-bottom, 0px));
-  --shadow-card: 0 1px 2px oklch(0.141 0.005 285.823 / 0.05),
-    0 6px 18px oklch(0.141 0.005 285.823 / 0.04);
+  --shadow-card:
+    0 1px 2px oklch(0.141 0.005 285.823 / 0.05), 0 6px 18px oklch(0.141 0.005 285.823 / 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: oklch(0.185 0.004 285.9);
+    --background: oklch(0.145 0.002 286);
     --foreground: oklch(0.985 0 0);
 
-    /* Cards sit slightly below the page here, as minikyu does: the list recedes
-       and the countdown on top of it carries the emphasis. */
-    --card: oklch(0.141 0.004 285.822);
+    /* Cards sit above the page rather than below it: the sidebar and the lists
+       are panels lifted off a near-black ground, which is what gives a dark
+       screen its depth. Sunk into the page they read as holes, and every card
+       edge had to do the work the light was supposed to do. */
+    --card: oklch(0.192 0.002 286);
     --card-foreground: oklch(0.985 0 0);
 
-    --secondary: oklch(0.274 0.006 286.033);
+    --secondary: oklch(0.248 0.003 286);
     --secondary-foreground: oklch(0.985 0 0);
 
-    --muted: oklch(0.274 0.006 286.033);
+    --muted: oklch(0.248 0.003 286);
     --muted-foreground: oklch(0.705 0.015 286.067);
     --subtle-foreground: oklch(0.58 0.014 286.05);
     --faint-foreground: oklch(0.47 0.012 286);
@@ -83,27 +120,27 @@
     --warning: oklch(0.79 0.15 70);
     --destructive: oklch(0.704 0.191 22.216);
 
-    --border: oklch(1 0 0 / 10%);
+    --border: oklch(1 0 0 / 7%);
     --ring: oklch(0.552 0.016 285.938);
-    --map: oklch(0.16 0.004 285.9);
+    --map: oklch(0.205 0.002 286);
 
     --shadow-card: none;
   }
 }
 
 :root[data-theme="dark"] {
-  --background: oklch(0.185 0.004 285.9);
+  --background: oklch(0.145 0.002 286);
   --foreground: oklch(0.985 0 0);
 
-  /* Cards sit slightly below the page here, as minikyu does: the list recedes
-     and the countdown on top of it carries the emphasis. */
-  --card: oklch(0.141 0.004 285.822);
+  /* Cards sit above the page rather than below it; see the note in the
+     media-query block above. */
+  --card: oklch(0.192 0.002 286);
   --card-foreground: oklch(0.985 0 0);
 
-  --secondary: oklch(0.274 0.006 286.033);
+  --secondary: oklch(0.248 0.003 286);
   --secondary-foreground: oklch(0.985 0 0);
 
-  --muted: oklch(0.274 0.006 286.033);
+  --muted: oklch(0.248 0.003 286);
   --muted-foreground: oklch(0.705 0.015 286.067);
   --subtle-foreground: oklch(0.58 0.014 286.05);
   --faint-foreground: oklch(0.47 0.012 286);
@@ -116,9 +153,9 @@
   --warning: oklch(0.79 0.15 70);
   --destructive: oklch(0.704 0.191 22.216);
 
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 7%);
   --ring: oklch(0.552 0.016 285.938);
-  --map: oklch(0.16 0.004 285.9);
+  --map: oklch(0.205 0.002 286);
 
   --shadow-card: none;
 }
@@ -144,10 +181,22 @@
   --color-ring: var(--ring);
   --color-map: var(--map);
 
-  --font-ui:
-    "IBM Plex Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang HK",
-    "PingFang TC", "Noto Sans CJK HK", "Noto Sans HK", "Microsoft JhengHei",
-    "Hiragino Sans CNS", "Source Han Sans HK", sans-serif;
+  /*
+   * `--font-sans` is the name Tailwind's own preflight reads for the document
+   * default, and the name shadcn's themes use, so declaring it here is all it
+   * takes for every element and the `font-sans` utility to agree.
+   *
+   * One stack, read left to right per glyph: Geist answers for Latin and the
+   * digits, and Chinese falls through to whichever Hong Kong face the system
+   * has. The order of the CJK names is the order of preference for Traditional
+   * Chinese as it is set in Hong Kong - PingFang HK before PingFang TC, Noto
+   * before the Windows default - so a stop name is never rendered in Simplified
+   * glyph forms by a font that happens to be installed first.
+   */
+  --font-sans:
+    "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang HK",
+    "PingFang TC", "Noto Sans CJK HK", "Noto Sans HK", "Microsoft JhengHei", "Hiragino Sans CNS",
+    "Source Han Sans HK", sans-serif;
 
   /* minikyu's radius ramp, derived from one base value. */
   --radius-sm: calc(var(--radius) - 4px);
@@ -168,6 +217,24 @@
   --duration-press: 110ms;
   --duration-state: 190ms;
   --duration-reveal: 280ms;
+  /*
+   * The digit roll is the one motion the eye is meant to follow rather than
+   * merely notice, so it runs long by this app's standards - at state speed a
+   * countdown ticking down looked like a flicker, not a roll.
+   */
+  --duration-roll: 480ms;
+
+  /*
+   * The same three values under the names Tailwind's `duration-*` utilities
+   * look for. Without these the classes matched nothing and every transition
+   * in the app quietly ran at the framework default instead of the scale
+   * above - which is why a pill that was meant to travel looked like it
+   * simply appeared somewhere else.
+   */
+  --transition-duration-press: 110ms;
+  --transition-duration-state: 190ms;
+  --transition-duration-reveal: 280ms;
+  --transition-duration-roll: 480ms;
 
   --shadow-card: var(--shadow-card);
 }
@@ -190,17 +257,39 @@
   html {
     background: var(--background);
     -webkit-tap-highlight-color: transparent;
+    /* Safari on iOS inflates text in landscape unless told not to, which on a
+       list of countdowns means the column of numbers changes width with the
+       phone's orientation. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     margin: 0;
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
+    /* Both halves of the same instruction: WebKit and Firefox-on-macOS each
+       have their own name for it, and with only the first the app rendered
+       heavier in one browser than the other. */
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Chinese wraps between any two characters, so the only thing keeping a
+       line from starting on a comma or a closing bracket is this. Notices are
+       whole paragraphs of it. */
+    line-break: strict;
+    /* Latin has the opposite problem - a stop name breaking mid-word - and
+       this keeps a long one inside its row rather than through the edge. */
+    overflow-wrap: break-word;
     overscroll-behavior-y: none;
   }
-  /* countdowns must never reflow as digits change */
+  /* Countdowns must never reflow as digits change: tabular figures for the
+     width, lining figures so they sit on the cap line beside the label, and no
+     tracking, because a tightened container would undo the even column that
+     tabular figures exist to give. */
   .tnum {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings:
+      "tnum" 1,
+      "lnum" 1;
+    letter-spacing: 0;
   }
 }
 
@@ -215,28 +304,83 @@
 }
 
 @keyframes mb-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @keyframes mb-rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes mb-page-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes mb-page-wait {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/*
+ * The sweep the shimmer placeholders ride on. It was missing, so every skeleton
+ * in the app sat as a static gradient - a "loading" state that never moved is
+ * indistinguishable from a box that failed to fill.
+ */
+/*
+ * Something small arriving in place - a tag on a row, a chip taking over the
+ * space a countdown was using. It springs in so the row reads as having gained
+ * something, rather than as having been redrawn behind the rider's back.
+ */
+@keyframes mb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mb-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes mb-flash {
-  from { background: color-mix(in srgb, var(--primary) 16%, transparent); }
-  to { background: transparent; }
+  from {
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+  to {
+    background: transparent;
+  }
 }
 
 @layer components {
@@ -330,10 +474,60 @@
   .mb-modal[data-open="true"] .mb-sheet {
     transform: none;
   }
+
+  /*
+   * A panel docked to an edge of the content rather than opened over the page:
+   * the ride band at the foot of the stop list. Same both-ways trick as the
+   * sheet - it rises from the edge it is docked to and falls back to it, so
+   * clearing a ride reads as putting the band down rather than as the list
+   * jumping. `visibility` flips only after the fall, so a band on its way out
+   * cannot take a tap meant for the row behind it.
+   */
+  .mb-dock {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.9rem) scale(0.98);
+    transition:
+      opacity var(--duration-reveal) var(--ease-out),
+      transform var(--duration-reveal) var(--ease-spring),
+      visibility 0s linear var(--duration-reveal);
+  }
+  .mb-dock[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity var(--duration-reveal) var(--ease-out),
+      transform var(--duration-reveal) var(--ease-spring),
+      visibility 0s linear 0s;
+  }
+
+  .mb-pop {
+    animation: mb-pop var(--duration-reveal) var(--ease-spring) both;
+  }
   @media (min-width: 40rem) {
     .mb-sheet {
       transform: translateY(10px) scale(0.97);
     }
+  }
+
+  /*
+   * A theme change is drawn as one circle wiping across the screen, from the
+   * control that asked for it. The browser's own cross-fade would run beneath
+   * that wipe and show through it, so it is turned off for the length of the
+   * swap - and only then, so any other view transition keeps its default.
+   */
+  :root.mb-theme-swap::view-transition-old(root),
+  :root.mb-theme-swap::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  :root.mb-theme-swap::view-transition-old(root) {
+    /* The old theme stays put while the new one is drawn over it. */
+    z-index: 0;
+  }
+  :root.mb-theme-swap::view-transition-new(root) {
+    z-index: 1;
   }
 
   /* Set while a screen holds itself to the window; see `Page`'s `fill`. */
@@ -343,6 +537,16 @@
       height: 100%;
       overflow: hidden;
     }
+  }
+
+  /*
+   * Set while something owns the whole window - the route map opened out. At
+   * every width, unlike `mb-fill`: a phone is where a map is opened out most.
+   */
+  html.mb-locked,
+  html.mb-locked body {
+    height: 100%;
+    overflow: hidden;
   }
 
   /*

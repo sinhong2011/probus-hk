@@ -15,6 +15,15 @@ export default defineConfig({
 
   use: {
     baseURL: "http://localhost:4173",
+    /*
+     * The built app ships a service worker that answers arrival requests
+     * network-first, and a service worker's fetches are not page-routed - so
+     * whenever it happened to claim the page before the first poll, the stubs
+     * were bypassed, the real network was unreachable, and a screen of live
+     * countdowns turned into 暫無班次. That is what made every ETA assertion
+     * flaky. The worker itself is exercised in pwa.spec.ts, which opts back in.
+     */
+    serviceWorkers: "block",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     locale: "zh-HK",

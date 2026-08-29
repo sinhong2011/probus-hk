@@ -1,11 +1,46 @@
 import { For, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import { SlidingPill } from "./SlidingPill";
+import type { IconProps } from "./Icons";
+import type { Bilingual } from "~/data/types";
+import { pick, stopCode, type Lang } from "~/lib/i18n";
+
+/**
+ * The pole code printed on the stop itself - "WT916".
+ *
+ * Stop lists used to carry the name twice, once in each language, which cost a
+ * line per row to say something the rider already knew. What the second line
+ * was actually good for is telling two poles of the same name apart, and the
+ * code does that in five characters: it is the one on the flag you are looking
+ * for, and it is what a rider types when they know exactly which stop they
+ * mean.
+ */
+export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class?: string }) {
+  // The code is appended to both languages, but only one of them is certain to
+  // be present for every operator's data.
+  const code = () => stopCode(pick(props.name, props.lang)) ?? stopCode(pick(props.name, "en"));
+
+  return (
+    <Show when={code()}>
+      {(value) => (
+        <span
+          class={[
+            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.69rem] font-bold tracking-[0.06em] text-faint-foreground",
+            props.class ?? "",
+          ]}
+        >
+          {value()}
+        </span>
+      )}
+    </Show>
+  );
+}
 
 /** Small-caps section heading used down the whole app. */
 export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Element }) {
   return (
     <div class="flex items-baseline justify-between">
-      <span class="text-[0.63rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
+      <span class="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
         {props.children}
       </span>
       <Show when={props.trailing}>{props.trailing}</Show>
@@ -51,13 +86,28 @@ export function Hairline() {
   return <div class="ml-3.5 h-px bg-border" />;
 }
 
-export function Chip(props: { children: JSX.Element; tone?: "plain" | "accent" }) {
+export function Chip(props: {
+  children: JSX.Element;
+  tone?: "plain" | "accent" | "warn";
+  /** For the flex behaviour of the row it sits in, e.g. `shrink-0`. */
+  class?: string;
+}) {
   return (
     <span
-      class={["inline-flex h-[1.6rem] w-fit items-center gap-1.5 rounded-full px-2.5 text-[0.63rem] font-bold", {
-        "bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
-        "bg-primary-muted text-primary border border-primary-border": props.tone === "accent",
-      }]}
+      /* `whitespace-nowrap`, because the chip is a fixed height: a value that
+         wraps does not make the chip taller, it spills out of it. "52 m" broke
+         across two lines the moment a long stop name claimed the row. */
+      class={[
+        "inline-flex h-[1.6rem] w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[0.75rem] font-bold",
+        props.class ?? "",
+        {
+          "bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
+          "bg-primary-muted text-primary border border-primary-border": props.tone === "accent",
+          // The last bus of the night is the one piece of timetable that is
+          // urgent, and it shares its colour with an arrival that is imminent.
+          "bg-warning/12 text-warning border border-warning/25": props.tone === "warn",
+        },
+      ]}
     >
       {props.children}
     </span>
@@ -70,28 +120,94 @@ export function LivePill(props: { label: string }) {
     <span class="inline-flex items-center gap-[7px] rounded-full border border-primary-border bg-primary-muted py-[5px] pl-[9px] pr-[11px]">
       <span
         class="size-1.5 rounded-full bg-primary motion-safe:animate-[mb-pulse_2s_ease-in-out_infinite]"
-        style={{ "box-shadow": "0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)" }}
+        style={{
+          "box-shadow": "0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)",
+        }}
       />
-      <span class="text-[0.66rem] font-semibold text-primary">{props.label}</span>
+      <span class="text-[0.81rem] font-semibold text-primary">{props.label}</span>
     </span>
   );
 }
 
-/** Screen title block: large Chinese over a small roman subtitle. */
-export function ScreenTitle(props: { title: string; subtitle: string; trailing?: JSX.Element }) {
+/**
+ * The screen's own header: large Chinese over a small roman subtitle on a
+ * phone, and on a wide screen the toolbar the window has room for - title,
+ * context and the screen's controls on one line, held to the top while the
+ * list scrolls under it.
+ *
+ * The controls belong here rather than on a row of their own below: a desktop
+ * window is short and wide, and a second band of chips pushed the first card
+ * of every screen further down a window that already had height to spare.
+ */
+export function ScreenTitle(props: {
+  title: string;
+  /**
+   * A second line under the title, where it says something the title does not.
+   * Never the same words in the other language: the app is read in one language
+   * at a time, and printing both is a translation exercise, not a heading.
+   */
+  subtitle?: string;
+  /** Context for the screen - where you are, what is live - beside the title. */
+  trailing?: JSX.Element;
+  /**
+   * A row above the title, in practice the breadcrumb. It belongs inside the
+   * bar rather than above it: a pinned bar is pulled up over the page's top
+   * padding, and anything left sitting there is what it covers.
+   */
+  lead?: JSX.Element;
+  /** The screen's controls, right-aligned in the toolbar on a wide screen. */
+  controls?: JSX.Element;
+  /**
+   * Held to the top of a wide window while the page scrolls. Off inside a
+   * split screen, whose panes scroll on their own and whose left column is
+   * short enough that a pinned header would only crowd it.
+   */
+  pinned?: boolean;
+}) {
+  const pinned = () => props.pinned !== false;
+
   return (
-    <div class="flex items-end justify-between gap-4">
-      <div class="flex min-w-0 shrink-0 flex-col gap-[3px]">
-        <span class="text-[1.7rem] font-bold leading-[1.05] tracking-[-0.035em] text-foreground">
-          {props.title}
-        </span>
-        <span class="text-[0.75rem] font-semibold tracking-[0.02em] text-subtle-foreground">
-          {props.subtitle}
-        </span>
+    <div
+      class={[
+        "flex flex-col gap-3",
+        {
+          "lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:-mt-8 lg:border-b lg:border-border lg:px-8 lg:pb-4 lg:pt-8":
+            pinned(),
+        },
+      ]}
+      style={
+        pinned()
+          ? {
+              background: "color-mix(in srgb, var(--background) 88%, transparent)",
+              "backdrop-filter": "blur(14px)",
+              "-webkit-backdrop-filter": "blur(14px)",
+            }
+          : undefined
+      }
+    >
+      {props.lead}
+
+      <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+        <div class="flex items-end justify-between gap-4 lg:min-w-0 lg:items-baseline lg:justify-start lg:gap-3">
+          <div class="flex min-w-0 shrink-0 flex-col gap-[3px] lg:flex-row lg:items-baseline lg:gap-2.5">
+            <span class="text-[1.7rem] font-bold leading-[1.05] tracking-[-0.035em] text-foreground lg:text-[1.3rem]">
+              {props.title}
+            </span>
+            <Show when={props.subtitle}>
+              <span class="text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
+                {props.subtitle}
+              </span>
+            </Show>
+          </div>
+          <Show when={props.trailing}>
+            <div class="flex min-w-0 justify-end lg:pl-2">{props.trailing}</div>
+          </Show>
+        </div>
+
+        <Show when={props.controls}>
+          <div class="flex items-center gap-2 lg:shrink-0 lg:justify-end">{props.controls}</div>
+        </Show>
       </div>
-      <Show when={props.trailing}>
-        <div class="flex min-w-0 justify-end">{props.trailing}</div>
-      </Show>
     </div>
   );
 }
@@ -100,30 +216,74 @@ export function ScreenTitle(props: { title: string; subtitle: string; trailing?:
  * Segmented control. Kept local rather than pulled from a component library
  * because it is a plain single-choice control and this keeps the alpha
  * dependency off a high-traffic path.
+ *
+ * The chosen segment is a raised card on a sunken track, not a slightly
+ * different grey on a slightly different grey: on a white card in light mode
+ * the old pairing left the choice all but invisible. The track carries the one
+ * travelling pill the rest of the app uses, which needs the segments to be
+ * equal width - and a row of equal segments reads better anyway.
  */
 export function Segmented<T extends string | number>(props: {
   value: T;
-  options: { value: T; label: string }[];
-  onChange: (value: T) => void;
+  options: { value: T; label: string; Icon?: (p: IconProps) => JSX.Element }[];
+  onChange: (value: T, event: MouseEvent) => void;
   label: string;
+  /** Fully round, for a switch that rides in a header rather than a settings row. */
+  pill?: boolean;
+  /** Shorter and smaller, where the control is an aside to a heading. */
+  dense?: boolean;
+  /**
+   * Spread the choices across the width instead of sizing to their labels, for
+   * a control that is a block of its own rather than something in a row.
+   */
+  fill?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label={props.label} class="flex items-center gap-0.5 rounded-lg bg-background p-[3px]">
+    <div
+      role="radiogroup"
+      aria-label={props.label}
+      class={[
+        "relative flex items-center bg-secondary p-[3px]",
+        props.pill ? "rounded-full" : "rounded-lg",
+        { "w-full": Boolean(props.fill) },
+      ]}
+    >
+      <SlidingPill
+        active={props.value}
+        class={`inset-y-[3px] bg-card shadow-card ${props.pill ? "rounded-full" : "rounded-md"}`}
+      />
+
       <For each={props.options}>
-        {(option) => (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={props.value === option.value ? "true" : "false"}
-            onClick={() => props.onChange(option.value)}
-            class={["flex h-7 items-center justify-center rounded-lg px-2.5 text-[0.72rem] transition-colors duration-150", {
-              "bg-secondary font-bold text-foreground": props.value === option.value,
-              "font-semibold text-subtle-foreground": props.value !== option.value,
-            }]}
-          >
-            {option.label}
-          </button>
-        )}
+        {(option) => {
+          const on = () => props.value === option.value;
+          return (
+            <button
+              type="button"
+              role="radio"
+              data-active={on() ? "true" : "false"}
+              aria-checked={on() ? "true" : "false"}
+              aria-label={option.Icon ? option.label : undefined}
+              title={option.Icon ? option.label : undefined}
+              onClick={(event) => props.onChange(option.value, event)}
+              class={[
+                // `whitespace-nowrap`: a two-character label broken across two
+                // lines is not a shorter label, it is a broken one.
+                "mb-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
+                props.fill ? "grow basis-0" : "shrink-0",
+                props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
+                props.pill ? "rounded-full" : "rounded-md",
+                {
+                  "font-bold text-foreground": on(),
+                  "font-semibold text-subtle-foreground": !on(),
+                },
+              ]}
+            >
+              <Show when={option.Icon} fallback={option.label}>
+                {(Icon) => Icon()({ size: 14 })}
+              </Show>
+            </button>
+          );
+        }}
       </For>
     </div>
   );
@@ -137,13 +297,19 @@ export function Toggle(props: { checked: boolean; onChange: (v: boolean) => void
       aria-checked={props.checked ? "true" : "false"}
       aria-label={props.label}
       onClick={() => props.onChange(!props.checked)}
-      class={["flex h-[1.7rem] w-[2.9rem] items-center rounded-full p-[2.5px] transition-colors duration-200", { "bg-primary": props.checked, "bg-secondary": !props.checked }]}
+      class={[
+        "flex h-[1.7rem] w-[2.9rem] items-center rounded-full p-[2.5px] transition-colors duration-200",
+        { "bg-primary": props.checked, "bg-secondary": !props.checked },
+      ]}
     >
       <span
-        class={["size-[1.35rem] rounded-full transition-transform duration-200 ease-[cubic-bezier(0.34,1.4,0.64,1)]", {
-          "translate-x-[1.2rem] bg-primary-foreground": props.checked,
-          "bg-background": !props.checked,
-        }]}
+        class={[
+          "size-[1.35rem] rounded-full transition-transform duration-200 ease-[cubic-bezier(0.34,1.4,0.64,1)]",
+          {
+            "translate-x-[1.2rem] bg-primary-foreground": props.checked,
+            "bg-background": !props.checked,
+          },
+        ]}
       />
     </button>
   );
@@ -152,10 +318,12 @@ export function Toggle(props: { checked: boolean; onChange: (v: boolean) => void
 /** Empty and error states share this centred, quiet treatment. */
 export function EmptyState(props: { title: string; hint?: string; action?: JSX.Element }) {
   return (
-    <div class="flex flex-col items-center gap-2.5 px-10 py-16 text-center">
-      <span class="text-[0.85rem] font-bold text-muted-foreground">{props.title}</span>
+    <div class="flex flex-col items-center gap-2.5 px-10 py-16 text-center lg:py-24">
+      <span class="text-[0.94rem] font-bold text-muted-foreground">{props.title}</span>
       <Show when={props.hint}>
-        <span class="text-[0.72rem] font-medium leading-relaxed text-subtle-foreground">{props.hint}</span>
+        <span class="text-[0.81rem] font-medium leading-relaxed text-subtle-foreground">
+          {props.hint}
+        </span>
       </Show>
       <Show when={props.action}>
         <div class="pt-2">{props.action}</div>

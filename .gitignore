@@ -11,3 +11,6 @@ src/paraglide/
 # Design canvases: the seeded pages embed a ~2 MB editor payload each, and the
 # published artifact is the shareable copy.
 design/
+
+# Locally generated development certificate; see `npm run cert`.
+.certs/

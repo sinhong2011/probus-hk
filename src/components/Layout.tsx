@@ -15,7 +15,7 @@ import type { JSX } from "@solidjs/web";
  */
 
 /** Gutter and column widths, in one place so nothing drifts. */
-const GUTTER = "px-5 lg:px-8";
+const GUTTER = "px-3.5 lg:px-8";
 /*
  * One row width across the whole app: `content` matches the list column inside
  * a split screen exactly, so a bookmark row, a search result and a stop row are
@@ -100,7 +100,7 @@ export function Section(props: { children: JSX.Element; class?: string; tight?: 
  * header, or a control docked to the bottom of a phone screen.
  */
 export function Bleed(props: { children: JSX.Element; class?: string }) {
-  return <div class={`-mx-5 lg:-mx-8 ${props.class ?? ""}`}>{props.children}</div>;
+  return <div class={`-mx-3.5 lg:-mx-8 ${props.class ?? ""}`}>{props.children}</div>;
 }
 
 /**

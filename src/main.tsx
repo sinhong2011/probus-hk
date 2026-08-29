@@ -1,14 +1,4 @@
 import { render } from "@solidjs/web";
-/*
- * IBM Plex Sans, weight axis only, self-hosted through Fontsource.
- *
- * The whole app is a number you read in a glance, and Plex is the grotesque
- * whose figures survive that: its 1 carries a flag and a foot, so 11 cannot be
- * mistaken for anything else at a bus stop. Google Fonts would cost a second
- * round trip to another origin before any text could paint, and would leave the
- * app dependent on that origin to look right offline.
- */
-import "@fontsource-variable/ibm-plex-sans/wght.css";
 import "./app.css";
 import { App } from "./app";
 

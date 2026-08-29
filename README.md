@@ -77,6 +77,12 @@ bun run messages
 - **Offline** — a Serwist service worker precaches the shell, holds the route
   database, and serves arrival times network-first with a short grace window so
   a tunnel does not blank the screen.
+- **Reminders** — an arrival alert watches the feed and says when the bus is
+  nearly at your stop; an alight reminder watches where you are and says when
+  the stop you are riding to is close. Both go to a system notification and to
+  an in-app banner, because neither channel is available everywhere. They live
+  entirely in the browser: nothing is registered with a push service, so a
+  reminder needs the tab to still be open.
 - **Timetables** — where an operator publishes no live arrivals, or has stopped
   running for the night, departures are projected from the published frequency
   bands and labelled as estimates rather than passed off as live.

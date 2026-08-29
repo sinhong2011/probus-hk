@@ -1,3 +1,7 @@
+import { For } from "solid-js";
+import { Card, Hairline } from "./Chrome";
+import { CardColumnItem } from "./Layout";
+
 /**
  * A placeholder in the shape of the thing that is coming.
  *
@@ -22,5 +26,42 @@ export function EtaSkeleton(props: { size?: "sm" | "md" | "lg" }) {
       <Skeleton width="2.6rem" height={height()} />
       <Skeleton width="1.6rem" height="0.5rem" />
     </div>
+  );
+}
+
+/**
+ * The wait before the nearby list lands, in the shape of the cards that replace
+ * it: a stop's name over the routes calling there. Three of them, because that
+ * is about a screenful on a phone - fewer read as a short list that then grew.
+ */
+export function StopListSkeleton() {
+  return (
+    <For each={[0, 1, 2]}>
+      {() => (
+        <CardColumnItem>
+          <Card>
+            <div class="flex items-center gap-2.5 px-3.5 pb-2.5 pt-3">
+              <Skeleton width="9rem" height="0.94rem" />
+            </div>
+            <Hairline />
+            <For each={[0, 1]}>
+              {(row) => (
+                <>
+                  {row > 0 ? <Hairline /> : null}
+                  <div class="flex items-center gap-3 px-3.5 py-2.5">
+                    <Skeleton width="2.6rem" height="1.6rem" />
+                    <div class="flex grow flex-col gap-1.5">
+                      <Skeleton width="7rem" height="0.88rem" />
+                      <Skeleton width="4.5rem" height="0.75rem" />
+                    </div>
+                    <EtaSkeleton size="sm" />
+                  </div>
+                </>
+              )}
+            </For>
+          </Card>
+        </CardColumnItem>
+      )}
+    </For>
   );
 }
