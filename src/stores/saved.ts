@@ -61,6 +61,15 @@ export const saved = {
     });
   },
 
+  /** Every group a bookmark has been put in, in the order they were made. */
+  groups(): string[] {
+    const seen: string[] = [];
+    for (const item of items()) {
+      if (item.group && !seen.includes(item.group)) seen.push(item.group);
+    }
+    return seen;
+  },
+
   /** Grouped for display, in insertion order, ungrouped last. */
   grouped(): { group: string; items: SavedItem[] }[] {
     const buckets = new Map<string, SavedItem[]>();
