@@ -61,11 +61,13 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  deploy-resolve:
-    # The deploy runs an older Bun, cannot read the v2 lockfile, and resolves
-    # the tree from the ranges instead. That is how v0.2.0 built here and broke
-    # there, so it is worth building the tree the deploy will actually get.
-    name: the tree the deploy will get
+  fresh-resolve:
+    # Vercel is held to the lockfile now, but the README offers one-click
+    # deploys on two other hosts, and neither can be told which Bun to run. A
+    # host that cannot read the lockfile resolves the tree from the ranges
+    # instead - which is exactly how v0.2.0 built here and broke in production.
+    # So one job builds with no lockfile at all, and the ranges have to hold.
+    name: the tree a host without our lockfile would get
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
