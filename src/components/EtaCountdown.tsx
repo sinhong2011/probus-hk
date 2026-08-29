@@ -88,12 +88,13 @@ export function EtaCountdown(props: {
       .filter((entry) => entry.state.kind !== "gone");
 
     /*
-     * The cap says how much of the stack is worth reading, not which part of
-     * it: cut at the limit and the one arrival the card is about disappears
-     * the moment the two in front of it are out of reach. The ceiling keeps a
-     * long walk from growing the card without end.
+     * The cap counts the arrivals still worth reading, so the ones out of
+     * reach are added on top of it: cut at the limit alone and the one arrival
+     * the card is about disappears the moment the two in front of it are out
+     * of reach. The ceiling keeps a long walk from growing the card without
+     * end.
      */
-    return live.slice(0, Math.min(5, Math.max(props.limit ?? 3, missed() + 2)));
+    return live.slice(0, Math.min(5, missed() + (props.limit ?? 3)));
   });
 
   /**

@@ -1,5 +1,5 @@
 import { createEffect, onCleanup } from "solid-js";
-import type { JSX } from "@solidjs/web";
+import { Portal, type JSX } from "@solidjs/web";
 import { CloseIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
 
@@ -13,6 +13,14 @@ import { t, type Lang } from "~/lib/i18n";
  * It stays mounted so the close can animate, which means the closed dialog has
  * to be genuinely out of reach: `inert` for focus and pointers, and a delayed
  * `visibility` flip so it stops taking hits the moment the fade ends.
+ *
+ * Rendered under `document.body` rather than where it is used. A dialog is
+ * opened from deep inside a page - a header, a scrolling stop list - and
+ * `position: fixed` is only fixed to the viewport until an ancestor gets a
+ * transform, a filter or a scrolling touch region, after which it is fixed to
+ * that ancestor instead. iOS Safari makes every one of those a containing
+ * block, and the sheet came up underneath the page content it was meant to
+ * cover. The portal keeps the reactive scope and disposes with the owner.
  */
 export function Modal(props: {
   open: boolean;
@@ -66,44 +74,46 @@ export function Modal(props: {
   );
 
   return (
-    <div
-      class="mb-modal fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
-      data-open={props.open ? "true" : "false"}
-      inert={!props.open}
-    >
+    <Portal>
       <div
-        class="absolute inset-0 bg-black/55"
-        style={{ "backdrop-filter": "blur(2px)", "-webkit-backdrop-filter": "blur(2px)" }}
-        onClick={props.onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        ref={sheet}
-        role="dialog"
-        aria-modal="true"
-        aria-label={props.title}
-        tabindex="-1"
-        class="mb-sheet relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-card outline-none sm:max-h-[80dvh] sm:max-w-[32rem] sm:rounded-3xl"
+        class="mb-modal fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
+        data-open={props.open ? "true" : "false"}
+        inert={!props.open}
       >
-        <header class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
-            {props.title}
-          </span>
-          <button
-            type="button"
-            aria-label={t("close", props.lang)}
-            onClick={props.onClose}
-            class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
-          >
-            <CloseIcon size={14} />
-          </button>
-        </header>
+        <div
+          class="absolute inset-0 bg-black/55"
+          style={{ "backdrop-filter": "blur(2px)", "-webkit-backdrop-filter": "blur(2px)" }}
+          onClick={props.onClose}
+          aria-hidden="true"
+        />
 
-        {/* Contained, so flicking past the end of the sheet does not start
+        <div
+          ref={sheet}
+          role="dialog"
+          aria-modal="true"
+          aria-label={props.title}
+          tabindex="-1"
+          class="mb-sheet relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-card outline-none sm:max-h-[80dvh] sm:max-w-[32rem] sm:rounded-3xl"
+        >
+          <header class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
+              {props.title}
+            </span>
+            <button
+              type="button"
+              aria-label={t("close", props.lang)}
+              onClick={props.onClose}
+              class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+            >
+              <CloseIcon size={14} />
+            </button>
+          </header>
+
+          {/* Contained, so flicking past the end of the sheet does not start
             scrolling the page underneath it. */}
-        <div class="mb-scroll grow overscroll-contain px-4 py-4">{props.children}</div>
+          <div class="mb-scroll grow overscroll-contain px-4 py-4">{props.children}</div>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }

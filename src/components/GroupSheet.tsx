@@ -145,13 +145,15 @@ export function GroupSheet(props: {
             type="submit"
             aria-label={t("newGroup", props.lang)}
             disabled={draft().trim() === ""}
-            /* The key lifts to the accent the moment there is a name to add,
-               so the field says what the button is for before it is used. */
+            /* The key takes the accent the moment there is a name to add, so
+               the field says what the button is for before it is used - but
+               tinted, not filled: the filled button on this sheet is the one
+               that saves, and a second one made adding a name look like it. */
             class={[
               "mb-press flex size-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-state",
               {
                 "border-border bg-card text-faint-foreground": draft().trim() === "",
-                "border-primary bg-primary text-primary-foreground": draft().trim() !== "",
+                "border-primary-border bg-primary-muted text-primary": draft().trim() !== "",
               },
             ]}
           >
@@ -202,7 +204,10 @@ function Chip(props: {
       class={[
         "mb-press flex h-8 max-w-full items-center gap-1.5 rounded-full border px-3 text-[0.81rem] transition-colors duration-state",
         {
-          "border-primary bg-primary font-bold text-primary-foreground": props.selected,
+          // Tinted rather than filled: the one solid block of accent on the
+          // sheet is the button that saves, and a filled chip beside it was
+          // competing for the same glance while deciding nothing.
+          "border-primary-border bg-primary-muted font-bold text-primary": props.selected,
           "border-dashed border-border bg-transparent font-semibold text-subtle-foreground":
             !props.selected && !!props.ghost,
           "border-transparent bg-secondary font-semibold text-muted-foreground":
