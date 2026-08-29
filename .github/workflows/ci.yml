@@ -34,9 +34,9 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # Formatting is left out on purpose: the tree is not formatted yet, and a
-      # gate nothing can pass teaches everyone to ignore the gate.
-      - run: bun run check --no-fmt
+      # Format, lint and types. What the formatter is not to touch is listed
+      # in .prettierignore, which is where oxfmt looks for it.
+      - run: bun run check
 
       - run: bun run test
 
