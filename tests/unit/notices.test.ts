@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // happy-dom's DOMParser does not implement text/xml; jsdom does.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchNotices, routesMentioned } from "~/data/notices";
+import { fetchNotices, parseReferenceDate, routesMentioned } from "~/data/notices";
 
 /** Shaped exactly like the Transport Department's feed, Kangxi quirks and all. */
 function feed(messages: string): string {
@@ -25,6 +25,7 @@ const ONE_LINER = `
 <message>
   <msgID>258400</msgID>
   <CurrentStatus>3</CurrentStatus>
+  <ReferenceDate> 2026/8/28 下午 07:48:10</ReferenceDate>
   <ChinText>因交通意外，龍翔道近廣播道的行車線現已解封。</ChinText>
   <EngText>Lung Cheung Road near Broadcast Drive has reopened.</EngText>
 </message>`;
@@ -98,6 +99,35 @@ describe("fetchNotices", () => {
   it("raises when the feed is unavailable, so the screen can offer a retry", async () => {
     stub("", false);
     await expect(fetchNotices()).rejects.toThrow();
+  });
+});
+
+describe("parseReferenceDate", () => {
+  it("reads the feed's own format, meridiem and all", () => {
+    // " 2026/8/28 下午 07:48:10" is Hong Kong wall-clock: 19:48 at UTC+8.
+    expect(parseReferenceDate(" 2026/8/28 下午 07:48:10")?.toISOString()).toBe(
+      "2026-08-28T11:48:10.000Z",
+    );
+  });
+
+  it("puts midnight and noon on the right side of the clock", () => {
+    expect(parseReferenceDate("2026/1/2 上午 12:05:00")?.toISOString()).toBe(
+      "2026-01-01T16:05:00.000Z",
+    );
+    expect(parseReferenceDate("2026/1/2 下午 12:05:00")?.toISOString()).toBe(
+      "2026-01-02T04:05:00.000Z",
+    );
+  });
+
+  it("returns null rather than an invalid date when the field is missing", () => {
+    expect(parseReferenceDate("")).toBeNull();
+    expect(parseReferenceDate("not a date")).toBeNull();
+  });
+
+  it("is carried onto the notice, so the screen can show it", async () => {
+    stub(feed(ONE_LINER));
+    const [notice] = await fetchNotices();
+    expect(notice?.at?.toISOString()).toBe("2026-08-28T11:48:10.000Z");
   });
 });
 

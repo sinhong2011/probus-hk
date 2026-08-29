@@ -2,6 +2,8 @@ import type { Company, KeyedRoute, RouteDb, StopEntry } from "./types";
 import type { LatLng } from "~/lib/geo";
 import { boundingBox, distanceM } from "~/lib/geo";
 import { operatorRank } from "~/lib/operators";
+import { stopCode, stripStopCode } from "~/lib/i18n";
+import { openDB, type IDBPDatabase } from "idb";
 
 const DB_URL = "https://data.hkbus.app/routeFareList.min.json";
 const STORE_KEY = "routeDb";
@@ -15,34 +17,35 @@ export interface CachedDb {
   fetchedAt: number;
 }
 
-function openIdb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains("kv")) req.result.createObjectStore("kv");
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
+/**
+ * One store, one key, holding the whole route database.
+ *
+ * `idb` is a promise wrapper over the native API and nothing more - the same
+ * transactions and the same structured clone, without the event plumbing that
+ * a hand-rolled `openIdb`/`get`/`put` had to spell out here. The connection is
+ * also opened once and shared, where every call used to open its own.
+ */
+type Schema = { kv: { key: string; value: CachedDb } };
 
-async function idbGet<T>(key: string): Promise<T | undefined> {
-  const db = await openIdb();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction("kv", "readonly").objectStore("kv").get(key);
-    req.onsuccess = () => resolve(req.result as T | undefined);
-    req.onerror = () => reject(req.error);
-  });
-}
+let connection: Promise<IDBPDatabase<Schema>> | undefined;
 
-async function idbSet(key: string, value: unknown): Promise<void> {
-  const db = await openIdb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("kv", "readwrite");
-    tx.objectStore("kv").put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+function idb(): Promise<IDBPDatabase<Schema>> {
+  connection ??= openDB<Schema>(IDB_NAME, IDB_VERSION, {
+    upgrade: (database) => {
+      if (!database.objectStoreNames.contains("kv")) database.createObjectStore("kv");
+    },
+    // A connection the browser has closed under us - another tab upgrading, or
+    // storage being cleared - must not be handed out again.
+    terminated: () => {
+      connection = undefined;
+    },
+  }).catch((error: unknown) => {
+    // Nor may a refusal be remembered: a private window can decline the first
+    // open of a session and allow a later one.
+    connection = undefined;
+    throw error;
   });
+  return connection;
 }
 
 /**
@@ -51,7 +54,9 @@ async function idbSet(key: string, value: unknown): Promise<void> {
  * nothing, and a failure leaves the cached copy in place.
  */
 export async function loadRouteDb(): Promise<CachedDb> {
-  const cached = await idbGet<CachedDb>(STORE_KEY).catch(() => undefined);
+  const cached = await idb()
+    .then((store) => store.get("kv", STORE_KEY))
+    .catch(() => undefined);
 
   if (cached) {
     void revalidate(cached).catch(() => {});
@@ -73,7 +78,7 @@ async function download(etag: string | null): Promise<CachedDb> {
   });
 
   if (res.status === 304) {
-    const cached = await idbGet<CachedDb>(STORE_KEY);
+    const cached = await (await idb()).get("kv", STORE_KEY);
     if (cached) return cached;
     // Cache vanished between the request and now; refetch unconditionally.
     return download(null);
@@ -82,9 +87,11 @@ async function download(etag: string | null): Promise<CachedDb> {
 
   const db = (await res.json()) as RouteDb;
   const next: CachedDb = { db, etag: res.headers.get("etag"), fetchedAt: Date.now() };
-  await idbSet(STORE_KEY, next).catch(() => {
-    // Storage full or blocked (private mode): run from memory this session.
-  });
+  await idb()
+    .then((store) => store.put("kv", next, STORE_KEY))
+    .catch(() => {
+      // Storage full or blocked (private mode): run from memory this session.
+    });
   return next;
 }
 
@@ -301,47 +308,63 @@ export interface StopMatch {
 }
 
 /**
- * Stops whose name contains the query, in either language.
+ * Stops whose name contains the query, in either language - or whose pole code
+ * is what was typed.
  *
- * Ranked by how many routes call there: typing "彌敦道" should surface the
- * major interchange before a quiet kerb of the same name.
+ * Ranked by how well the name matches and then by how many routes call there:
+ * typing "彌敦道" should surface the major interchange before a quiet kerb of
+ * the same name.
  */
 export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
 
   const index = stopIndex(db);
-  const out: StopMatch[] = [];
+  const out: (StopMatch & { rank: number })[] = [];
 
   for (const stopId in db.stopList) {
     const stop = db.stopList[stopId];
     if (!stop) continue;
-    if (!stop.name.zh.toLowerCase().includes(q) && !stop.name.en.toLowerCase().includes(q)) {
-      continue;
-    }
+
+    /*
+     * The pole code - the "(WT916)" on the end of a KMB name - comes off the
+     * name and is matched on its own. It is the only thing on a stop flag that
+     * belongs to that pole and no other, so a rider who types it means exactly
+     * one stop; left inside the name it also spoiled the exact and prefix
+     * tests below, because no displayed name ever ends in a bracketed code.
+     */
+    const zh = stripStopCode(stop.name.zh).toLowerCase();
+    const en = stripStopCode(stop.name.en).toLowerCase();
+    const code = (stopCode(stop.name.en) ?? stopCode(stop.name.zh) ?? "").toLowerCase();
+
+    if (!zh.includes(q) && !en.includes(q) && !(code !== "" && code.includes(q))) continue;
+
     const routeCount = index.get(stopId)?.length ?? 0;
     if (routeCount === 0) continue;
-    out.push({ stopId, stop, routeCount });
+
+    /*
+     * How well the name matches comes first, and only then how busy the stop
+     * is. Ranking by route count alone buried every railway station: searching
+     * 金鐘 returned six bus stops whose names contain it - 28 to 66 routes each
+     * - and dropped Admiralty station itself, which is called exactly that and
+     * is served by four lines.
+     */
+    const rank =
+      code === q || zh === q || en === q
+        ? 0
+        : code.startsWith(q) || zh.startsWith(q) || en.startsWith(q)
+          ? 1
+          : 2;
+
+    out.push({ stopId, stop, routeCount, rank });
   }
 
-  /*
-   * How well the name matches comes first, and only then how busy the stop is.
-   * Ranking by route count alone buried every railway station: searching 金鐘
-   * returned six bus stops whose names contain it - 28 to 66 routes each - and
-   * dropped Admiralty station itself, which is called exactly that and is
-   * served by four lines.
-   */
-  const rank = (stop: StopEntry) => {
-    const zh = stop.name.zh.toLowerCase();
-    const en = stop.name.en.toLowerCase();
-    if (zh === q || en === q) return 0;
-    if (zh.startsWith(q) || en.startsWith(q)) return 1;
-    return 2;
-  };
-
+  // Scored in the pass above rather than inside the comparator, which would
+  // have stripped and lowercased every name again on every comparison.
   return out
-    .sort((a, b) => rank(a.stop) - rank(b.stop) || b.routeCount - a.routeCount)
-    .slice(0, limit);
+    .sort((a, b) => a.rank - b.rank || b.routeCount - a.routeCount)
+    .slice(0, limit)
+    .map(({ stopId, stop, routeCount }) => ({ stopId, stop, routeCount }));
 }
 
 /** Routes whose origin or destination contains the query, in either language. */

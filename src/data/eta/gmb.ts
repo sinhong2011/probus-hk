@@ -1,4 +1,5 @@
-import type { Eta } from "~/data/types";
+import type { Eta, KeyedRoute } from "~/data/types";
+import type { EtaTable } from "~/data/vehicles";
 import { cachedJson, parseHkTime } from "./http";
 import type { EtaQuery } from "./types";
 
@@ -48,7 +49,9 @@ export async function fetchGmbEta(q: EtaQuery): Promise<Eta[]> {
           : undefined;
       // GMB flags timetable-derived entries as "未開出" / "Scheduled".
       const scheduled = row.remarks_en === "Scheduled";
-      return [{ at, source: scheduled ? ("scheduled" as const) : ("live" as const), co: q.co, remark }];
+      return [
+        { at, source: scheduled ? ("scheduled" as const) : ("live" as const), co: q.co, remark },
+      ];
     });
 }
 
@@ -63,9 +66,7 @@ interface GmbStopRow {
  * Every route calling at one minibus stop, in a single request - what the
  * nearby and stop screens want, instead of one call per route.
  */
-export async function fetchGmbStopEta(
-  stopId: string,
-): Promise<Map<string, Eta[]>> {
+export async function fetchGmbStopEta(stopId: string): Promise<Map<string, Eta[]>> {
   const body = await cachedJson<{ data?: GmbStopRow[] }>(
     `${BASE}/eta/stop/${encodeURIComponent(stopId)}`,
   ).catch(() => null);
@@ -87,4 +88,37 @@ export async function fetchGmbStopEta(
     out.set(`${row.route_id}/${row.route_seq}`, etas);
   }
   return out;
+}
+
+/**
+ * Every stop on one direction of a minibus route, in a single request.
+ *
+ * The route-level form of the same feed the row above uses. Working out where
+ * the buses are needs the whole column of arrivals rather than one stop's, and
+ * GMB will hand it over for the price of one call - so a minibus route gets the
+ * same picture as a KMB one.
+ */
+export async function fetchGmbRouteEtaTable(route: KeyedRoute): Promise<EtaTable> {
+  const routeId = route.gtfsId;
+  if (!routeId) return new Map();
+
+  const seq = routeSeq(route.bound.gmb);
+  const body = await cachedJson<{ data?: GmbStopRow[] }>(
+    `${BASE}/eta/route/${routeId}/${seq}`,
+  ).catch(() => null);
+
+  const table: EtaTable = new Map();
+  for (const row of body?.data ?? []) {
+    if (typeof row.stop_seq !== "number") continue;
+    const etas = (row.eta ?? []).flatMap((e) => {
+      const at = parseHkTime(e.timestamp);
+      if (!at) return [];
+      const scheduled = e.remarks_en === "Scheduled";
+      return [
+        { at, source: scheduled ? ("scheduled" as const) : ("live" as const), co: "gmb" as const },
+      ];
+    });
+    if (etas.length > 0) table.set(row.stop_seq, etas);
+  }
+  return table;
 }

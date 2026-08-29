@@ -109,6 +109,18 @@ describe("operator-based categories", () => {
     expect(match("minibus", kmb1)).toBe(false);
   });
 
+  it("puts a Citybus route, joint ones included, under Citybus", () => {
+    expect(match("citybus", fake({ co: ["ctb"] }))).toBe(true);
+    expect(match("citybus", fake({ co: ["kmb", "ctb"] }))).toBe(true);
+    expect(match("citybus", kmb1)).toBe(false);
+  });
+
+  it("puts a KMB route under KMB and an NLB one under NLB", () => {
+    expect(match("kmb", kmb1)).toBe(true);
+    expect(match("kmb", nlb1)).toBe(false);
+    expect(match("nlb", nlb1)).toBe(true);
+  });
+
   it("puts light rail under rail", () => {
     expect(match("rail", lr505)).toBe(true);
   });

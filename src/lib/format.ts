@@ -1,4 +1,4 @@
-import type { Eta } from "~/data/types";
+import type { Bilingual, Eta } from "~/data/types";
 
 export type CountdownKind = "arriving" | "minutes" | "gone";
 
@@ -6,6 +6,28 @@ export interface Countdown {
   kind: CountdownKind;
   minutes: number;
   scheduled: boolean;
+  /** What the operator said about this departure, where it adds something. */
+  remark?: Bilingual;
+}
+
+/**
+ * Remarks the countdown already makes in its own shape.
+ *
+ * "原定班次" is what the tilde and the scheduled note mean, so printing it too
+ * is the same fact three times. Everything else an operator says - 最後班次,
+ * 延誤, 非實時定位 - is news, and was being parsed and then dropped.
+ */
+const ALREADY_SAID = /scheduled|原定/i;
+
+function newsworthy(remark: Bilingual | undefined): Bilingual | undefined {
+  if (!remark) return undefined;
+  const text = `${remark.zh} ${remark.en}`.trim();
+  return text && !ALREADY_SAID.test(text) ? remark : undefined;
+}
+
+/** Whether a remark is the operator saying this is the last one of the day. */
+export function isLastRun(remark: Bilingual): boolean {
+  return /last/i.test(remark.en) || /最後|尾班/.test(remark.zh);
 }
 
 /**
@@ -18,9 +40,30 @@ export function countdown(eta: Eta, now = Date.now()): Countdown {
   const minutes = Math.floor(deltaMs / 60_000);
   const scheduled = eta.source === "scheduled";
 
-  if (deltaMs < -30_000) return { kind: "gone", minutes, scheduled };
-  if (minutes < 1) return { kind: "arriving", minutes: 0, scheduled };
-  return { kind: "minutes", minutes, scheduled };
+  const remark = newsworthy(eta.remark);
+
+  if (deltaMs < -30_000) return { kind: "gone", minutes, scheduled, remark };
+  if (minutes < 1) return { kind: "arriving", minutes: 0, scheduled, remark };
+  return { kind: "minutes", minutes, scheduled, remark };
+}
+
+/**
+ * The one thing the operator said that is about the stop rather than about a
+ * single departure.
+ *
+ * "尾班" is a mark on one numeral and belongs beside it, at a width that never
+ * changes. A disruption - 「受阻於牛池灣」 - is a sentence, and beside a column
+ * of numbers it was cut to six characters with no way to read the rest. It is
+ * picked out here so a row can carry it next to the stop's own name, where
+ * there is room for it and something to tap.
+ */
+export function serviceNotice(etas: Eta[] | undefined, now = Date.now()): Bilingual | undefined {
+  for (const eta of etas ?? []) {
+    const state = countdown(eta, now);
+    if (state.kind === "gone" || !state.remark) continue;
+    if (!isLastRun(state.remark)) return state.remark;
+  }
+  return undefined;
 }
 
 /** "11 · 24" - the two arrivals after the one being counted down. */
@@ -29,6 +72,11 @@ export function followingMinutes(etas: Eta[], now = Date.now()): string {
     .slice(1)
     .map((e) => Math.max(0, Math.floor((e.at.getTime() - now) / 60_000)))
     .join(" · ");
+}
+
+/** "15:18", for a time this app worked out rather than one it was told. */
+export function clockTime(at: Date): string {
+  return at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export function formatFare(value: string | undefined | null): string | null {

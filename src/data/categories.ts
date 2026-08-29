@@ -22,6 +22,9 @@ export type CategoryId =
   | "feeder"
   | "circular"
   | "islands"
+  | "kmb"
+  | "citybus"
+  | "nlb"
   | "minibus"
   | "rail"
   | "ferry";
@@ -187,6 +190,35 @@ export const CATEGORIES: Category[] = [
       route.co[0] === "sunferry" ||
       route.co[0] === "hkkf" ||
       route.co[0] === "fortuneferry",
+  },
+  {
+    id: "kmb",
+    name: { zh: "九巴", en: "KMB" },
+    hint: { zh: "九巴營運及聯營路線", en: "KMB routes, joint ones included" },
+    accent: "#D71920",
+    matches: (route) => route.co.includes("kmb"),
+  },
+  {
+    id: "citybus",
+    name: { zh: "城巴", en: "Citybus" },
+    hint: { zh: "城巴營運及聯營路線", en: "Citybus routes, joint ones included" },
+    /* Citybus prints its route numbers on #ffdd00, but the accent is also set
+       as text on a white card, where that yellow measures 1.3:1 and cannot be
+       read. Darkened into the same mid-tone band as the other accents. */
+    accent: "#B79A2B",
+    // A 聯營 route is one a rider boards as a Citybus route just as often as a
+    // KMB one, so the whole `co` list is searched, not only the lead operator.
+    matches: (route) => route.co.includes("ctb"),
+  },
+  {
+    id: "nlb",
+    name: { zh: "嶼巴", en: "NLB" },
+    hint: { zh: "新大嶼山巴士路線", en: "New Lantao Bus routes" },
+    /* Not the brand #009FE3, which outlying islands already carries - two
+       tiles in the same blue, one of them a subset of the other, read as a
+       duplicate rather than as two ways in. */
+    accent: "#0082C4",
+    matches: (route) => route.co.includes("nlb"),
   },
   {
     id: "minibus",

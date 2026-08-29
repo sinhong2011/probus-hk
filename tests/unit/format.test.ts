@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Eta } from "~/data/types";
-import { concessionFare, countdown, fareAt, fareLabel, followingMinutes, formatFare } from "~/lib/format";
+import {
+  concessionFare,
+  countdown,
+  fareAt,
+  fareLabel,
+  followingMinutes,
+  formatFare,
+  isLastRun,
+} from "~/lib/format";
 import { plateStyle } from "~/lib/operators";
 
 const NOW = new Date("2026-03-01T12:00:00Z").getTime();
@@ -36,6 +44,25 @@ describe("countdown", () => {
   it("carries the timetable flag through so the UI can mark it", () => {
     expect(countdown(eta(10, "scheduled"), NOW).scheduled).toBe(true);
     expect(countdown(eta(10, "live"), NOW).scheduled).toBe(false);
+  });
+
+  it("carries the operator's remark through, which is how a rider learns this is the last one", () => {
+    const last = { ...eta(29), remark: { zh: "最後班次", en: "Last departure" } };
+    expect(countdown(last, NOW).remark).toEqual({ zh: "最後班次", en: "Last departure" });
+  });
+
+  it("drops a remark the countdown already makes in its own shape", () => {
+    // The tilde and the scheduled note say this; a third copy is noise.
+    const planned = { ...eta(12, "scheduled"), remark: { zh: "原定班次", en: "Scheduled" } };
+    expect(countdown(planned, NOW).remark).toBeUndefined();
+  });
+});
+
+describe("isLastRun", () => {
+  it("recognises the operators' several ways of saying it", () => {
+    expect(isLastRun({ zh: "最後班次", en: "Last departure" })).toBe(true);
+    expect(isLastRun({ zh: "尾班車", en: "" })).toBe(true);
+    expect(isLastRun({ zh: "延誤", en: "Delayed" })).toBe(false);
   });
 });
 

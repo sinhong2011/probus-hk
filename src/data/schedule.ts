@@ -44,6 +44,29 @@ function travelMinutes(route: KeyedRoute, seq: number): number {
   return (total * (seq - 1)) / (count - 1);
 }
 
+/**
+ * Minutes on the bus between two stops of a route.
+ *
+ * The database publishes one journey time for the whole route, so this is that
+ * time shared out over the stops - an estimate, and labelled as one wherever it
+ * is shown. It is still the number a rider wants when choosing where to get
+ * off: nobody rides a route end to end and reads the total.
+ */
+export function rideMinutes(route: KeyedRoute, fromSeq: number, toSeq: number): number {
+  return Math.round(rideSeconds(route, fromSeq, toSeq) / 60);
+}
+
+/**
+ * The same estimate unrounded, in seconds.
+ *
+ * Placing a bus between two stops divides by this, and a single hop of a
+ * frequent route rounds to zero minutes - which is a division by zero, not a
+ * fast bus. Nothing is shown to a rider in seconds; this is arithmetic.
+ */
+export function rideSeconds(route: KeyedRoute, fromSeq: number, toSeq: number): number {
+  return Math.max(0, (travelMinutes(route, toSeq) - travelMinutes(route, fromSeq)) * 60);
+}
+
 /** Departure times (minutes since that day's midnight) inside the window. */
 function departuresInWindow(
   freq: NonNullable<KeyedRoute["freq"]>,
@@ -219,9 +242,89 @@ export function routeTimetable(db: RouteDb, route: KeyedRoute): TimetableGroup[]
     byFlags.set(flags, list);
   }
 
-  return [...byFlags.entries()]
-    .map(([flags, bands]) => ({ flags, bands: bands.sort((a, b) => a.from.localeCompare(b.from)) }))
-    .filter((group) => group.bands.length > 0)
-    // Everyday patterns first, then the ones covering the most days.
-    .sort((a, b) => b.flags.split("1").length - a.flags.split("1").length);
+  return (
+    [...byFlags.entries()]
+      .map(([flags, bands]) => ({
+        flags,
+        bands: bands.sort((a, b) => a.from.localeCompare(b.from)),
+      }))
+      .filter((group) => group.bands.length > 0)
+      // Everyday patterns first, then the ones covering the most days.
+      .sort((a, b) => b.flags.split("1").length - a.flags.split("1").length)
+  );
+}
+
+/**
+ * When the route starts and stops on the pattern running today, and how long
+ * is left before the last one goes.
+ *
+ * A railway is read this way - "尾班車 00:48" is the fact a rider needs at
+ * midnight - and the bands already carry it; nothing showed the two ends.
+ * Returns `null` where the database publishes no timetable for the route.
+ *
+ * After midnight the operative day is yesterday's: a service written 23:10 ->
+ * 02:20 is still the one running at one in the morning, and telling that rider
+ * about tonight's last bus - twenty-two hours away - would be answering a
+ * question nobody asked.
+ */
+export function serviceSpan(
+  db: RouteDb,
+  route: KeyedRoute,
+): { first: string; last: string; untilFirst: number; untilLast: number } | null {
+  if (!route.freq) return null;
+
+  const now = hkNow();
+  const today = spanOfDay(db, route, now);
+  // Expressed in today's clock, so yesterday's overnight tail is comparable.
+  const yesterday = spanOfDay(db, route, shiftDay(now, -1));
+  const overnight = yesterday
+    ? { first: yesterday.first - 1440, last: yesterday.last - 1440 }
+    : null;
+
+  const span = overnight && overnight.last >= now.minutesSinceMidnight ? overnight : today;
+  if (!span) return null;
+
+  return {
+    first: hhmm(span.first),
+    last: hhmm(span.last),
+    // Positive before the day's first departure - the small hours, when the
+    // useful fact is when service resumes rather than when it stopped.
+    untilFirst: span.first - now.minutesSinceMidnight,
+    untilLast: span.last - now.minutesSinceMidnight,
+  };
+}
+
+/** The ends of one service day, in that day's own clock. */
+function spanOfDay(
+  db: RouteDb,
+  route: KeyedRoute,
+  day: HkDateParts,
+): { first: number; last: number } | null {
+  if (!route.freq) return null;
+
+  const isHoliday = db.holidays.includes(hkDateKey(day));
+  const index = isHoliday ? 0 : day.weekday;
+
+  let first: number | null = null;
+  let last: number | null = null;
+
+  for (const serviceId in route.freq) {
+    if (db.serviceDayMap[serviceId]?.[index] !== "1") continue;
+    const bands = route.freq[serviceId];
+    if (!bands) continue;
+
+    for (const startText in bands) {
+      const start = parseHhmm(startText);
+      if (start === null) continue;
+      const band = bands[startText];
+      const end = band ? parseHhmm(band[0]) : start;
+      if (end === null) continue;
+
+      if (first === null || start < first) first = start;
+      if (last === null || end > last) last = end;
+    }
+  }
+
+  if (first === null || last === null) return null;
+  return { first, last };
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { isRunningNow, routeTimetable, scheduledEta } from "~/data/schedule";
+import { isRunningNow, routeTimetable, scheduledEta, serviceSpan } from "~/data/schedule";
 import type { KeyedRoute, RouteDb } from "~/data/types";
 
 /** Runs every day of the week. */
@@ -204,5 +204,80 @@ describe("routeTimetable", () => {
   it("reports a fixed departure as having no headway", () => {
     const groups = routeTimetable(db, route({ sun: { "0815": null } }));
     expect(groups[0]?.bands[0]).toEqual({ from: "08:15", to: "08:15", headwayMin: null });
+  });
+});
+
+describe("serviceSpan", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // A Wednesday, 10:00 Hong Kong time.
+    vi.setSystemTime(new Date("2026-03-04T02:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns nothing where the route publishes no timetable", () => {
+    expect(serviceSpan(makeDb(), makeRoute({ freq: null }))).toBeNull();
+  });
+
+  it("reports the ends of the day, across every band running today", () => {
+    const route = makeRoute({
+      freq: {
+        daily: {
+          "0535": ["0705", "900"],
+          "0705": ["2340", "600"],
+        },
+      },
+    });
+    expect(serviceSpan(makeDb(), route)).toEqual({ first: "05:35", last: "23:40", untilFirst: -265, untilLast: 820 });
+  });
+
+  it("wraps a band that runs past midnight into a readable clock time", () => {
+    // 23:10 to 02:20 the next morning, which the database writes as 2620.
+    const route = makeRoute({ freq: { daily: { "2310": ["2620", "1200"] } } });
+    expect(serviceSpan(makeDb(), route)).toEqual({ first: "23:10", last: "02:20", untilFirst: 790, untilLast: 980 });
+  });
+
+  it("ignores a pattern that does not run today", () => {
+    const route = makeRoute({
+      freq: {
+        daily: { "0600": ["2300", "600"] },
+        sundayOnly: { "0100": ["0400", "600"] },
+      },
+    });
+    // Wednesday, so the Sunday-only band must not drag the first train to 01:00.
+    expect(serviceSpan(makeDb(), route)).toEqual({ first: "06:00", last: "23:00", untilFirst: -240, untilLast: 780 });
+  });
+
+  it("counts down to tonight's last departure", () => {
+    const route = makeRoute({ freq: { daily: { "0600": ["2300", "600"] } } });
+    // 10:00 to 23:00 is thirteen hours of service left.
+    expect(serviceSpan(makeDb(), route)?.untilLast).toBe(780);
+  });
+
+  it("reports a finished service as time already past", () => {
+    const route = makeRoute({ freq: { daily: { "0500": ["0900", "600"] } } });
+    const span = serviceSpan(makeDb(), route);
+    expect(span?.last).toBe("09:00");
+    expect(span?.untilLast).toBeLessThan(0);
+  });
+
+  it("says how long until service resumes, before the day's first departure", () => {
+    // 04:00 Hong Kong time, an hour and a half before the first bus.
+    vi.setSystemTime(new Date("2026-03-03T20:00:00Z"));
+    const route = makeRoute({ freq: { daily: { "0530": ["2300", "600"] } } });
+    expect(serviceSpan(makeDb(), route)?.untilFirst).toBe(90);
+  });
+
+  it("after midnight, answers for the service still running rather than tonight's", () => {
+    // 01:00 Hong Kong time on the Thursday, inside Wednesday's 23:10 -> 02:20.
+    vi.setSystemTime(new Date("2026-03-04T17:00:00Z"));
+    const route = makeRoute({ freq: { daily: { "2310": ["2620", "1200"] } } });
+    const span = serviceSpan(makeDb(), route);
+    expect(span?.last).toBe("02:20");
+    // 80 minutes to the last one, not the twenty-odd hours to tomorrow night's.
+    expect(span?.untilLast).toBe(80);
   });
 });

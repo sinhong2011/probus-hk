@@ -181,4 +181,52 @@ describe("searchStops ranking", () => {
   it("still prefers the busier stop when neither is an exact match", () => {
     expect(searchStops(named, "金鐘道")[0]?.stopId).toBe("BUS");
   });
+
+  /**
+   * A pole code names one stop and nothing else, so a rider who reads it off
+   * the flag in front of them should be handed that stop, however quiet it is.
+   */
+  const coded: RouteDb = {
+    ...named,
+    stopList: {
+      QUIET: {
+        name: { zh: "白虹樓 (WT916)", en: "PAK HUNG HOUSE (WT916)" },
+        location: { lat: 22.34, lng: 114.2 },
+      },
+      BUSY: {
+        name: { zh: "白虹樓對面", en: "OPPOSITE PAK HUNG HOUSE" },
+        location: { lat: 22.34, lng: 114.201 },
+      },
+    },
+    routeList: {
+      "1+1+A+B": {
+        co: ["kmb"], route: "1", bound: { kmb: "O" }, serviceType: 1,
+        orig: { zh: "A", en: "A" }, dest: { zh: "B", en: "B" },
+        fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null,
+        seq: 1, stops: { kmb: ["QUIET", "BUSY"] },
+      },
+      "2+1+A+B": {
+        co: ["kmb"], route: "2", bound: { kmb: "O" }, serviceType: 1,
+        orig: { zh: "A", en: "A" }, dest: { zh: "B", en: "B" },
+        fares: null, faresHoliday: null, freq: null, gtfsId: null, jt: null, nlbId: null,
+        seq: 1, stops: { kmb: ["BUSY"] },
+      },
+    },
+  } as unknown as RouteDb;
+
+  it("finds a stop by the pole code printed on it", () => {
+    const hits = searchStops(coded, "wt916");
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.stopId).toBe("QUIET");
+  });
+
+  it("ranks the pole whose code was typed above the busier stop beside it", () => {
+    expect(searchStops(coded, "WT916")[0]?.stopId).toBe("QUIET");
+  });
+
+  it("matches a name that the code used to hide", () => {
+    // The code lives inside the raw name, so "白虹樓" was never an exact match
+    // and the quiet pole lost to its busier neighbour.
+    expect(searchStops(coded, "白虹樓")[0]?.stopId).toBe("QUIET");
+  });
 });
