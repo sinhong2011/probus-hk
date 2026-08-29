@@ -361,20 +361,18 @@ function awayLabel(away: number, lang: Lang): string {
 }
 
 /**
- * The two departures after the one the row is counting down, listed under a
+ * The two departures after the one the row is counting down, stacked under a
  * label that says what they are.
  *
  * A column, not a row: three arrivals are one series, and a series reads down -
- * the eye goes 25, 45 without being led. They were chips for a while, and a row
- * of boxes directly above the row of action buttons turned the open panel into
- * two bands of boxes competing for the same glance. Nothing here needs a
+ * the eye goes 28, 37 without being led, and the clock times line up into a
+ * second column so the pair reads as a small timetable. Nothing here needs a
  * container; the label and the alignment do the work a border was doing.
  *
- * Each carries the clock time it lands at, right-aligned into its own column so
- * the two read as a small timetable. That is the point of the second number:
- * "45 分鐘" is something you have to add to a watch before it means anything,
- * whereas 15:42 is either before or after where you have to be. The row's own
- * countdown needs no clock - nobody plans around four minutes.
+ * Each carries the clock time it lands at. That is the point of the second
+ * number: "45 分鐘" is something you have to add to a watch before it means
+ * anything, whereas 15:42 is either before or after where you have to be. The
+ * row's own countdown needs no clock - nobody plans around four minutes.
  */
 function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
   const rest = createMemo(() => {
@@ -387,8 +385,8 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
 
   return (
     <Show when={rest().length > 0}>
-      <div class={`flex items-baseline gap-2 ${props.class ?? ""}`}>
-        <span class="shrink-0 text-[0.75rem] font-bold uppercase tracking-[0.06em] text-faint-foreground">
+      <div class={`flex items-baseline gap-2.5 ${props.class ?? ""}`}>
+        <span class="shrink-0 text-[0.69rem] font-bold uppercase tracking-[0.06em] text-faint-foreground">
           {t("thenArrivals", props.lang)}
         </span>
 
@@ -414,8 +412,8 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
               >
                 {/* Right-aligned, so a tilde or a second digit pushes the
                     number out to the left and the units stay in line. */}
-                <span class="flex min-w-[3.1rem] items-baseline justify-end gap-[3px]">
-                  <span class="tnum text-[1rem] font-bold leading-none tracking-[-0.03em] text-muted-foreground">
+                <span class="flex min-w-[2.9rem] items-baseline justify-end gap-[3px]">
+                  <span class="tnum text-[0.94rem] font-bold leading-none tracking-[-0.03em] text-muted-foreground">
                     <Show when={row().state.scheduled}>
                       <span class="opacity-60">~</span>
                     </Show>
