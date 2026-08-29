@@ -1,4 +1,4 @@
-import type { Bilingual, KeyedRoute, RouteDb } from "./types";
+import type { Bilingual, KeyedRoute, RouteDb, StopEntry } from "./types";
 import { routeAt } from "./db";
 
 /**
@@ -63,13 +63,7 @@ export function railLines(db: RouteDb): RailLine[] {
       directions: directions.sort((a, b) => a.key.localeCompare(b.key)),
       stations: Math.max(...directions.map((r) => r.stops.mtr?.length ?? 0)),
     }))
-    .sort((a, b) => {
-      const rank = (code: string) => {
-        const at = LINE_ORDER.indexOf(code);
-        return at < 0 ? LINE_ORDER.length : at;
-      };
-      return rank(a.code) - rank(b.code);
-    });
+    .sort((a, b) => lineRank(a.code) - lineRank(b.code));
 }
 
 /**
@@ -89,4 +83,83 @@ export function lightRailRoutes(db: RouteDb): KeyedRoute[] {
   return out.sort(
     (a, b) => a.route.localeCompare(b.route, undefined, { numeric: true }) || a.key.localeCompare(b.key),
   );
+}
+
+/**
+ * Which lines call at each station.
+ *
+ * The railway is navigated by interchange - "take the red line to 中環, change
+ * to the blue one" - and the database knows it only as a station appearing in
+ * several routes' stop lists. Built once per database, because a line page asks
+ * about thirty stations at a time.
+ */
+const stationLineIndexes = new WeakMap<RouteDb, Map<string, string[]>>();
+
+export function stationLines(db: RouteDb): Map<string, string[]> {
+  const existing = stationLineIndexes.get(db);
+  if (existing) return existing;
+
+  const index = new Map<string, string[]>();
+  for (const key in db.routeList) {
+    const entry = db.routeList[key];
+    if (entry?.co[0] !== "mtr") continue;
+    for (const id of entry.stops.mtr ?? []) {
+      const lines = index.get(id) ?? [];
+      if (!lines.includes(entry.route)) lines.push(entry.route);
+      index.set(id, lines);
+    }
+  }
+
+  stationLineIndexes.set(db, index);
+  return index;
+}
+
+export interface RailStation {
+  id: string;
+  stop: StopEntry;
+  /** Other lines you can change to here, in the network map's order. */
+  interchanges: string[];
+}
+
+/**
+ * The stations along a line, in order.
+ *
+ * Taken from the longest direction: East Rail and Tseung Kwan O branch, and the
+ * longest run is the one that visits every station on the trunk. A branch-only
+ * station is therefore missing from the list rather than shown out of sequence,
+ * which is the lesser of the two wrongs.
+ */
+export function lineStations(db: RouteDb, line: RailLine): RailStation[] {
+  const longest = line.directions.reduce<KeyedRoute | undefined>(
+    (best, route) =>
+      (route.stops.mtr?.length ?? 0) > (best?.stops.mtr?.length ?? 0) ? route : best,
+    undefined,
+  );
+
+  const index = stationLines(db);
+
+  return (longest?.stops.mtr ?? []).flatMap((id) => {
+    const stop = db.stopList[id];
+    if (!stop) return [];
+    const interchanges = (index.get(id) ?? [])
+      .filter((code) => code !== line.code)
+      .sort((a, b) => lineRank(a) - lineRank(b));
+    return [{ id, stop, interchanges }];
+  });
+}
+
+/** One line, by its code. */
+export function railLine(db: RouteDb, code: string): RailLine | undefined {
+  return railLines(db).find((line) => line.code === code);
+}
+
+/** Where a line sits on the MTR's own network map, for consistent ordering. */
+export function lineRank(code: string): number {
+  const at = LINE_ORDER.indexOf(code);
+  return at < 0 ? LINE_ORDER.length : at;
+}
+
+/** The railway's own name for a line, or its code where there is no better. */
+export function lineName(code: string): Bilingual {
+  return LINE_NAMES[code] ?? { zh: code, en: code };
 }

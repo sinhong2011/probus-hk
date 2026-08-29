@@ -67,7 +67,10 @@ test("a line's direction opens that direction's route", async ({ page }) => {
   await page.goto("/rail");
   await expect(page.getByText("荃灣綫")).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("link", { name: /往 荃灣/ }).first().click();
+  await page
+    .getByRole("link", { name: /往 荃灣/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/route\/TWL/);
   await expect(page.getByText("往 荃灣").first()).toBeVisible();
 });
@@ -79,6 +82,10 @@ test("a station can be bookmarked like any other stop", async ({ page }) => {
   await page.locator("[data-stop-seq]").nth(2).getByRole("button").first().click();
   const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
   await pin.click();
+  await page
+    .getByRole("dialog", { name: "分組" })
+    .getByRole("button", { name: "加入收藏" })
+    .click();
   await expect(pin).toHaveAttribute("aria-pressed", "true");
 
   // Bookmarks are route-agnostic, but a railway station is the one place where
@@ -86,4 +93,30 @@ test("a station can be bookmarked like any other stop", async ({ page }) => {
   await page.goto("/saved");
   await expect(page.getByText("往 荃灣").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("TWL").first()).toBeVisible();
+});
+
+/**
+ * A railway line is a place you stand and two ways it can take you, which the
+ * direction-first route page could only answer by being visited twice.
+ */
+test("a line has a screen of its own, and a station answers both directions", async ({ page }) => {
+  await page.goto("/rail");
+  await expect(page.getByText("荃灣綫")).toBeVisible({ timeout: 15_000 });
+
+  await page
+    .getByRole("link", { name: /荃灣綫/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/rail\/TWL/);
+
+  // The stations, in order, on the line's own colour.
+  await expect(page.getByRole("button", { name: /中環/ }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page
+    .getByRole("button", { name: /中環/ })
+    .first()
+    .click();
+  await expect(page.getByText(/月台\s*\d/).first()).toBeVisible({ timeout: 15_000 });
 });
