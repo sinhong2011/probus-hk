@@ -4,6 +4,13 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.2.3](https://github.com/sinhong2011/probus-hk/compare/v0.2.2...v0.2.3) (2026-08-29)
+
+
+### Bug Fixes
+
+* let a bookmark change its stop, and give the page its scroll back ([#9](https://github.com/sinhong2011/probus-hk/issues/9)) ([9717397](https://github.com/sinhong2011/probus-hk/commit/97173977d9bb4c43485cfe7285372c1085b7b2c5))
+
 ## [0.2.2](https://github.com/sinhong2011/probus-hk/compare/v0.2.1...v0.2.2) (2026-08-29)
 
 
