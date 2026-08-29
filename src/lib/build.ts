@@ -14,4 +14,4 @@ export const APP_VERSION = __APP_VERSION__;
 /** Short commit, or `dev` where the build had no repository to ask. */
 export const BUILD_SHA = __BUILD_SHA__;
 
-export const REPO_URL = "https://github.com/sinhong2011/motherbus";
+export const REPO_URL = "https://github.com/sinhong2011/probus-hk";

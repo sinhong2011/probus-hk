@@ -144,7 +144,7 @@ export const GithubIcon = wrap(IconGithub as IconComponent);
  * An arrow leaving the corner - the row opens something outside the app.
  *
  * It sits where a chevron sits on an internal row, and the difference between
- * the two glyphs is the whole point: one goes deeper into MotherBus, the other
+ * the two glyphs is the whole point: one goes deeper into the app, the other
  * hands the rider to somebody else's site. Drawn here because Lineicons only
  * has a chain link, which reads as "copy a URL" rather than "go there".
  */

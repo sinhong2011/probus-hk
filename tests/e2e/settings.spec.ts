@@ -52,7 +52,7 @@ test("says what build this is, and links out to everything it reads", async ({ p
 
   await expect(page.getByRole("link", { name: /原始碼/ })).toHaveAttribute(
     "href",
-    "https://github.com/sinhong2011/motherbus",
+    "https://github.com/sinhong2011/probus-hk",
   );
 
   // Every feed the app reads is named and reachable, not printed as text.

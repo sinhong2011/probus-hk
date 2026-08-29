@@ -11,7 +11,7 @@ test("ships an installable manifest", async ({ page, request }) => {
   expect(href).toBe("/manifest.webmanifest");
 
   const manifest = await (await request.get(href as string)).json();
-  expect(manifest.name).toContain("MotherBus");
+  expect(manifest.name).toContain("ProBus HK");
   expect(manifest.display).toBe("standalone");
   expect(manifest.start_url).toBe("/");
   // A maskable icon is what stops Android cropping the logo into a circle.

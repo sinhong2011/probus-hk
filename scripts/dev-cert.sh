@@ -26,7 +26,7 @@ else
   [ -n "$lan" ] && alt="$alt,IP:$lan"
   openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
     -keyout "$dir/dev-key.pem" -out "$dir/dev.pem" \
-    -subj "/CN=motherbus.local" -addext "subjectAltName=$alt"
+    -subj "/CN=probus.local" -addext "subjectAltName=$alt"
 fi
 
 echo

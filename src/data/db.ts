@@ -7,6 +7,8 @@ import { openDB, type IDBPDatabase } from "idb";
 
 const DB_URL = "https://data.hkbus.app/routeFareList.min.json";
 const STORE_KEY = "routeDb";
+// The old name, kept on purpose: renaming the database throws away the
+// cached route data and makes every rider fetch 1.7 MB again.
 const IDB_NAME = "motherbus";
 const IDB_VERSION = 1;
 

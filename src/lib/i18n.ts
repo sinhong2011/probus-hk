@@ -241,6 +241,7 @@ const MESSAGES = {
   firstTrain: m.first_train,
   lastTrain: m.last_train,
   lineMap: m.line_map,
+  appName: m.app_name,
   about: m.about,
   appTagline: m.app_tagline,
   versionLabel: m.version_label,

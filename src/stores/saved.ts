@@ -1,6 +1,8 @@
 import { installPersistence, persistedSignal } from "./persisted";
 import type { Company } from "~/data/types";
 
+// The old name, kept on purpose: renaming the key empties a rider's bookmarks on every
+// device that already has one.
 const KEY = "motherbus:saved";
 
 export interface SavedItem {

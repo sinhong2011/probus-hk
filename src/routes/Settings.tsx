@@ -48,9 +48,9 @@ function Row(props: { title: string; subtitle?: string; children: unknown }) {
  * Where a piece of the app comes from, as a row that opens the source itself.
  *
  * Every credit here is a live link rather than a printed domain: a rider who
- * wants to check what MotherBus is reading should be one tap away from the
+ * wants to check what the app is reading should be one tap away from the
  * feed, not left to retype a hostname. The arrow says the row leaves the app -
- * a chevron would promise another MotherBus screen behind it.
+ * a chevron would promise another screen of ours behind it.
  */
 function LinkRow(props: { href: string; title: string; subtitle: string; icon?: JSX.Element }) {
   return (
@@ -119,7 +119,7 @@ export default function Settings() {
   const shareApp = () => {
     const url = window.location.origin;
     if (navigator.share) {
-      void navigator.share({ title: "MotherBus", url }).catch(() => undefined);
+      void navigator.share({ title: t("appName", lang()), url }).catch(() => undefined);
       return;
     }
     void navigator.clipboard
@@ -382,7 +382,7 @@ export default function Settings() {
             <div class="flex min-w-0 flex-col gap-1">
               <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span class="text-[1rem] font-bold tracking-[-0.02em] text-foreground">
-                  MotherBus
+                  {t("appName", lang())}
                 </span>
                 {/*
                  * Release and commit together: the number is what a rider

@@ -1,4 +1,4 @@
-# MotherBus · 香港到站時間
+# ProBus HK 撚手巴士hk · 香港到站時間
 
 Ad-free real-time arrivals for Hong Kong buses, minibuses, MTR, light rail and
 ferries. No account, no tracking, no server of its own — the browser talks to
@@ -7,9 +7,9 @@ offline use.
 
 ## Deploy
 
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sinhong2011/motherbus)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/sinhong2011/motherbus)
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/sinhong2011/motherbus)
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sinhong2011/probus-hk)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/sinhong2011/probus-hk)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/sinhong2011/probus-hk)
 
 Each target is already configured in the repository, so the buttons need no
 further settings:
@@ -29,8 +29,8 @@ never update.
 ### Docker
 
 ```sh
-docker build -t motherbus .
-docker run --rm -p 8080:8080 motherbus
+docker build -t probus-hk .
+docker run --rm -p 8080:8080 probus-hk
 ```
 
 Nothing runs at request time — it is static files behind nginx.

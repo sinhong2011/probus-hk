@@ -25,7 +25,7 @@ function maplibreWorker(): Plugin {
     fileURLToPath(new URL(`./node_modules/maplibre-gl/dist/${name}`, import.meta.url));
 
   return {
-    name: "motherbus:maplibre-worker",
+    name: "probus:maplibre-worker",
 
     configureServer(server) {
       server.middlewares.use((req, res, next) => {

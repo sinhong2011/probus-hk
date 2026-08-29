@@ -19,7 +19,7 @@ export function AppMark(props: { size?: number; class?: string }) {
       viewBox="0 0 512 512"
       class={props.class}
       role="img"
-      aria-label="MotherBus"
+      aria-label="ProBus HK"
     >
       <rect width="512" height="512" rx="112" fill="#09090b" />
       <rect

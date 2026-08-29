@@ -180,13 +180,13 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
       <div class={["flex items-center gap-2.5", { "flex-col gap-2": !open() }]}>
         <a
           href="/"
-          aria-label="MotherBus"
+          aria-label={t("appName", props.lang)}
           class="mb-press flex shrink-0 items-center gap-2.5 rounded-xl px-0.5 py-1"
         >
           <AppMark size={26} />
           <Show when={open()}>
             <span class="whitespace-nowrap text-[1rem] font-bold tracking-[-0.02em] text-foreground">
-              MotherBus
+              {t("appName", props.lang)}
             </span>
           </Show>
         </a>

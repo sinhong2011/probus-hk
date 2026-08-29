@@ -1,5 +1,7 @@
 import { installPersistence, persistedSignal } from "./persisted";
 
+// The old name, kept on purpose: renaming the key empties the routes a rider opens often on every
+// device that already has one.
 const KEY = "motherbus:frequent";
 /** Anything untouched for two months has stopped being a habit. */
 const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
