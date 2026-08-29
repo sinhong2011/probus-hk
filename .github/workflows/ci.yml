@@ -1,0 +1,75 @@
+# What has to be true before anything reaches main.
+#
+# The jobs are the same commands you run by hand, in the order that fails
+# cheapest first: types and lint before the unit tests, the unit tests before a
+# build, the build before a browser is opened. The e2e suite needs `dist`, which
+# is why the build is not last.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: types, lint, unit, build, browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned: the lockfile is v2, which older Bun cannot read - and an
+      # install that silently ignores the lockfile is not a check of anything.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - run: bun install --frozen-lockfile
+
+      # Formatting is left out on purpose: the tree is not formatted yet, and a
+      # gate nothing can pass teaches everyone to ignore the gate.
+      - run: bun run check --no-fmt
+
+      - run: bun run test
+
+      - run: bun run build
+
+      - name: Cache the browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      - run: bunx playwright install --with-deps chromium
+
+      - run: bunx playwright test
+
+      # A red run is only useful if you can see what it saw.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  deploy-resolve:
+    # The deploy runs an older Bun, cannot read the v2 lockfile, and resolves
+    # the tree from the ranges instead. That is how v0.2.0 built here and broke
+    # there, so it is worth building the tree the deploy will actually get.
+    name: the tree the deploy will get
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: rm bun.lock
+      - run: bun install
+      - run: bun run build
