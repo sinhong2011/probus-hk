@@ -231,13 +231,23 @@ describe("serviceSpan", () => {
         },
       },
     });
-    expect(serviceSpan(makeDb(), route)).toEqual({ first: "05:35", last: "23:40", untilFirst: -265, untilLast: 820 });
+    expect(serviceSpan(makeDb(), route)).toEqual({
+      first: "05:35",
+      last: "23:40",
+      untilFirst: -265,
+      untilLast: 820,
+    });
   });
 
   it("wraps a band that runs past midnight into a readable clock time", () => {
     // 23:10 to 02:20 the next morning, which the database writes as 2620.
     const route = makeRoute({ freq: { daily: { "2310": ["2620", "1200"] } } });
-    expect(serviceSpan(makeDb(), route)).toEqual({ first: "23:10", last: "02:20", untilFirst: 790, untilLast: 980 });
+    expect(serviceSpan(makeDb(), route)).toEqual({
+      first: "23:10",
+      last: "02:20",
+      untilFirst: 790,
+      untilLast: 980,
+    });
   });
 
   it("ignores a pattern that does not run today", () => {
@@ -248,7 +258,12 @@ describe("serviceSpan", () => {
       },
     });
     // Wednesday, so the Sunday-only band must not drag the first train to 01:00.
-    expect(serviceSpan(makeDb(), route)).toEqual({ first: "06:00", last: "23:00", untilFirst: -240, untilLast: 780 });
+    expect(serviceSpan(makeDb(), route)).toEqual({
+      first: "06:00",
+      last: "23:00",
+      untilFirst: -240,
+      untilLast: 780,
+    });
   });
 
   it("counts down to tonight's last departure", () => {

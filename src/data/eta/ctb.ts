@@ -30,8 +30,7 @@ export async function fetchCtbEta(q: EtaQuery): Promise<Eta[]> {
     .flatMap((row) => {
       const at = parseHkTime(row.eta as string);
       if (!at) return [];
-      const remark =
-        row.rmk_tc || row.rmk_en ? { zh: row.rmk_tc, en: row.rmk_en } : undefined;
+      const remark = row.rmk_tc || row.rmk_en ? { zh: row.rmk_tc, en: row.rmk_en } : undefined;
       return [{ at, source: "live" as const, co: q.co, remark }];
     });
 }

@@ -68,13 +68,18 @@ export function StopCard(props: {
 
   return (
     <Card>
-      <a href={`/stop/${encodeURIComponent(props.stopId)}`} class="flex items-center gap-2.5 px-3.5 pb-2.5 pt-3">
+      <a
+        href={`/stop/${encodeURIComponent(props.stopId)}`}
+        class="flex items-center gap-2.5 px-3.5 pb-2.5 pt-3"
+      >
         {/* One language, and the pole code beside it. The name in the other
             language said nothing a rider standing here did not already know;
             the code is what distinguishes this pole from the one across the
             road with the same name on it. */}
         <div class="flex min-w-0 grow items-center gap-1.5">
-          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">{name()}</span>
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+            {name()}
+          </span>
           <StopCode name={props.stop.name} lang={props.lang} />
         </div>
         {/* The distance never gives way to the name: it is the shorter of the
@@ -96,12 +101,7 @@ export function StopCard(props: {
             <Show when={index() > 0}>
               <Hairline />
             </Show>
-            <RouteLine
-              route={row.at.route}
-              seq={row.at.seq}
-              lang={props.lang}
-              etas={row.etas}
-            />
+            <RouteLine route={row.at.route} seq={row.at.seq} lang={props.lang} etas={row.etas} />
           </>
         )}
       </For>

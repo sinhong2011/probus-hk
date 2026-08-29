@@ -243,8 +243,6 @@ export function planJourneys(
   const seen = new Set<string>();
   return journeys
     .filter((j) => (seen.has(j.id) ? false : seen.add(j.id)))
-    .sort(
-      (a, b) => a.legs.length - b.legs.length || a.totalMinutes - b.totalMinutes,
-    )
+    .sort((a, b) => a.legs.length - b.legs.length || a.totalMinutes - b.totalMinutes)
     .slice(0, MAX_RESULTS);
 }

@@ -87,12 +87,10 @@ export function Trail(props: { extra?: Crumb[] }) {
   const lang = settings.lang;
 
   const crumbs = createMemo<Crumb[]>(() => {
-    const walked = trail
-      .ancestors(location.pathname)
-      .flatMap((path) => {
-        const label = labelFor(db(), lang(), path);
-        return label ? [{ href: path, label }] : [];
-      });
+    const walked = trail.ancestors(location.pathname).flatMap((path) => {
+      const label = labelFor(db(), lang(), path);
+      return label ? [{ href: path, label }] : [];
+    });
 
     const all = [
       { href: trail.origin(), label: t(trail.originLabel(), lang()) },

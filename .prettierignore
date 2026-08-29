@@ -1,0 +1,9 @@
+# The formatter's own ignore list; oxfmt reads .gitignore and this file.
+
+# Test data, not source: formatting it expands one minified line into ~2,900,
+# and a fixture is read by assertions rather than by people.
+tests/fixtures/
+
+# Host config, where the indentation under each table header is the convention
+# every example in Netlify's own docs uses.
+netlify.toml
