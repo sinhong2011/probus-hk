@@ -1,5 +1,5 @@
 import { useLocation } from "@solidjs/router";
-import { For, Show, createEffect, onCleanup } from "solid-js";
+import { For, Show, createEffect } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { t, type Lang, type MessageKey } from "~/lib/i18n";
 import { trail } from "~/stores/trail";
@@ -167,7 +167,8 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
         searchLink.click();
       };
       document.addEventListener("keydown", onKey);
-      onCleanup(() => document.removeEventListener("keydown", onKey));
+      // Returned: an `onCleanup` inside an effect callback has no owner in Solid 2.
+      return () => document.removeEventListener("keydown", onKey);
     },
   );
 

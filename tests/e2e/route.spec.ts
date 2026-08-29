@@ -315,6 +315,32 @@ test("the timetable opens as a dialog and closes with Escape", async ({ page }) 
   await expect(timetable).toBeHidden();
 });
 
+test("a closed dialog and a left screen both give the page its scroll back", async ({ page }) => {
+  await page.goto(`/route/${KMB_1}`);
+  await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
+
+  // The sheet pins the body while it is up. Every cleanup in the app used to
+  // be registered from inside an effect callback, where Solid 2 gives it no
+  // owner and never runs it - so the body stayed pinned and a phone could not
+  // scroll anything after its first sheet.
+  await page.getByRole("button", { name: "路線資料" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.body.style.position)).toBe("fixed");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.body.style.position)).toBe("");
+
+  // A split screen pins the root the same way, for as long as it is up.
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))
+    .toBe(true);
+  await page.getByRole("navigation", { name: "導覽" }).getByRole("link", { name: "附近" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))
+    .toBe(false);
+});
+
 test("the nearest stop is named, and jumps to itself", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ latitude: 22.3396, longitude: 114.1949 });

@@ -50,6 +50,24 @@ export const saved = {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, group } : i)));
   },
 
+  /**
+   * Points a bookmark at another stop on the same route.
+   *
+   * Its identity follows the stop, so a bookmark already sitting at the target
+   * absorbs this one rather than ending up beside it as a duplicate. The place
+   * in the list and the group are the rider's own arrangement and are kept.
+   */
+  retarget(id: string, to: { co: Company; stopId: string; seq: number }) {
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id);
+      if (!item) return prev;
+      const next = savedId(item.routeKey, to.stopId);
+      return prev
+        .filter((i) => i.id === id || i.id !== next)
+        .map((i) => (i.id === id ? { ...i, ...to, id: next } : i));
+    });
+  },
+
   /** Moves `id` to sit at `toIndex` in the flat list, preserving the rest. */
   reorder(id: string, toIndex: number) {
     setItems((prev) => {
