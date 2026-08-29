@@ -45,7 +45,7 @@ export function ModeSwitch(props: { lang: Lang }) {
               href={mode.href}
               role="tab"
               aria-selected={current() ? "true" : "false"}
-              data-active={current() ? "true" : "false"}
+              data-pill-active={current() ? "true" : "false"}
               class={[
                 "mb-press relative z-10 flex h-8 grow items-center justify-center rounded-full text-[0.88rem] transition-colors duration-state",
                 {

@@ -371,7 +371,7 @@ function Row(props: {
     <a
       href={props.tab.href}
       ref={(el: HTMLAnchorElement) => current(el, active)}
-      data-active={active() && !props.quiet ? "true" : "false"}
+      data-pill-active={active() && !props.quiet ? "true" : "false"}
       title={props.open ? undefined : t(props.tab.label, props.lang)}
       class={[
         "mb-press relative z-10 flex h-10 shrink-0 items-center gap-2.5 rounded-lg transition-colors duration-state",

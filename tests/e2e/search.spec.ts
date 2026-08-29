@@ -96,3 +96,38 @@ test("learns which routes you keep opening", async ({ page }) => {
   await page.goto("/search");
   await expect(page.getByText("常用", { exact: false }).first()).toBeVisible({ timeout: 10_000 });
 });
+
+/*
+ * The router claims every link it renders and writes its own `data-active` on
+ * the current one - an empty string, not "true". The travelling pill used to
+ * read that attribute, so it agreed with the router on the first paint and lost
+ * the argument on the first navigation: switching to 規劃 and back left the
+ * switch with no pill at all, and nothing said which half you were looking at.
+ */
+test("the pill still marks the half you are on after switching", async ({ page }) => {
+  const pill = page.locator('[role="tablist"] [data-ready]');
+  const plan = page.locator('[role="tab"][href="/plan"]');
+  const search = page.locator('[role="tab"][href="/search"]');
+  const box = async () => {
+    const rect = await pill.boundingBox();
+    return { x: Math.round(rect?.x ?? -1), width: Math.round(rect?.width ?? 0) };
+  };
+
+  await expect(search).toHaveAttribute("data-pill-active", "true");
+  const onSearch = await box();
+  expect(onSearch.width).toBeGreaterThan(0);
+
+  await plan.click();
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(plan).toHaveAttribute("data-pill-active", "true");
+  await expect(pill).toHaveAttribute("data-ready", "true");
+  // The same pill travelling into the other half, not a second one blinking
+  // on - so it is polled, the travel being the whole point of the component.
+  await expect.poll(async () => (await box()).x).toBeGreaterThan(onSearch.x);
+  expect((await box()).width).toBeGreaterThan(0);
+
+  await search.click();
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(pill).toHaveAttribute("data-ready", "true");
+  await expect.poll(async () => (await box()).x).toBe(onSearch.x);
+});

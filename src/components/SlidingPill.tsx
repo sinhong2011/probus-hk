@@ -13,8 +13,14 @@ import type { JSX } from "@solidjs/web";
  * It measures the choice it is behind rather than stepping by a fixed fraction.
  * Stepping needs every choice to be the same size, which a row of words is not:
  * forcing 繁中 and EN into equal halves broke the first onto two lines. Drop the
- * pill inside the track, mark the active choice `data-active="true"`, and the
- * pill finds it - at any width, in any language.
+ * pill inside the track, mark the active choice `data-pill-active="true"`, and
+ * the pill finds it - at any width, in any language.
+ *
+ * The mark is not `data-active`: the router owns that attribute on every link it
+ * claims, writing an empty string on the current one and stripping it from the
+ * rest. A track of links agreed with it on the first paint and then lost the
+ * argument on the first navigation - the pill went looking for `"true"`, found
+ * `""`, and never showed itself again.
  */
 export function SlidingPill(props: {
   /** Whatever changing means the pill should move; only read, never rendered. */
@@ -28,7 +34,7 @@ export function SlidingPill(props: {
 
   const measure = () => {
     const track = pill.parentElement;
-    const target = track?.querySelector<HTMLElement>('[data-active="true"]');
+    const target = track?.querySelector<HTMLElement>('[data-pill-active="true"]');
     if (!target) return;
 
     /*

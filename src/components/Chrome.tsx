@@ -260,7 +260,7 @@ export function Segmented<T extends string | number>(props: {
             <button
               type="button"
               role="radio"
-              data-active={on() ? "true" : "false"}
+              data-pill-active={on() ? "true" : "false"}
               aria-checked={on() ? "true" : "false"}
               aria-label={option.Icon ? option.label : undefined}
               title={option.Icon ? option.label : undefined}
