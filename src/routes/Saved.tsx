@@ -4,9 +4,11 @@ import { Card, EmptyState, Hairline, ScreenTitle, SectionLabel } from "~/compone
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, type SortChoice } from "~/components/SortSheet";
+import { StopSheet } from "~/components/StopSheet";
 import {
   AlarmIcon,
   BookmarkIcon,
+  ExchangeIcon,
   GripIcon,
   LayersIcon,
   MinusIcon,
@@ -104,6 +106,8 @@ function BookmarkCard(props: {
   onArrivals: () => void;
   onNext: (at: number) => void;
   onRegroup: () => void;
+  /** Move the bookmark to another stop on the same route. */
+  onRestop: () => void;
 }) {
   const etas = useEta(() => ({
     route: props.entry.route,
@@ -210,32 +214,7 @@ function BookmarkCard(props: {
           </span>
         </Show>
 
-        <Show
-          when={!props.editing}
-          fallback={
-            <div class="flex shrink-0 items-center gap-2">
-              {/* Grouping is an editing action, so it lives where the other
-                  editing actions are rather than behind a long press. */}
-              <button
-                type="button"
-                onClick={props.onRegroup}
-                class="flex h-7 max-w-[7rem] items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground"
-              >
-                <LayersIcon size={11} />
-                <span class="truncate">{props.entry.item.group || t("noGroup", props.lang)}</span>
-              </button>
-              <button
-                type="button"
-                aria-label="remove"
-                onClick={props.onRemove}
-                class="flex size-7 items-center justify-center rounded-full text-destructive"
-                style={{ background: "color-mix(in srgb, var(--destructive) 14%, transparent)" }}
-              >
-                <MinusIcon size={13} />
-              </button>
-            </div>
-          }
-        >
+        <Show when={!props.editing}>
           <EtaCountdown
             etas={etas()}
             lang={props.lang}
@@ -245,6 +224,48 @@ function BookmarkCard(props: {
           />
         </Show>
       </div>
+
+      {/*
+       * Everything that can be done to a bookmark, in a row of its own under
+       * the card while the list is being edited. They sat at the end of the
+       * top row for a while, where the countdown goes; a third action there
+       * squeezed the route's name out of a phone-width card, and this is the
+       * row the advice line occupies the rest of the time, so the card does
+       * not change height on the way into editing.
+       *
+       * The stop is as much a part of a bookmark as the group: a route offered
+       * from the "you keep opening these" list is saved at its first stop, and
+       * before this the only way to move it was to delete it and start again.
+       */}
+      <Show when={props.editing}>
+        <div class="flex items-center gap-2 border-t border-border px-3.5 py-2">
+          <button
+            type="button"
+            onClick={props.onRestop}
+            class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground"
+          >
+            <ExchangeIcon size={11} />
+            {t("changeStop", props.lang)}
+          </button>
+          <button
+            type="button"
+            onClick={props.onRegroup}
+            class="flex h-7 min-w-0 max-w-[9rem] items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground"
+          >
+            <LayersIcon size={11} />
+            <span class="truncate">{props.entry.item.group || t("noGroup", props.lang)}</span>
+          </button>
+          <button
+            type="button"
+            aria-label="remove"
+            onClick={props.onRemove}
+            class="ml-auto flex size-7 shrink-0 items-center justify-center rounded-full text-destructive"
+            style={{ background: "color-mix(in srgb, var(--destructive) 14%, transparent)" }}
+          >
+            <MinusIcon size={13} />
+          </button>
+        </div>
+      </Show>
 
       {/* The one line that turns arrival times into a decision. */}
       <Show when={!props.editing && advice()}>
@@ -321,6 +342,9 @@ export default function Saved() {
   const [asking, setAsking] = createSignal<GroupAsk | null>(null);
   const [groupOpen, setGroupOpen] = createSignal(false);
   const [sortOpen, setSortOpen] = createSignal(false);
+  /** The bookmark whose stop is being changed, while the stop sheet is up. */
+  const [restopping, setRestopping] = createSignal<Resolved | null>(null);
+  const [stopOpen, setStopOpen] = createSignal(false);
 
   const resolved = createMemo<Resolved[]>(() =>
     saved.items().flatMap((item) => {
@@ -494,6 +518,10 @@ export default function Saved() {
           apply: (group) => saved.setGroup(entry.item.id, group),
         })
       }
+      onRestop={() => {
+        setRestopping(entry);
+        requestAnimationFrame(() => setStopOpen(true));
+      }}
     />
   );
 
@@ -748,6 +776,24 @@ export default function Saved() {
             current={ask().current}
             confirmLabel={ask().confirm}
             onChoose={(group) => ask().apply(group)}
+            lang={lang()}
+          />
+        )}
+      </Show>
+
+      {/* Keyed: a different bookmark is a different sheet, so the child takes
+          the entry itself. The accessor form threw a stale-value error the
+          moment the portalled list read it, and there is nothing here that
+          wants to survive the entry changing. */}
+      <Show when={restopping()} keyed>
+        {(entry) => (
+          <StopSheet
+            open={stopOpen()}
+            onClose={() => setStopOpen(false)}
+            route={entry.route}
+            co={entry.item.co}
+            stopId={entry.item.stopId}
+            onChoose={(choice) => saved.retarget(entry.item.id, choice)}
             lang={lang()}
           />
         )}

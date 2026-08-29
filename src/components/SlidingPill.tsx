@@ -1,4 +1,4 @@
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
 /**
@@ -76,7 +76,8 @@ export function SlidingPill(props: {
       const observer = new ResizeObserver(() => measure());
       observer.observe(track);
       for (const child of track.children) observer.observe(child);
-      onCleanup(() => observer.disconnect());
+      // Returned: an `onCleanup` inside an effect callback has no owner in Solid 2.
+      return () => observer.disconnect();
     },
   );
 

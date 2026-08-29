@@ -1,4 +1,4 @@
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect } from "solid-js";
 import { Portal, type JSX } from "@solidjs/web";
 import { CloseIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
@@ -60,7 +60,14 @@ export function Modal(props: {
       };
       document.addEventListener("keydown", onKey);
 
-      onCleanup(() => {
+      /*
+       * Returned, not registered: in Solid 2 an effect's callback runs with no
+       * owner, so an `onCleanup` inside it is dropped on the floor - and the
+       * body stayed pinned after every sheet, which on a phone is the whole
+       * page refusing to scroll. A function returned from the callback is the
+       * cleanup, run before the next run and on disposal.
+       */
+      return () => {
         document.removeEventListener("keydown", onKey);
         body.position = previous.position;
         body.top = previous.top;
@@ -69,7 +76,7 @@ export function Modal(props: {
         // Put the caret back where it was, or the next Tab starts from the top
         // of the document.
         restore?.focus();
-      });
+      };
     },
   );
 

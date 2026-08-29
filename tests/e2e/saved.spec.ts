@@ -103,6 +103,30 @@ test("a bookmark can be put in a group, and the group filters the list", async (
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible();
 });
 
+test("a bookmark can be moved to another stop on its route", async ({ page }) => {
+  await bookmark(page, 1);
+  await page.goto("/saved");
+  const card = page.locator('a[href^="/route/"]');
+  await expect(card).toContainText("天虹小學", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "編輯" }).click();
+  await page.getByRole("button", { name: "換站" }).click();
+
+  // The sheet knows which stop it is at now, and one tap moves it.
+  const sheet = page.getByRole("dialog", { name: "換站" });
+  await expect(sheet.getByRole("radio", { name: /天虹小學/ })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await sheet.getByRole("radio", { name: /馬仔坑遊樂場/ }).click();
+  await expect(sheet).toBeHidden();
+
+  // Moved, not copied: one card, watching the new stop.
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("馬仔坑遊樂場");
+  await expect(card).not.toContainText("天虹小學");
+});
+
 test("an arrival reminder can be armed from a stop and called off from the list", async ({
   page,
 }) => {

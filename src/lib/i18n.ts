@@ -228,6 +228,7 @@ const MESSAGES = {
   newGroup: m.new_group,
   groupName: m.group_name,
   noGroup: m.no_group,
+  changeStop: m.change_stop,
   saveLabel: m.save_label,
   nothingInFilter: m.nothing_in_filter,
   published: m.published,

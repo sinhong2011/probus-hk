@@ -1,4 +1,4 @@
-import { Show, createEffect, onCleanup } from "solid-js";
+import { Show, createEffect } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
 /**
@@ -51,7 +51,10 @@ export function Page(props: {
     (fill) => {
       if (!fill) return;
       document.documentElement.classList.add("mb-fill");
-      onCleanup(() => document.documentElement.classList.remove("mb-fill"));
+      // Returned rather than `onCleanup`: the callback has no owner in Solid 2,
+      // so a registered cleanup never ran and the root stayed pinned on every
+      // screen visited after this one.
+      return () => document.documentElement.classList.remove("mb-fill");
     },
   );
 
