@@ -7,3 +7,8 @@ tests/fixtures/
 # Host config, where the indentation under each table header is the convention
 # every example in Netlify's own docs uses.
 netlify.toml
+
+# Written by release-please on every release, in its own markdown style. The
+# formatter disagrees with it about bullets and blank lines, and the generator
+# always gets the last word - so this file is its business, not the gate's.
+CHANGELOG.md
