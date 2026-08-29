@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
 import { uniqBy } from "es-toolkit";
 import { For, Show, createMemo } from "solid-js";
-import { Card, Chip, EmptyState, Hairline, SectionLabel } from "~/components/Chrome";
+import { Card, Chip, EmptyState, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
 import { Trail } from "~/components/Breadcrumb";
 import { Page, Section } from "~/components/Layout";
 import { WalkIcon } from "~/components/Icons";
@@ -11,7 +11,7 @@ import { routesAtCluster } from "~/data/db";
 import { etaKey, fetchStopEtas } from "~/data/eta/batch";
 import { createAsyncMemo } from "~/lib/async";
 import { distanceM, formatDistance, walkMinutes } from "~/lib/geo";
-import { pick, stopCode, stripStopCode, t } from "~/lib/i18n";
+import { pick, stripStopCode, t } from "~/lib/i18n";
 import { etaTick } from "~/stores/clock";
 import { useGeolocation } from "~/stores/geolocation";
 import { settings } from "~/stores/settings";
@@ -72,13 +72,15 @@ export default function StopDetail() {
       <Show when={stop()} fallback={<EmptyState title={t("noResults", lang())} />}>
         {(entry) => (
           <>
-            <div class="flex flex-col gap-1.5">
+            {/* The name in the language being read, and the pole code beside
+                it. The same name in the other language was a translation
+                exercise; the code is the thing printed on the flag you are
+                standing at, and the one a rider can search for. */}
+            <div class="flex flex-wrap items-center gap-2.5">
               <h1 class="text-[1.55rem] font-bold leading-[1.1] tracking-[-0.035em] text-foreground">
                 {stripStopCode(pick(entry().name, lang()))}
               </h1>
-              <span class="text-[0.75rem] font-semibold text-subtle-foreground">
-                {stripStopCode(pick(entry().name, lang() === "zh" ? "en" : "zh"))}
-              </span>
+              <StopCode name={entry().name} lang={lang()} class="text-[0.81rem]" />
             </div>
 
             <div class="-mt-3 flex flex-wrap items-center gap-2">
@@ -96,24 +98,17 @@ export default function StopDetail() {
                   {routes().length} {lang() === "zh" ? "條路線" : "routes"}
                 </span>
               </Chip>
-              <Show when={stopCode(pick(entry().name, "en"))}>
-                {(code) => (
-                  <Chip>
-                    <span class="tnum">{code()}</span>
-                  </Chip>
-                )}
-              </Show>
             </div>
 
             <Section>
               <SectionLabel
                 trailing={
-                  <span class="text-[0.63rem] font-semibold text-primary">
+                  <span class="text-[0.75rem] font-semibold text-primary">
                     {lang() === "zh" ? "按時間排序" : "By arrival"}
                   </span>
                 }
               >
-                {`${t("routesHere", lang())} Routes here`}
+                {t("routesHere", lang())}
               </SectionLabel>
 
               <Show

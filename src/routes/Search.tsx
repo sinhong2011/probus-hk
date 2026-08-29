@@ -1,5 +1,12 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { Card, EmptyState, Hairline, ScreenTitle, SectionLabel } from "~/components/Chrome";
+import {
+  Card,
+  EmptyState,
+  Hairline,
+  ScreenTitle,
+  SectionLabel,
+  StopCode,
+} from "~/components/Chrome";
 import { SplitPage } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { BackspaceIcon, ChevronRightIcon, CloseIcon, SearchIcon } from "~/components/Icons";
@@ -47,10 +54,10 @@ function RouteResult(props: { route: KeyedRoute; lang: "zh" | "en" }) {
     <a href={routeHref(props.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
       <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
       <div class="flex min-w-0 grow flex-col gap-0.5">
-        <span class="truncate text-[0.82rem] font-bold tracking-[-0.01em] text-foreground">
+        <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
           {pick(props.route.orig, props.lang)} → {pick(props.route.dest, props.lang)}
         </span>
-        <span class="truncate text-[0.63rem] font-medium text-subtle-foreground">
+        <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
           {[
             operatorLabel(props.route.co, props.lang),
             fareLabel(props.route.fares?.[0]),
@@ -124,7 +131,7 @@ export default function Search() {
       }
       aside={
         <>
-          <ScreenTitle title={t("searchRoutes", lang())} subtitle="Search" />
+          <ScreenTitle title={t("searchRoutes", lang())} pinned={false} />
 
           <div class="-mt-2.5">
             <ModeSwitch lang={lang()} />
@@ -138,7 +145,15 @@ export default function Search() {
               <SearchIcon size={19} />
             </span>
             <input
-              ref={field}
+              ref={(el: HTMLInputElement) => {
+                field = el;
+                /* A window with a real keyboard should not ask for a click
+                   before it will take a letter. Focusing raises no keyboard on
+                   a phone because no phone is this wide. */
+                if (window.matchMedia("(min-width: 64rem)").matches) {
+                  requestAnimationFrame(() => el.focus());
+                }
+              }}
               value={query()}
               onInput={(e) => setQuery(e.currentTarget.value)}
               /* Switch before focus lands, so the tap that opens the field is
@@ -155,7 +170,7 @@ export default function Search() {
                to raise a keyboard, so the tuned keypad does the typing without
                a second one covering the results. */
               inputmode={typing() ? "search" : "none"}
-              class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.85rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
+              class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
             />
             <Show when={query()}>
               <button
@@ -172,8 +187,10 @@ export default function Search() {
             </Show>
           </div>
 
-          <div class="-mt-2 hidden lg:block">
+          <div class="-mt-1 hidden flex-col gap-2 lg:flex">
+            <SectionLabel>{t("routeNumber", lang())}</SectionLabel>
             <Keypad
+              compact
               lang={lang()}
               keys={keys()}
               keyEnabled={(key) => empty() || allowed().has(key)}
@@ -192,12 +209,12 @@ export default function Search() {
               <section class="flex flex-col gap-2.5">
                 <SectionLabel
                   trailing={
-                    <span class="tnum text-[0.63rem] font-semibold text-faint-foreground">
+                    <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
                       {routes().length}
                     </span>
                   }
                 >
-                  {`${t("routes", lang())} Routes`}
+                  {t("routes", lang())}
                 </SectionLabel>
                 <Card>
                   <For each={routes()}>
@@ -216,7 +233,7 @@ export default function Search() {
 
             <Show when={stops().length > 0}>
               <section class="flex flex-col gap-2.5">
-                <SectionLabel>{`${t("stopsMatched", lang())} Stops`}</SectionLabel>
+                <SectionLabel>{t("stopsMatched", lang())}</SectionLabel>
                 <Card>
                   <For each={stops()}>
                     {(match, index) => (
@@ -228,15 +245,17 @@ export default function Search() {
                           href={`/stop/${encodeURIComponent(match.stopId)}`}
                           class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
                         >
-                          <div class="flex min-w-0 grow flex-col gap-0.5">
-                            <span class="truncate text-[0.82rem] font-bold text-foreground">
+                          {/* The name once, in the language being read, and the
+                              pole code beside it - which is both what tells two
+                              stops of one name apart and what a rider can search
+                              for directly. */}
+                          <div class="flex min-w-0 grow items-center gap-1.5">
+                            <span class="truncate text-[0.88rem] font-bold text-foreground">
                               {stripStopCode(pick(match.stop.name, lang()))}
                             </span>
-                            <span class="truncate text-[0.63rem] font-medium text-subtle-foreground">
-                              {stripStopCode(pick(match.stop.name, lang() === "zh" ? "en" : "zh"))}
-                            </span>
+                            <StopCode name={match.stop.name} lang={lang()} />
                           </div>
-                          <span class="tnum shrink-0 text-[0.63rem] font-bold text-subtle-foreground">
+                          <span class="tnum shrink-0 text-[0.75rem] font-bold text-subtle-foreground">
                             {match.routeCount} {t("routesCount", lang())}
                           </span>
                         </a>
@@ -249,7 +268,7 @@ export default function Search() {
 
             <Show when={destinations().length > 0}>
               <section class="flex flex-col gap-2.5">
-                <SectionLabel>{`${t("towards", lang())} Destination`}</SectionLabel>
+                <SectionLabel>{t("towards", lang())}</SectionLabel>
                 <Card>
                   <For each={destinations()}>
                     {(route, index) => (
@@ -277,7 +296,7 @@ function EmptyView(props: { lang: "zh" | "en"; routes: KeyedRoute[] }) {
     <div class="flex flex-col gap-6">
       <Show when={props.routes.length > 0}>
         <section class="flex flex-col gap-2.5">
-          <SectionLabel>{`${t("frequent", props.lang)} Frequent`}</SectionLabel>
+          <SectionLabel>{t("frequent", props.lang)}</SectionLabel>
           <Card>
             <For each={props.routes}>
               {(route, index) => (
@@ -296,12 +315,12 @@ function EmptyView(props: { lang: "zh" | "en"; routes: KeyedRoute[] }) {
       <section class="flex flex-col gap-2.5">
         <SectionLabel
           trailing={
-            <a href="/browse" class="text-[0.63rem] font-bold text-primary">
+            <a href="/browse" class="text-[0.75rem] font-bold text-primary">
               {t("viewAll", props.lang)}
             </a>
           }
         >
-          {`${t("categories", props.lang)} Categories`}
+          {t("categories", props.lang)}
         </SectionLabel>
 
         <div class="grid grid-cols-2 gap-2.5">
@@ -316,10 +335,10 @@ function EmptyView(props: { lang: "zh" | "en"; routes: KeyedRoute[] }) {
                   style={{ background: item.accent }}
                   aria-hidden="true"
                 />
-                <span class="text-[0.8rem] font-bold text-foreground">
+                <span class="text-[0.88rem] font-bold text-foreground">
                   {pick(item.name, props.lang)}
                 </span>
-                <span class="text-[0.6rem] font-medium leading-snug text-subtle-foreground">
+                <span class="text-[0.75rem] font-medium leading-snug text-subtle-foreground">
                   {pick(item.hint, props.lang)}
                 </span>
               </a>
@@ -335,6 +354,11 @@ function EmptyView(props: { lang: "zh" | "en"; routes: KeyedRoute[] }) {
  * The route-number keypad. It belongs at the bottom of the screen on a phone
  * and directly under the field on a desktop, which are different places in the
  * reading order, so it is rendered where each layout needs it.
+ *
+ * `compact` is the desktop cut. A thumb-sized dialer under a machine with a
+ * real keyboard reads as a phone app someone stretched: the keys are still
+ * there, because tapping 1-0-2 beats typing it, but they are a strip of
+ * shortcuts rather than the thing the screen is about.
  */
 function Keypad(props: {
   lang: Lang;
@@ -343,12 +367,13 @@ function Keypad(props: {
   onPress: (key: string) => void;
   onBackspace: () => void;
   onType: () => void;
+  compact?: boolean;
 }) {
   return (
     /* Keys are sized for a thumb, so the pad keeps its width on a tablet
        instead of stretching each key to a couple of hundred pixels. */
     <div class="flex w-full flex-col gap-2">
-      <div class="grid grid-cols-5 gap-2">
+      <div class={props.compact ? "grid grid-cols-8 gap-1.5" : "grid grid-cols-5 gap-2"}>
         <For each={props.keys}>
           {(key) => {
             const enabled = () => props.keyEnabled(key);
@@ -362,7 +387,11 @@ function Keypad(props: {
                   // thumb-sized row; the twenty letters behind them would
                   // otherwise take half a phone screen.
                   "mb-press flex items-center justify-center rounded-xl font-bold transition-colors duration-press",
-                  /\d/.test(key) ? "h-12 text-[1.05rem]" : "h-10 text-[0.95rem]",
+                  props.compact
+                    ? "h-9 rounded-lg text-[0.94rem]"
+                    : /\d/.test(key)
+                      ? "h-12 text-[1.05rem]"
+                      : "h-10 text-[1rem]",
                   {
                     "bg-secondary text-foreground active:bg-primary active:text-primary-foreground":
                       enabled(),
@@ -379,26 +408,31 @@ function Keypad(props: {
           type="button"
           aria-label="backspace"
           onClick={props.onBackspace}
-          class="col-span-5 flex h-11 items-center justify-center rounded-lg bg-secondary text-muted-foreground active:bg-destructive active:text-white"
+          class={[
+            "flex items-center justify-center rounded-lg bg-secondary text-muted-foreground active:bg-destructive active:text-white",
+            props.compact ? "col-span-8 h-9" : "col-span-5 h-11",
+          ]}
         >
-          <BackspaceIcon size={18} />
+          <BackspaceIcon size={props.compact ? 15 : 18} />
         </button>
       </div>
 
       <div class="flex items-center justify-between pt-0.5">
-        <span class="text-[0.6rem] font-medium text-faint-foreground">
+        <span class="text-[0.75rem] font-medium text-faint-foreground">
           {t("dimmedKeys", props.lang)}
         </span>
-        {/* The way out of the keypad and into free text, made to look like the
+        <Show when={!props.compact}>
+          {/* The way out of the keypad and into free text, made to look like the
             control it is rather than a stray line of coloured text. */}
-        <button
-          type="button"
-          onClick={props.onType}
-          class="mb-press flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-primary-muted px-3 text-[0.63rem] font-bold text-primary"
-        >
-          <SearchIcon size={12} />
-          {t("searchAnything", props.lang)}
-        </button>
+          <button
+            type="button"
+            onClick={props.onType}
+            class="mb-press flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-primary-muted px-3 text-[0.75rem] font-bold text-primary"
+          >
+            <SearchIcon size={12} />
+            {t("searchAnything", props.lang)}
+          </button>
+        </Show>
       </div>
     </div>
   );

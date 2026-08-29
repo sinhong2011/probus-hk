@@ -35,7 +35,7 @@ export default function Browse() {
       when={category()}
       fallback={
         <Page wide>
-          <ScreenTitle title={t("categories", lang())} subtitle="Categories" />
+          <ScreenTitle title={t("categories", lang())} />
 
           <div class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4 2xl:grid-cols-5">
             <For each={CATEGORIES}>
@@ -50,14 +50,14 @@ export default function Browse() {
                     aria-hidden="true"
                   />
                   <div class="flex flex-col gap-1">
-                    <span class="text-[0.86rem] font-bold tracking-[-0.01em] text-foreground">
+                    <span class="text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
                       {pick(item.name, lang())}
                     </span>
-                    <span class="text-[0.63rem] font-medium leading-snug text-subtle-foreground">
+                    <span class="text-[0.75rem] font-medium leading-snug text-subtle-foreground">
                       {pick(item.hint, lang())}
                     </span>
                   </div>
-                  <span class="tnum text-[0.63rem] font-bold" style={{ color: item.accent }}>
+                  <span class="tnum text-[0.75rem] font-bold" style={{ color: item.accent }}>
                     {counts()[item.id]} {t("routesCount", lang())}
                   </span>
                 </a>
@@ -69,23 +69,21 @@ export default function Browse() {
     >
       {(chosen) => (
         <Page>
-          <div class="flex flex-col gap-3">
-            <Trail extra={[{ href: "/browse", label: t("categories", lang()) }]} />
-            <ScreenTitle
-              title={pick(chosen().name, lang())}
-              subtitle={pick(chosen().hint, lang())}
-            />
-          </div>
+          <ScreenTitle
+            lead={<Trail extra={[{ href: "/browse", label: t("categories", lang()) }]} />}
+            title={pick(chosen().name, lang())}
+            subtitle={pick(chosen().hint, lang())}
+          />
 
           <Section>
             <SectionLabel
               trailing={
-                <span class="tnum text-[0.63rem] font-semibold text-faint-foreground">
+                <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
                   {routes().length} {t("routesCount", lang())}
                 </span>
               }
             >
-              {`${t("routes", lang())} Routes`}
+              {t("routes", lang())}
             </SectionLabel>
 
             <Show
@@ -105,10 +103,10 @@ export default function Browse() {
                       >
                         <RoutePlate route={route.route} co={route.co} size="sm" />
                         <div class="flex min-w-0 grow flex-col gap-0.5">
-                          <span class="truncate text-[0.82rem] font-bold tracking-[-0.01em] text-foreground">
+                          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
                             {pick(route.orig, lang())} → {pick(route.dest, lang())}
                           </span>
-                          <span class="truncate text-[0.63rem] font-medium text-subtle-foreground">
+                          <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
                             {[operatorLabel(route.co, lang()), fareLabel(route.fares?.[0])]
                               .filter(Boolean)
                               .join(" · ")}
