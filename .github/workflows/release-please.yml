@@ -1,0 +1,30 @@
+# Cutting the release, so nobody has to remember how.
+#
+# On every push to main, release-please reads the commits since the last tag and
+# keeps a release pull request open: the version in package.json, the entry in
+# CHANGELOG.md, and nothing else. Merging that pull request is the release - it
+# tags `vX.Y.Z` and publishes the GitHub release from the same entry.
+#
+# It reads Conventional Commits, and only those: `feat:` moves the minor,
+# `fix:` the patch, `feat!:` or a `BREAKING CHANGE:` footer the major - which,
+# while the version is still 0.x, is held to the minor instead. A commit
+# subject that carries no type is left out of the notes and moves nothing, so
+# a release that does not appear is a release nothing asked for.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
