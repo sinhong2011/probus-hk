@@ -1,14 +1,137 @@
 import { expect, test } from "@playwright/test";
-import { mockTransit } from "./support/mock";
+import { mockRunningBuses, mockTransit } from "./support/mock";
 
 const KMB_1 = encodeURIComponent("1+1+CHUK YUEN ESTATE+STAR FERRY");
 
 /** Every stop on the route is a row you can open. */
-const stopRows = (page: import("@playwright/test").Page) =>
-  page.locator("button[aria-expanded]");
+const stopRows = (page: import("@playwright/test").Page) => page.locator("button[aria-expanded]");
 
 test.beforeEach(async ({ page }) => {
   await mockTransit(page);
+});
+
+test("warns when the last bus of the day is the next hour's problem", async ({ page }) => {
+  // 23:20 Hong Kong time. Route 1 runs 05:35 - 23:40, so the last one is
+  // twenty minutes out and the page should be saying so rather than making a
+  // rider open the timetable to find it.
+  await page.clock.setFixedTime(new Date("2026-08-29T15:20:00Z"));
+  await page.goto(`/route/${KMB_1}`);
+
+  // The timetable sheet states the same two ends, so the countdown itself is
+  // what distinguishes the warning from the reference.
+  await expect(page.getByText("尾班 23:40 · 20 分鐘")).toBeVisible({ timeout: 15_000 });
+});
+
+test("passes on the operator's word that a departure is the last one", async ({ page }) => {
+  // Every feed carries remarks - 最後班次, 延誤 - and the app parsed them and
+  // then dropped them on the floor. The last of the three arrivals says so.
+  await page.route("**/data.etabus.gov.hk/**", (route) => {
+    const at = (minutes: number) => {
+      const hk = new Date(Date.now() + minutes * 60_000 + 8 * 60 * 60 * 1000);
+      return `${hk.toISOString().slice(0, 19)}+08:00`;
+    };
+    const data = [];
+    for (let seq = 1; seq <= 40; seq++) {
+      for (const dir of ["O", "I"]) {
+        [3.5, 11.5, 24.5].forEach((offset, index) => {
+          data.push({
+            co: "KMB",
+            route: "1",
+            dir,
+            service_type: 1,
+            seq,
+            eta_seq: index + 1,
+            eta: at(offset),
+            rmk_tc: index === 2 ? "最後班次" : "",
+            rmk_en: index === 2 ? "Last departure" : "",
+            dest_tc: "尖沙咀碼頭",
+            dest_en: "STAR FERRY",
+          });
+        });
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ type: "StopETA", version: "1.0", data }),
+    });
+  });
+
+  await page.goto(`/route/${KMB_1}`);
+  await expect(stopRows(page).first()).toBeVisible({ timeout: 15_000 });
+
+  // The mark rides with the departure it belongs to, which here is the last of
+  // the three - the ones an opened stop reveals.
+  await stopRows(page).nth(3).click();
+  // The badge says the app's own short word for it, not whichever phrase the
+  // operator used, so a column of them stays one width.
+  await expect(page.locator('[data-open="true"]').getByText("尾班").first()).toBeVisible({
+    timeout: 10_000,
+  });
+});
+
+test("carries a disruption beside the stop's name, and opens it in full", async ({ page }) => {
+  // A diversion is a sentence, not a badge. Beside the countdown it was cut to
+  // six characters with no way to read the rest; beside the name it keeps the
+  // operator's words and opens.
+  const NOTICE = "受阻於牛池灣，改行清水灣道，不停牛池灣街市站";
+  await page.route("**/data.etabus.gov.hk/**", (route) => {
+    const at = (minutes: number) => {
+      const hk = new Date(Date.now() + minutes * 60_000 + 8 * 60 * 60 * 1000);
+      return `${hk.toISOString().slice(0, 19)}+08:00`;
+    };
+    const data = [];
+    for (let seq = 1; seq <= 40; seq++) {
+      for (const dir of ["O", "I"]) {
+        data.push({
+          co: "KMB",
+          route: "1",
+          dir,
+          service_type: 1,
+          seq,
+          eta_seq: 1,
+          eta: at(6.5),
+          rmk_tc: NOTICE,
+          rmk_en: "Diverted via Clear Water Bay Road",
+          dest_tc: "尖沙咀碼頭",
+          dest_en: "STAR FERRY",
+        });
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ type: "StopETA", version: "1.0", data }),
+    });
+  });
+
+  await page.goto(`/route/${KMB_1}`);
+  const row = page.locator('[data-stop-seq]:has([aria-label^="班次通告"])').first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  const chip = row.locator('[aria-label^="班次通告"]');
+  const toggle = row.locator("button[aria-expanded]");
+  const wasOpen = await toggle.getAttribute("aria-expanded");
+
+  // Tapping it opens the whole sentence, in both languages.
+  await chip.click();
+  const dialog = page.getByRole("dialog", { name: "班次通告" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(NOTICE)).toBeVisible();
+  await expect(dialog.getByText("Diverted via Clear Water Bay Road")).toBeVisible();
+
+  // And nothing else: the row it sits on is a control of its own, and the
+  // notice is not a second way of working it.
+  await expect(toggle).toHaveAttribute("aria-expanded", wasOpen ?? "false");
+});
+
+test("states the ends of the service day when neither end is near", async ({ page }) => {
+  // 14:00, when the same fact is a line of reference rather than a warning.
+  await page.clock.setFixedTime(new Date("2026-08-29T06:00:00Z"));
+  await page.goto(`/route/${KMB_1}`);
+
+  await expect(page.getByText("首班 05:35 · 尾班 23:40")).toBeVisible({ timeout: 15_000 });
 });
 
 test("shows the route, its operator and its whole stop list", async ({ page }) => {
@@ -27,8 +150,10 @@ test("numbers the stops so a position on the route is legible", async ({ page })
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
-  // The first row carries its sequence number.
-  await expect(stopRows(page).first()).toContainText("1");
+  // The first row carries its sequence number. Read off the row rather than off
+  // the control: the control is a layer covering the row, so the row can carry
+  // a notice beside the name that opens something of its own.
+  await expect(page.locator("[data-stop-seq]").first()).toContainText("1");
 });
 
 test("shows the full fare and the concession on every stop", async ({ page }) => {
@@ -60,8 +185,9 @@ test("opening a stop reveals the departures after the next one", async ({ page }
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
   // The row keeps the next bus; the ones after it live in the panel it opens,
-  // as bare times - two more times under a time need no label.
-  const later = page.locator('[data-open="true"]').getByLabel(/分鐘$/);
+  // under a label that says they come after it, each with the clock time it
+  // lands at - a wait that long is only worth reading against a watch.
+  const later = page.locator('[data-open="true"]').getByLabel(/分鐘 \d\d:\d\d$/);
   await expect(later.first()).toBeVisible({ timeout: 10_000 });
 });
 
@@ -101,6 +227,12 @@ test("pinning a stop puts it on the saved screen", async ({ page }) => {
   const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
   await expect(pin).toHaveAttribute("aria-pressed", "false");
   await pin.click();
+
+  // The bookmark is made by the sheet that asks which group it joins.
+  await page
+    .getByRole("dialog", { name: "分組" })
+    .getByRole("button", { name: "加入收藏" })
+    .click();
   await expect(pin).toHaveAttribute("aria-pressed", "true");
 
   await page.goto("/saved");
@@ -196,4 +328,20 @@ test("the nearest stop is named, and jumps to itself", async ({ page, context })
 
   await nearest.click();
   await expect(page.locator('[data-open="true"]')).toHaveCount(1);
+});
+
+/**
+ * The map answers "where is it" in metres; the list answers it in stops, which
+ * is the unit a rider standing at a kerb can check against the road in front of
+ * them - and the only one available to someone who never opens the map.
+ */
+test("says how far up the road the bus still is", async ({ page }) => {
+  await mockRunningBuses(page);
+  await page.goto(`/route/${KMB_1}`);
+
+  // The page opens the stop the rider is standing at, which is the stop the
+  // question is about.
+  const open = page.locator('[data-open="true"]');
+  await expect(open).toHaveCount(1, { timeout: 15_000 });
+  await expect(open.getByText(/架車/)).toBeVisible({ timeout: 15_000 });
 });

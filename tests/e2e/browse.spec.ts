@@ -41,13 +41,15 @@ test("finds cross-harbour routes from stop coordinates", async ({ page }) => {
 test("a category with nothing in it says so plainly", async ({ page }) => {
   // The fixture has no cross-boundary routes.
   await page.goto("/browse/crossBoundary");
-  await expect(page.getByText("沒有相符路線")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("揾唔到呢條路線")).toBeVisible({ timeout: 10_000 });
 });
 
 test("the trail names the way back out of a category", async ({ page }) => {
   await page.goto("/browse");
   await page.locator('a[href^="/browse/"]').first().click();
-  await expect(page.locator('a[href^="/route/"]').first().or(page.getByText("沒有相符路線"))).toBeVisible({
+  await expect(
+    page.locator('a[href^="/route/"]').first().or(page.getByText("揾唔到呢條路線")),
+  ).toBeVisible({
     timeout: 10_000,
   });
 

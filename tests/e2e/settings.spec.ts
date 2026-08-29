@@ -42,7 +42,25 @@ test("reports what is stored for offline use", async ({ page }) => {
   await expect(page.getByText("路線資料庫")).toBeVisible({ timeout: 10_000 });
   // The fixture holds 6 routes; the count must come from the data, not a guess.
   await expect(page.getByText(/\d+\s*(條路線|routes)/)).toBeVisible();
-  await expect(page.getByText("已下載 · 可離線使用")).toBeVisible();
+  await expect(page.getByText("已下載 · 存喺部機度")).toBeVisible();
+});
+
+test("says what build this is, and links out to everything it reads", async ({ page }) => {
+  // Release and commit together: a rider quoting only "0.1.0" cannot name the
+  // code they are running, which is the whole point of stamping it.
+  await expect(page.getByText(/^\d+\.\d+\.\d+ · \S+$/)).toBeVisible({ timeout: 10_000 });
+
+  await expect(page.getByRole("link", { name: /原始碼/ })).toHaveAttribute(
+    "href",
+    "https://github.com/sinhong2011/motherbus",
+  );
+
+  // Every feed the app reads is named and reachable, not printed as text.
+  for (const source of ["實時到站", "路線同車費", "交通消息", "地圖", "圖示"]) {
+    const row = page.getByRole("link", { name: new RegExp(source) });
+    await expect(row).toHaveAttribute("target", "_blank");
+    await expect(row).toHaveAttribute("href", /^https:\/\//);
+  }
 });
 
 test("refresh interval is a real choice that sticks", async ({ page }) => {

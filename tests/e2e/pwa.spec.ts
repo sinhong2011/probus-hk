@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+
+// This file is about the service worker, so here it is allowed to run.
+test.use({ serviceWorkers: "allow" });
 import { mockTransit } from "./support/mock";
 
 test("ships an installable manifest", async ({ page, request }) => {

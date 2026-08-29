@@ -94,14 +94,97 @@ const TRAFFIC_NEWS = `<?xml version='1.0' encoding='utf-8'?>
     <EngText>The following ferry services are temporarily adjusted:
 Park Island Transport Company Limited
 - Replaced by bus services (Route NR338S)</EngText>
+    <ReferenceDate> 2026/8/28 下午 07:48:10</ReferenceDate>
   </message>
   <message>
     <msgID>900002</msgID>
     <CurrentStatus>3</CurrentStatus>
     <ChinText>因交通意外，龍翔道近廣播道的行車線現已解封。</ChinText>
     <EngText>Lung Cheung Road near Broadcast Drive has reopened.</EngText>
+    <ReferenceDate> 2026/8/28 下午 07:48:10</ReferenceDate>
   </message>
 </body>`;
+
+/**
+ * The department's other feed - the incident register, which names its own
+ * category and location instead of leaving them in the prose.
+ */
+const TRAFFIC_INCIDENTS = `<?xml version="1.0" encoding="UTF-8"?>
+<list>
+  <message>
+    <INCIDENT_NUMBER>IN-26-06323</INCIDENT_NUMBER>
+    <INCIDENT_HEADING_EN>Road Incident</INCIDENT_HEADING_EN>
+    <INCIDENT_HEADING_CN>道路事故</INCIDENT_HEADING_CN>
+    <LOCATION_EN>Sai Kung Man Yee Road</LOCATION_EN>
+    <LOCATION_CN>西貢萬宜路</LOCATION_CN>
+    <ANNOUNCEMENT_DATE>2026-08-28T18:00:00</ANNOUNCEMENT_DATE>
+    <INCIDENT_STATUS_EN>NEW</INCIDENT_STATUS_EN>
+    <ID>145107</ID>
+    <CONTENT_EN>Traffic on Sai Kung Man Yee Road is anticipated to be busy.</CONTENT_EN>
+    <CONTENT_CN>西貢萬宜路交通預計比較繁忙。</CONTENT_CN>
+  </message>
+</list>`;
+
+/**
+ * A flat colour where the basemap would be.
+ *
+ * Most map tests are content to let the map fail and check the fallback
+ * instead, but a test about something drawn *on* the map needs a map that
+ * paints without reaching the network.
+ */
+export async function mockBasemap(page: Page) {
+  await page.route("**/basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({
+        version: 8,
+        sources: {},
+        layers: [{ id: "bg", type: "background", paint: { "background-color": "#141922" } }],
+      }),
+    }),
+  );
+}
+
+/**
+ * Arrivals shaped like buses that are actually on the road: each one due later
+ * at every stop ahead of it, and absent from the stops it has already passed.
+ *
+ * The shared mock gives every stop the same three times, which is a shape no
+ * bus makes - nothing can be worked out about a vehicle from it. Anything that
+ * reads positions out of arrival times needs this instead.
+ */
+export async function mockRunningBuses(page: Page, startSeqs = [8, 18], stops = 25) {
+  await page.route("**/data.etabus.gov.hk/v1/transport/kmb/route-eta/**", (route) => {
+    const data = [];
+    for (const [index, from] of startSeqs.entries()) {
+      for (let seq = from; seq <= stops; seq += 1) {
+        for (const dir of ["O", "I"]) {
+          data.push({
+            co: "KMB",
+            route: "1",
+            dir,
+            service_type: 1,
+            seq,
+            eta_seq: index + 1,
+            eta: hkIso(1.5 + (seq - from) * 2),
+            rmk_tc: "",
+            rmk_en: "",
+            dest_tc: "尖沙咀碼頭",
+            dest_en: "STAR FERRY",
+          });
+        }
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ type: "RouteETA", version: "1.0", data }),
+    });
+  });
+}
 
 export interface MockOptions {
   /** Make every arrival feed fail, to exercise the timetable fallback. */
@@ -173,6 +256,21 @@ export async function mockTransit(page: Page, options: MockOptions = {}) {
           contentType: "application/xml",
           headers: { "access-control-allow-origin": "*" },
           body: TRAFFIC_NEWS,
+        }),
+  );
+
+  /*
+   * The incident register, matched on its own path so the glob cannot also
+   * claim `specialtrafficnews.xml` above it.
+   */
+  await page.route("**/special_news/trafficnews.xml", (route) =>
+    options.noticesFail
+      ? route.fulfill({ status: 503, body: "" })
+      : route.fulfill({
+          status: 200,
+          contentType: "application/xml",
+          headers: { "access-control-allow-origin": "*" },
+          body: TRAFFIC_INCIDENTS,
         }),
   );
 

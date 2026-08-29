@@ -17,6 +17,7 @@ const ROUTES = [
   "/plan",
   "/notices",
   "/rail",
+  "/rail/TWL",
   "/browse",
   "/browse/overnight",
   "/saved",

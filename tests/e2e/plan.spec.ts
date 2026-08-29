@@ -29,7 +29,7 @@ async function chooseDestination(page: import("@playwright/test").Page, name: st
 test("starts from your location and asks only for a destination", async ({ page }) => {
   // Both ends are fields now rather than buttons, so the origin's value is
   // read off the input the same way a screen reader would.
-  await expect(page.getByLabel("起點")).toHaveValue("我的位置", { timeout: 10_000 });
+  await expect(page.getByLabel("起點")).toHaveValue("我嘅位置", { timeout: 10_000 });
   await expect(page.getByLabel("目的地")).toBeVisible();
 });
 
@@ -38,7 +38,9 @@ test("plans a journey between two stops", async ({ page }) => {
   await chooseDestination(page, "尖沙咀");
 
   // Whatever it finds, each journey names its routes and a total time.
-  await expect(page.getByText("全程約", { exact: false }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("全程大約", { exact: false }).first()).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible();
 });
 
@@ -70,24 +72,26 @@ test("says so plainly when there is no way to get there", async ({ page }) => {
   // Tai O is on Lantau; the fixture has no service to it from Kowloon.
   await chooseDestination(page, "大澳");
 
-  await expect(page.getByText("找不到合適路線")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("揾唔到啱嘅路線")).toBeVisible({ timeout: 15_000 });
 });
 
 test("swapping the ends re-plans in the other direction", async ({ page }) => {
   await expect(page.getByLabel("目的地")).toBeVisible({ timeout: 10_000 });
   await chooseDestination(page, "尖沙咀");
-  await expect(page.getByText("全程約", { exact: false }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("全程大約", { exact: false }).first()).toBeVisible({
+    timeout: 15_000,
+  });
 
   const origin = page.getByLabel("起點");
   const destination = page.getByLabel("目的地");
-  await expect(origin).toHaveValue("我的位置");
+  await expect(origin).toHaveValue("我嘅位置");
 
-  await page.getByRole("button", { name: "對調" }).click();
+  await page.getByRole("button", { name: "掉轉" }).click();
 
   // The two ends trade places: the chosen stop becomes where you start from,
   // and your own location becomes where you are going.
-  await expect(origin).not.toHaveValue("我的位置");
-  await expect(destination).toHaveValue("我的位置");
+  await expect(origin).not.toHaveValue("我嘅位置");
+  await expect(destination).toHaveValue("我嘅位置");
 });
 
 test("planning and searching share one tab", async ({ page }) => {

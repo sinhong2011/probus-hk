@@ -39,13 +39,31 @@ test("shows the fare and the two-dollar concession together", async ({ page }) =
 });
 
 test("finds stops by name, not just routes by number", async ({ page }) => {
-  await page.getByLabel(/路線號碼|Route number/).fill("彌敦道");
+  await page.getByLabel(/路線、車站|Route, stop/).fill("彌敦道");
 
-  // Match the section heading itself, not any control that happens to mention
-  // stops - the desktop keypad carries the same words and sits earlier in the
+  // The stop results, reached through their own link rather than through a
+  // heading: the keypad's hint carries the same words and sits earlier in the
   // DOM even while hidden.
-  await expect(page.getByText(/車站\s+Stops/)).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page
+      .getByRole("heading", { name: "車站" })
+      .or(page.getByText("車站", { exact: true }))
+      .first(),
+  ).toBeVisible({
+    timeout: 10_000,
+  });
   await expect(page.locator('a[href^="/stop/"]').first()).toBeVisible();
+});
+
+test("finds the one stop whose pole carries the code you typed", async ({ page }) => {
+  // The code on the flag - "WT916" - is the only thing at a stop that names
+  // that pole and no other, so typing it should land on exactly one stop.
+  await page.getByLabel(/路線、車站|Route, stop/).fill("WT916");
+
+  const results = page.locator('a[href^="/stop/"]');
+  await expect(results).toHaveCount(1, { timeout: 10_000 });
+  await expect(results.first()).toContainText("竹園邨總站");
+  await expect(results.first()).toContainText("WT916");
 });
 
 test("backspace and clear both undo the query", async ({ page }) => {
