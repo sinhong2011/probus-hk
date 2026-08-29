@@ -4,6 +4,13 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.2.2](https://github.com/sinhong2011/probus-hk/compare/v0.2.1...v0.2.2) (2026-08-29)
+
+
+### Bug Fixes
+
+* show one arrival per stop row, and lift the sheet above the page on iOS ([#7](https://github.com/sinhong2011/probus-hk/issues/7)) ([9473e2b](https://github.com/sinhong2011/probus-hk/commit/9473e2b5fa071c3795962b6299f2cbb374c35110))
+
 ## [0.2.1](https://github.com/sinhong2011/probus-hk/compare/v0.2.0...v0.2.1) (2026-08-29)
 
 
