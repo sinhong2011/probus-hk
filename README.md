@@ -14,12 +14,12 @@ offline use.
 Each target is already configured in the repository, so the buttons need no
 further settings:
 
-| Target | Config | Build | Output |
-| --- | --- | --- | --- |
-| Vercel | `vercel.json` | `bun run build` | `dist` |
-| Netlify | `netlify.toml` | `bun run build` | `dist` |
-| Cloudflare Pages | `public/_redirects` | `bun run build` | `dist` |
-| Docker | `Dockerfile`, `nginx.conf` | — | port 8080 |
+| Target           | Config                     | Build           | Output    |
+| ---------------- | -------------------------- | --------------- | --------- |
+| Vercel           | `vercel.json`              | `bun run build` | `dist`    |
+| Netlify          | `netlify.toml`             | `bun run build` | `dist`    |
+| Cloudflare Pages | `public/_redirects`        | `bun run build` | `dist`    |
+| Docker           | `Dockerfile`, `nginx.conf` | —               | port 8080 |
 
 All three static hosts need the same two things, and all three have them here: a
 catch-all rewrite to `index.html`, because the router owns every path, and a

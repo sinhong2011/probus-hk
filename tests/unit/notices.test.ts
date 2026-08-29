@@ -31,9 +31,7 @@ const ONE_LINER = `
 </message>`;
 
 function stub(xml: string, ok = true) {
-  vi.stubGlobal("fetch", () =>
-    Promise.resolve(new Response(xml, { status: ok ? 200 : 503 })),
-  );
+  vi.stubGlobal("fetch", () => Promise.resolve(new Response(xml, { status: ok ? 200 : 503 })));
 }
 
 afterEach(() => vi.unstubAllGlobals());

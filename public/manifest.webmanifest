@@ -10,11 +10,7 @@
   "orientation": "portrait",
   "background_color": "#121214",
   "theme_color": "#121214",
-  "categories": [
-    "travel",
-    "navigation",
-    "utilities"
-  ],
+  "categories": ["travel", "navigation", "utilities"],
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -81,7 +81,8 @@ export function lightRailRoutes(db: RouteDb): KeyedRoute[] {
     if (route) out.push(route);
   }
   return out.sort(
-    (a, b) => a.route.localeCompare(b.route, undefined, { numeric: true }) || a.key.localeCompare(b.key),
+    (a, b) =>
+      a.route.localeCompare(b.route, undefined, { numeric: true }) || a.key.localeCompare(b.key),
   );
 }
 

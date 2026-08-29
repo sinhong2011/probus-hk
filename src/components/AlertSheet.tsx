@@ -102,11 +102,7 @@ export function AlertSheet(props: {
  * happen. Permission is asked from this button and nowhere else - a prompt on
  * page load is one browsers ignore and Safari holds against the site.
  */
-function PermissionRow(props: {
-  permission: NotifyPermission;
-  lang: Lang;
-  onRequest: () => void;
-}) {
+function PermissionRow(props: { permission: NotifyPermission; lang: Lang; onRequest: () => void }) {
   return (
     <div class="flex items-center gap-3 rounded-xl bg-secondary px-3.5 py-3">
       <div class="flex min-w-0 grow flex-col gap-0.5">

@@ -290,10 +290,7 @@ export function reverseRoute(db: RouteDb, route: KeyedRoute): KeyedRoute | undef
 }
 
 /** The stop entries along a route, in order, for the operator that runs it. */
-export function routeStops(
-  db: RouteDb,
-  route: KeyedRoute,
-): { id: string; stop: StopEntry }[] {
+export function routeStops(db: RouteDb, route: KeyedRoute): { id: string; stop: StopEntry }[] {
   const co = route.co[0];
   const ids = co ? (route.stops[co] ?? []) : [];
   return ids.flatMap((id) => {
@@ -415,11 +412,7 @@ export interface StopCluster {
  * separately shows the rider the same routes twice under two names, which is
  * exactly the kind of raw-data leakage that makes an app feel unfinished.
  */
-export function nearbyStopClusters(
-  db: RouteDb,
-  centre: LatLng,
-  radiusM: number,
-): StopCluster[] {
+export function nearbyStopClusters(db: RouteDb, centre: LatLng, radiusM: number): StopCluster[] {
   const found = nearbyStops(db, centre, radiusM);
   const claimed = new Set<string>();
   const clusters: StopCluster[] = [];

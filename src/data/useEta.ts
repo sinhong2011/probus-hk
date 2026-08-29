@@ -22,10 +22,7 @@ export interface EtaTarget {
  * from `[]`, "there are no buses". Collapsing the two made every stop claim
  * 暫無班次 for as long as the request took.
  */
-export function useEta(
-  target: () => EtaTarget | null,
-  limit = 3,
-): Accessor<Eta[] | undefined> {
+export function useEta(target: () => EtaTarget | null, limit = 3): Accessor<Eta[] | undefined> {
   const db = useDb();
 
   return createAsyncMemo(async () => {

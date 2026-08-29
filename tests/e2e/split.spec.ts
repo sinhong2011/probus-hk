@@ -52,18 +52,16 @@ test("jumping to a stop scrolls the list, not the card around it", async ({ brow
   await expect(rows.first()).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(`[data-stop-seq="${last}"]`)).toBeInViewport();
 
-  const box = await rows
-    .first()
-    .evaluate((row) => {
-      const list = row.closest(".mb-scroll") as HTMLElement;
-      const card = list.parentElement as HTMLElement;
-      return {
-        card: card.scrollTop,
-        pane: (card.parentElement as HTMLElement).scrollTop,
-        // The list fills the card it is framed by: no hole under the last stop.
-        gap: card.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom,
-      };
-    });
+  const box = await rows.first().evaluate((row) => {
+    const list = row.closest(".mb-scroll") as HTMLElement;
+    const card = list.parentElement as HTMLElement;
+    return {
+      card: card.scrollTop,
+      pane: (card.parentElement as HTMLElement).scrollTop,
+      // The list fills the card it is framed by: no hole under the last stop.
+      gap: card.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom,
+    };
+  });
 
   expect(box.card, "the card is a frame, not a scroller").toBe(0);
   expect(box.pane, "the pane is a frame, not a scroller").toBe(0);

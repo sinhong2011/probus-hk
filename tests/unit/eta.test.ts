@@ -105,7 +105,14 @@ describe("KMB", () => {
   it("marks KMB's own timetable rows as scheduled, not as a live prediction", async () => {
     stubJson({
       data: [
-        { dir: "O", seq: 4, eta_seq: 1, eta: "2026-08-27T20:00:06+08:00", rmk_tc: "原定班次", rmk_en: "Scheduled Bus" },
+        {
+          dir: "O",
+          seq: 4,
+          eta_seq: 1,
+          eta: "2026-08-27T20:00:06+08:00",
+          rmk_tc: "原定班次",
+          rmk_en: "Scheduled Bus",
+        },
         { dir: "O", seq: 4, eta_seq: 2, eta: "2026-08-27T20:19:45+08:00", rmk_tc: "", rmk_en: "" },
       ],
     });
@@ -128,8 +135,24 @@ describe("Citybus", () => {
   it("queries by stop and route and filters by direction", async () => {
     stubJson({
       data: [
-        { dir: "I", seq: 18, stop: "001027", eta_seq: 1, eta: "2026-08-27T19:12:27+08:00", rmk_tc: "", rmk_en: "" },
-        { dir: "O", seq: 18, stop: "001027", eta_seq: 1, eta: "2026-08-27T19:40:00+08:00", rmk_tc: "", rmk_en: "" },
+        {
+          dir: "I",
+          seq: 18,
+          stop: "001027",
+          eta_seq: 1,
+          eta: "2026-08-27T19:12:27+08:00",
+          rmk_tc: "",
+          rmk_en: "",
+        },
+        {
+          dir: "O",
+          seq: 18,
+          stop: "001027",
+          eta_seq: 1,
+          eta: "2026-08-27T19:40:00+08:00",
+          rmk_tc: "",
+          rmk_en: "",
+        },
       ],
     });
 
@@ -198,8 +221,20 @@ describe("Minibus", () => {
     stubJson({
       data: {
         eta: [
-          { eta_seq: 1, diff: 0, timestamp: "2026-08-27T19:39:29+08:00", remarks_tc: null, remarks_en: null },
-          { eta_seq: 2, diff: 5, timestamp: "2026-08-27T19:44:05+08:00", remarks_tc: "未開出", remarks_en: "Scheduled" },
+          {
+            eta_seq: 1,
+            diff: 0,
+            timestamp: "2026-08-27T19:39:29+08:00",
+            remarks_tc: null,
+            remarks_en: null,
+          },
+          {
+            eta_seq: 2,
+            diff: 5,
+            timestamp: "2026-08-27T19:44:05+08:00",
+            remarks_tc: "未開出",
+            remarks_en: "Scheduled",
+          },
         ],
       },
     });
@@ -215,8 +250,12 @@ describe("MTR heavy rail", () => {
     status: 1,
     data: {
       "AEL-HOK": {
-        UP: [{ seq: "1", dest: "AWE", plat: "1", time: "2026-08-27 19:20:00", ttnt: "8", valid: "Y" }],
-        DOWN: [{ seq: "1", dest: "HOK", plat: "2", time: "2026-08-27 19:25:00", ttnt: "13", valid: "Y" }],
+        UP: [
+          { seq: "1", dest: "AWE", plat: "1", time: "2026-08-27 19:20:00", ttnt: "8", valid: "Y" },
+        ],
+        DOWN: [
+          { seq: "1", dest: "HOK", plat: "2", time: "2026-08-27 19:25:00", ttnt: "13", valid: "Y" },
+        ],
       },
     },
   };
@@ -238,7 +277,20 @@ describe("MTR heavy rail", () => {
   it("ignores trains the feed marks invalid", async () => {
     stubJson({
       status: 1,
-      data: { "AEL-HOK": { UP: [{ seq: "1", dest: "AWE", plat: "1", time: "2026-08-27 19:20:00", ttnt: "8", valid: "N" }] } },
+      data: {
+        "AEL-HOK": {
+          UP: [
+            {
+              seq: "1",
+              dest: "AWE",
+              plat: "1",
+              time: "2026-08-27 19:20:00",
+              ttnt: "8",
+              valid: "N",
+            },
+          ],
+        },
+      },
     });
     const r = route({ co: ["mtr"], route: "AEL", bound: { mtr: "UT" } });
     await expect(fetchMtrRailEta(query("mtr", r, 1, "HOK"))).resolves.toEqual([]);
@@ -260,10 +312,31 @@ describe("Light rail", () => {
         {
           platform_id: 1,
           route_list: [
-            { route_no: "505", dest_en: "Siu Hong", dest_ch: "兆康", time_en: "Departing", time_ch: "正在離開", train_length: 2 },
-            { route_no: "505", dest_en: "Siu Hong", dest_ch: "兆康", time_en: "7 min", time_ch: "7 分鐘", train_length: 2 },
+            {
+              route_no: "505",
+              dest_en: "Siu Hong",
+              dest_ch: "兆康",
+              time_en: "Departing",
+              time_ch: "正在離開",
+              train_length: 2,
+            },
+            {
+              route_no: "505",
+              dest_en: "Siu Hong",
+              dest_ch: "兆康",
+              time_en: "7 min",
+              time_ch: "7 分鐘",
+              train_length: 2,
+            },
             // A different terminus on the same platform must not be counted.
-            { route_no: "505", dest_en: "Tuen Mun Ferry Pier", dest_ch: "屯門碼頭", time_en: "2 min", time_ch: "2 分鐘", train_length: 2 },
+            {
+              route_no: "505",
+              dest_en: "Tuen Mun Ferry Pier",
+              dest_ch: "屯門碼頭",
+              time_en: "2 min",
+              time_ch: "2 分鐘",
+              train_length: 2,
+            },
           ],
         },
       ],
@@ -285,8 +358,18 @@ describe("MTR feeder bus", () => {
         {
           busStopId: "K1",
           bus: [
-            { arrivalTimeInSecond: "108000", departureTimeInSecond: "83", isScheduled: "1", isDelayed: "0" },
-            { arrivalTimeInSecond: "300", departureTimeInSecond: "320", isScheduled: "0", isDelayed: "0" },
+            {
+              arrivalTimeInSecond: "108000",
+              departureTimeInSecond: "83",
+              isScheduled: "1",
+              isDelayed: "0",
+            },
+            {
+              arrivalTimeInSecond: "300",
+              departureTimeInSecond: "320",
+              isScheduled: "0",
+              isDelayed: "0",
+            },
           ],
         },
       ],
@@ -323,7 +406,14 @@ describe("MTR platforms", () => {
           data: {
             "TWL-ADM": {
               UP: [
-                { seq: "1", dest: "TSW", plat: "2", time: "2026-03-04 10:05:00", ttnt: "3", valid: "Y" },
+                {
+                  seq: "1",
+                  dest: "TSW",
+                  plat: "2",
+                  time: "2026-03-04 10:05:00",
+                  ttnt: "3",
+                  valid: "Y",
+                },
               ],
             },
           },

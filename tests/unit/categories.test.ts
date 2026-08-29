@@ -49,9 +49,9 @@ describe("overnight", () => {
 
   it("catches a route that runs through the small hours whatever its number", () => {
     // A band written 2310 -> 2620 runs until 02:20 the next morning.
-    expect(match("overnight", fake({ route: "999", freq: { s: { "2310": ["2620", "1800"] } } }))).toBe(
-      true,
-    );
+    expect(
+      match("overnight", fake({ route: "999", freq: { s: { "2310": ["2620", "1800"] } } })),
+    ).toBe(true);
   });
 
   it("leaves an ordinary daytime route alone", () => {
@@ -80,7 +80,10 @@ describe("cross-boundary", () => {
 
   it("catches a route terminating at a control point", () => {
     expect(
-      match("crossBoundary", fake({ route: "618", dest: { zh: "深圳灣口岸", en: "Shenzhen Bay" } })),
+      match(
+        "crossBoundary",
+        fake({ route: "618", dest: { zh: "深圳灣口岸", en: "Shenzhen Bay" } }),
+      ),
     ).toBe(true);
   });
 

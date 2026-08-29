@@ -71,7 +71,6 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 600, maxAgeSeconds: 30 * 24 * 60 * 60 })],
       }),
     },
-
   ],
 });
 

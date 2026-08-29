@@ -39,9 +39,7 @@ export const frequent = {
         : [...fresh, { key: routeKey, count: 1, last: now }];
 
       // Keep the list bounded; drop the least-used, oldest entries first.
-      return next
-        .sort((a, b) => b.count - a.count || b.last - a.last)
-        .slice(0, MAX_TRACKED);
+      return next.sort((a, b) => b.count - a.count || b.last - a.last).slice(0, MAX_TRACKED);
     });
   },
 
@@ -50,7 +48,9 @@ export const frequent = {
    * once are excluded unless nothing else qualifies.
    */
   top(limit = 5): string[] {
-    const ranked = visits().slice().sort((a, b) => b.count - a.count || b.last - a.last);
+    const ranked = visits()
+      .slice()
+      .sort((a, b) => b.count - a.count || b.last - a.last);
     const habitual = ranked.filter((v) => v.count > 1);
     return (habitual.length > 0 ? habitual : ranked).slice(0, limit).map((v) => v.key);
   },

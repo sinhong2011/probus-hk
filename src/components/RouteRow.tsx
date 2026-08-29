@@ -45,24 +45,19 @@ function subtitleFor(props: LineProps): string {
 /** Presentational row - takes arrivals it is given, so a stop can batch them. */
 export function RouteLine(props: LineProps) {
   return (
-    <a
-      href={routeHref(props.route.key)}
-      class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
-    >
+    <a href={routeHref(props.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 
       <div class="flex min-w-0 grow flex-col gap-0.5">
         <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
           {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
         </span>
-        <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">{subtitleFor(props)}</span>
+        <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+          {subtitleFor(props)}
+        </span>
       </div>
 
-      <EtaCountdown
-        etas={props.etas}
-        lang={props.lang}
-        size={props.countdownSize ?? "sm"}
-      />
+      <EtaCountdown etas={props.etas} lang={props.lang} size={props.countdownSize ?? "sm"} />
     </a>
   );
 }

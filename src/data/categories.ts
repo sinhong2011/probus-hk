@@ -130,9 +130,7 @@ export const CATEGORIES: Category[] = [
     hint: { zh: "落馬洲 · 深圳灣 · 港珠澳大橋", en: "Lok Ma Chau, Shenzhen Bay, HZMB" },
     accent: "#C0563A",
     matches: (route) =>
-      /^B\d/i.test(route.route) ||
-      CROSSING.test(route.orig.zh) ||
-      CROSSING.test(route.dest.zh),
+      /^B\d/i.test(route.route) || CROSSING.test(route.orig.zh) || CROSSING.test(route.dest.zh),
   },
   {
     id: "crossHarbour",
