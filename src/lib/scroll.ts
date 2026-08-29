@@ -45,3 +45,33 @@ export function centerInView(el: Element, behavior: ScrollBehavior = "smooth") {
     behavior,
   });
 }
+
+/**
+ * The same, held until the row stops changing shape.
+ *
+ * A jump lands on the stop it opens, and an open stop is still being written:
+ * its arrivals, the panel under them and the ride controls all arrive after the
+ * scroll that aimed at it, and a row that triples in height afterwards is a row
+ * the scroll no longer points at - the last stop on a route ended up two pixels
+ * below the fold. So the aim is corrected for as long as the row is moving, and
+ * dropped the instant the rider takes over: nothing here outranks a hand on the
+ * list.
+ */
+export function centerWhileItSettles(el: Element, settleMs = 1200) {
+  centerInView(el);
+
+  const observer = new ResizeObserver(() => centerInView(el));
+  const stop = () => {
+    observer.disconnect();
+    clearTimeout(timer);
+    for (const event of TAKEOVER) window.removeEventListener(event, stop);
+  };
+  const timer = setTimeout(stop, settleMs);
+
+  observer.observe(el);
+  // On `window`, because every one of these reaches it whatever it started on.
+  for (const event of TAKEOVER) window.addEventListener(event, stop, { passive: true });
+}
+
+/** A rider moving the list themselves; the aim is theirs from then on. */
+const TAKEOVER = ["wheel", "touchstart", "keydown"] as const;

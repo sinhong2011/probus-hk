@@ -43,7 +43,7 @@ import { now } from "~/stores/clock";
 import { distanceM, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { operatorLabel } from "~/lib/operators";
-import { centerInView } from "~/lib/scroll";
+import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
 import { alertId, alerts } from "~/stores/alerts";
@@ -1262,7 +1262,7 @@ export default function RouteDetail() {
       jumped = true;
       requestAnimationFrame(() => {
         const row = document.querySelector(`[data-stop-seq="${index + 1}"]`);
-        if (row) centerInView(row);
+        if (row) centerWhileItSettles(row);
       });
     },
   );
@@ -1286,7 +1286,7 @@ export default function RouteDetail() {
     setOpenSeq(seq);
     requestAnimationFrame(() => {
       const row = document.querySelector(`[data-stop-seq="${seq}"]`);
-      if (row) centerInView(row);
+      if (row) centerWhileItSettles(row);
     });
   };
 
