@@ -20,6 +20,8 @@ const TABS: Record<string, MessageKey> = {
 const SECTIONS: [string, string][] = [
   ["/plan", "/search"],
   ["/browse", "/search"],
+  // A line page belongs to the railway even on a cold open from a shared link.
+  ["/rail/", "/rail"],
 ];
 
 export interface Crumb {
