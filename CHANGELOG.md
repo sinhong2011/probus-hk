@@ -4,6 +4,13 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.2.1](https://github.com/sinhong2011/probus-hk/compare/v0.2.0...v0.2.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* pin the Solid packages to the versions the app was built against ([3af8b6f](https://github.com/sinhong2011/probus-hk/commit/3af8b6f32134e2088e9b8276855683ecd5cf5a86))
+
 ## 0.2.0
 
 ### The app has a name
