@@ -66,17 +66,19 @@ test("bookmarks can be ordered by something other than the hand-dragged order", 
   await bookmark(page, 1);
   await page.goto("/saved");
 
-  const byRoute = page.getByRole("radio", { name: "路線號" });
-  await byRoute.click();
-  await expect(byRoute).toHaveAttribute("aria-checked", "true");
+  // Order rides in the header wearing its own answer; the four choices only
+  // appear when the header button is asked for them.
+  const sort = page.locator('button[aria-haspopup="dialog"]');
+  await expect(sort).toContainText("自訂", { timeout: 15_000 });
+  await sort.click();
+  await page.getByRole("radio", { name: "路線號" }).click();
+  await expect(sort).toContainText("路線號");
 
   // The choice is part of how the screen is read, so it outlives the visit.
   await page.reload();
-  await expect(page.getByRole("radio", { name: "路線號" })).toHaveAttribute(
-    "aria-checked",
-    "true",
-    { timeout: 15_000 },
-  );
+  await expect(page.locator('button[aria-haspopup="dialog"]')).toContainText("路線號", {
+    timeout: 15_000,
+  });
 });
 
 test("a bookmark can be put in a group, and the group filters the list", async ({ page }) => {
