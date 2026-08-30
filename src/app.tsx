@@ -9,6 +9,7 @@ import { installFrequentEffects } from "~/stores/frequent";
 import { installSavedEffects } from "~/stores/saved";
 import { installTripEffects } from "~/stores/trips";
 import { installSettingsEffects } from "~/stores/settings";
+import { installDismissedEffects } from "~/stores/dismissed";
 
 /**
  * The app is the stores plus the router.
@@ -23,6 +24,7 @@ import { installSettingsEffects } from "~/stores/settings";
  */
 export function App() {
   installSettingsEffects();
+  installDismissedEffects();
   installSavedEffects();
   installTripEffects();
   installAlertEffects();

@@ -9,6 +9,7 @@ import {
   SectionLabel,
   StopCode,
 } from "~/components/Chrome";
+import { Alert } from "~/components/Alert";
 import { Trail } from "~/components/Breadcrumb";
 import { AlertSheet } from "~/components/AlertSheet";
 import { GroupSheet } from "~/components/GroupSheet";
@@ -1886,6 +1887,12 @@ export default function RouteDetail() {
            * the answer behind a control, and the page opens scrolled to where
            * you are standing anyway.
            */}
+
+          {/* Said once, before the list, and closed for good with one tap:
+              the rider who has learned the gesture should not be told again. */}
+          <Alert id="route.tap-for-eta" lang={lang()} class="shrink-0">
+            {t("tapForEta", lang())}
+          </Alert>
 
           {/* The card is the frame; the rows move inside it. */}
           <Card class="lg:relative lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">

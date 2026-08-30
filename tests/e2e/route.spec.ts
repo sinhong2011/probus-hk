@@ -441,3 +441,20 @@ test("says how far up the road the bus still is", async ({ page }) => {
   await expect(open).toHaveCount(1, { timeout: 15_000 });
   await expect(open.getByText(/架車/)).toBeVisible({ timeout: 15_000 });
 });
+
+/**
+ * The note that teaches the tap is closeable, and closing it is kept: a note
+ * that comes back on the next visit is not closeable, it is nagging.
+ */
+test("the tap-for-departures note can be closed for good", async ({ page }) => {
+  await page.goto("/route/1%2B1%2BCHUK%20YUEN%20ESTATE%2BSTAR%20FERRY");
+  const note = page.getByRole("status").filter({ hasText: "撳車站睇埋之後嘅班次" });
+  await expect(note).toBeVisible({ timeout: 15_000 });
+
+  await note.getByRole("button", { name: "關閉" }).click();
+  await expect(note).toBeHidden();
+
+  await page.reload();
+  await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
+  await expect(note).toBeHidden();
+});
