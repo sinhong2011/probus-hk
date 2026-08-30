@@ -1,0 +1,79 @@
+import { describe, expect, it } from "vitest";
+import { MAP_EDGES, MAP_STATIONS } from "~/data/railMap";
+
+/**
+ * The schematic map's geometry is generated once and then corrected by hand,
+ * which is the part that needs a net under it. Moving one station to make room
+ * for its name silently bends the two segments either side of it off the grid,
+ * or slides it on top of a neighbour - and neither shows up until someone looks
+ * at the right corner of the diagram at the right zoom.
+ *
+ * These are the rules the drawing depends on rather than opinions about how it
+ * should look: run at a compass direction, stations far enough apart to be
+ * separate things, and every segment joining two stations that exist.
+ */
+
+const byId = new Map(MAP_STATIONS.map((s) => [s.id, s]));
+const edges = Object.entries(MAP_EDGES).flatMap(([line, pairs]) =>
+  pairs.map(([a, b]) => ({ line, a, b })),
+);
+
+/** How far off the nearest of the eight compass directions, in degrees. */
+function skew(ax: number, ay: number, bx: number, by: number): number {
+  const degrees = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+  return Math.abs(((((degrees + 22.5) % 45) + 45) % 45) - 22.5);
+}
+
+describe("the schematic map's geometry", () => {
+  it("joins only stations it has", () => {
+    const missing = edges.filter((e) => !byId.has(e.a) || !byId.has(e.b));
+    expect(missing).toEqual([]);
+  });
+
+  it("gives every station at least one line", () => {
+    expect(MAP_STATIONS.filter((s) => s.lines.length === 0)).toEqual([]);
+  });
+
+  /*
+   * Not a round number: it is where the drawing actually breaks. At the zoom
+   * that shows every name, a grid square is 34 pixels and an interchange bead
+   * is 13 across, so two of them touch at 0.39 squares apart. This leaves half
+   * again on top of that.
+   *
+   * The generator aims for a full square, which is roomier than this - the
+   * point of the looser figure is that a hand correction is allowed to put two
+   * stations genuinely close where the railway does, as Tsim Sha Tsui and its
+   * East counterpart are, without being told it has broken something.
+   */
+  const CLEARANCE = 0.6;
+
+  it("puts no two stations on top of each other", () => {
+    const tooClose: string[] = [];
+    for (let i = 0; i < MAP_STATIONS.length; i++) {
+      for (let j = i + 1; j < MAP_STATIONS.length; j++) {
+        const a = MAP_STATIONS[i]!;
+        const b = MAP_STATIONS[j]!;
+        if (Math.hypot(a.x - b.x, a.y - b.y) < CLEARANCE) tooClose.push(`${a.id}/${b.id}`);
+      }
+    }
+    expect(tooClose).toEqual([]);
+  });
+
+  it("runs every segment at a multiple of 45 degrees", () => {
+    const bent = edges
+      .filter(
+        (e) => skew(byId.get(e.a)!.x, byId.get(e.a)!.y, byId.get(e.b)!.x, byId.get(e.b)!.y) > 0.5,
+      )
+      .map((e) => `${e.line} ${e.a}-${e.b}`);
+    expect(bent).toEqual([]);
+  });
+
+  it("gives every segment a length to draw", () => {
+    const zero = edges.filter((e) => {
+      const a = byId.get(e.a)!;
+      const b = byId.get(e.b)!;
+      return a.x === b.x && a.y === b.y;
+    });
+    expect(zero).toEqual([]);
+  });
+});
