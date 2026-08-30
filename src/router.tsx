@@ -76,7 +76,13 @@ const noticesRoute = createRoute({
 const railRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/rail",
-  validateSearch: endpointSearch,
+  // The endpoints, and which of them is being picked: the picker covers the
+  // whole of a phone's screen, so the back button has to be its way out.
+  validateSearch: (search: Record<string, unknown>) => {
+    const pick: "from" | "to" | undefined =
+      search.pick === "from" ? "from" : search.pick === "to" ? "to" : undefined;
+    return { ...endpointSearch(search), ...(pick ? { pick } : {}) };
+  },
   component: lazyScreen(() => import("~/routes/Rail")),
 });
 
@@ -130,12 +136,17 @@ const routeDetailRoute = createRoute({
   path: "/route/$key",
   // Which stop along the route to open at, so a saved trip and a shared link
   // both land on the right row rather than the top of the list.
-  // And whether the map is opened out over it: that is a place a rider is
-  // in, so the back button should be the way out of it.
+  // And whether the map is opened out over it, or the timetable is up: both
+  // are places a rider is in, so the back button should be the way out.
   validateSearch: (search: Record<string, unknown>) => {
     const stop = asCount(search.stop);
     const map = search.map === true;
-    return { ...(stop === undefined ? {} : { stop }), ...(map ? { map } : {}) };
+    const info = search.info === true;
+    return {
+      ...(stop === undefined ? {} : { stop }),
+      ...(map ? { map } : {}),
+      ...(info ? { info } : {}),
+    };
   },
   component: lazyScreen(() => import("~/routes/RouteDetail")),
 });

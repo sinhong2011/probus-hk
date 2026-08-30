@@ -1,5 +1,5 @@
 import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Card, Chip, Hairline, Reveal, SectionLabel } from "./Chrome";
 import { ChevronRightIcon, CloseIcon, PinIcon, SearchIcon, SwapIcon, WalkIcon } from "./Icons";
 import { Modal } from "./Modal";
@@ -246,7 +246,28 @@ export function RailPlanner(props: { lang: Lang }) {
   const db = useDb();
   const search = useSearch({ from: "/rail" });
   const navigate = useNavigate();
-  const [picking, setPicking] = createSignal<"from" | "to" | null>(null);
+  /*
+   * Which end is being picked lives in the URL beside the ends themselves:
+   * the picker covers the whole of a phone's screen, so the back button has
+   * to be its way out, and a reload should not lose it. Opening pushes,
+   * closing replaces, so leaving the planner is still one step.
+   */
+  const picking = (): "from" | "to" | null => search().pick ?? null;
+  const setPicking = (which: "from" | "to" | null) =>
+    navigate({
+      to: "/rail",
+      search: (prev) => ({ ...prev, pick: which ?? undefined }),
+      replace: which === null,
+    });
+  /* The dialog keeps its last title while it slides away, or "to" would flash
+     to "from" the moment a choice closed it. */
+  const [shownEnd, setShownEnd] = createSignal<"from" | "to">("from");
+  createEffect(
+    () => picking(),
+    (which) => {
+      if (which) setShownEnd(which);
+    },
+  );
   const [query, setQuery] = createSignal("");
 
   /** Only stations the database knows, so every one on the list has a name. */
@@ -271,7 +292,8 @@ export function RailPlanner(props: { lang: Lang }) {
   const set = (which: "from" | "to", code: string | null) =>
     navigate({
       to: "/rail",
-      search: (prev) => ({ ...prev, [which]: code ?? undefined }),
+      // A choice closes the picker in the same step, not a second one.
+      search: (prev) => ({ ...prev, [which]: code ?? undefined, pick: undefined }),
       replace: true,
     });
 
@@ -296,8 +318,8 @@ export function RailPlanner(props: { lang: Lang }) {
 
   const choose = (code: string) => {
     const which = picking();
-    if (which) set(which, code);
-    setPicking(null);
+    if (!which) return;
+    set(which, code);
     setQuery("");
   };
 
@@ -378,7 +400,7 @@ export function RailPlanner(props: { lang: Lang }) {
       <Modal
         open={picking() !== null}
         onClose={() => setPicking(null)}
-        title={picking() === "from" ? t("fromStation", props.lang) : t("toStation", props.lang)}
+        title={shownEnd() === "from" ? t("fromStation", props.lang) : t("toStation", props.lang)}
         lang={props.lang}
       >
         <div class="flex flex-col gap-3">

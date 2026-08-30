@@ -1168,7 +1168,19 @@ export default function RouteDetail() {
   });
 
   const [openSeq, setOpenSeq] = createSignal<number | null>(null);
-  const [showInfo, setShowInfo] = createSignal(false);
+  /*
+   * The timetable is a dialog over the whole of a phone's screen, so it lives
+   * in the URL the way the opened-out map does: back closes it, a reload comes
+   * back to it, and a link to "the 606 timetable" is a link.
+   */
+  const showInfo = () => search().info === true;
+  const setShowInfo = (open: boolean) =>
+    navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, info: open ? true : undefined }),
+      replace: !open,
+    });
   /*
    * One sheet for the whole page rather than one per row: a forty-stop route
    * would otherwise carry forty mounted dialogs. The target is set a frame
@@ -1636,7 +1648,7 @@ export default function RouteDetail() {
                  */}
                 <button
                   type="button"
-                  onClick={() => setShowInfo((v) => !v)}
+                  onClick={() => setShowInfo(!showInfo())}
                   /* Not `aria-expanded`: the timetable opens as a dialog over
                      the page, not as a section of the header - and the stop
                      rows below are the things that expand. */
