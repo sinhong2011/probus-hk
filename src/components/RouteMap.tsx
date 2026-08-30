@@ -36,7 +36,7 @@ import { settings } from "~/stores/settings";
  * the stop, which is as tall as its own arrivals - this is what the camera
  * assumes it takes, to stay clear of it.
  */
-const SHEET_LIST = 0.4;
+const SHEET_LIST = 0.26;
 /** How far the list can be pulled up, to read more of it over the map. */
 const SHEET_TALL = 0.9;
 const SHEET_STOP = 0.26;
@@ -1287,6 +1287,15 @@ export function RouteMap(props: {
    * button.
    */
   const [level, setLevel] = createSignal<"list" | "stop">("list");
+  /**
+   * Which rest the list is at. Below the top one the list does not scroll:
+   * a finger moving up on content that can scroll is scrolling it, and the
+   * sheet would never rise. Held low, the list is a window onto its first
+   * rows and the whole sheet is what the finger moves; pulled to the top, it
+   * becomes a list again.
+   */
+  const [listSnap, setListSnap] = createSignal(0);
+  const listScrolls = () => listSnap() >= 1;
   // Opened out, the sheet begins as the list; a pick, on the map or in the
   // list, opens the stop over it.
   createEffect(
@@ -1800,6 +1809,8 @@ export function RouteMap(props: {
               /* The list rests low and can be pulled up; the stop is as tall
                  as itself and has nowhere else to be. */
               snapPoints={level() === "list" ? [SHEET_LIST, SHEET_TALL] : undefined}
+              snap={level() === "list" ? listSnap() : undefined}
+              onSnapChange={setListSnap}
               label={t("mapSheet", props.lang)}
               class="lg:max-w-[36rem]"
             >
@@ -1814,7 +1825,10 @@ export function RouteMap(props: {
                        route's. */
                     <div
                       ref={setSheetList}
-                      class="mb-scroll min-h-0 touch-pan-y overflow-y-auto pb-safe-bottom motion-safe:mb-rise"
+                      class={[
+                        "mb-scroll min-h-0 pb-safe-bottom motion-safe:mb-rise",
+                        listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
+                      ]}
                       /* As tall as the part of the sheet that shows, whichever
                          rest it is at, so the visible part is the scrolling
                          part and the rows under the fold are reached by
