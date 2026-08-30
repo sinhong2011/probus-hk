@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
   createCustomVirtualizer,
@@ -109,13 +109,41 @@ export function VirtualRows<T>(props: {
 
   const first = () => virtualizer.getVirtualItems()[0]?.index ?? 0;
 
+  /*
+   * When the list last became a different list. Rows drawn in that moment
+   * are the list arriving and rise in a stagger, like every other list on
+   * the app; rows drawn later are the rider scrolling, and a row that is
+   * scrolled to must already be there - one that fades in a beat late reads
+   * as the screen struggling to keep up.
+   */
+  let arrived = performance.now();
+  createEffect(
+    () => props.items,
+    () => {
+      arrived = performance.now();
+    },
+  );
+  const arriving = () => performance.now() - arrived < 120;
+
+  /*
+   * The rows in range, and only the ones the list still has. The virtualiser
+   * is told the new count in a later phase than the rows read the new items,
+   * so for one flush after a list shrinks a row can point past its end. A row
+   * handed no item threw, and the boundary above the whole app swapped every
+   * screen out and back - which read as the page reloading on a keystroke,
+   * with the field's focus gone.
+   */
+  const rows = createMemo(() =>
+    virtualizer.getVirtualItems().filter((item) => item.index < props.items.length),
+  );
+
   return (
     <div
       ref={setList}
       class="relative w-full"
       style={{ height: `${virtualizer.getTotalSize()}px` }}
     >
-      <For each={virtualizer.getVirtualItems()}>
+      <For each={rows()}>
         {(item) => (
           <div
             data-index={item.index}
@@ -130,10 +158,13 @@ export function VirtualRows<T>(props: {
             </Show>
             {/* Rows arrive a beat apart from the top of what is visible, so a
                 new list is seen to arrive rather than to blink. Capped, so
-                the bottom is not still arriving while the top is read. */}
+                the bottom is not still arriving while the top is read. A
+                rise, not a pop: a pop is for something small landing on a
+                row, and a whole list of rows springing in from four-fifths
+                size made the search screen shudder on every visit. */}
             <div
-              class="mb-pop"
-              style={{ "animation-delay": `${Math.min(item.index - first(), 8) * 18}ms` }}
+              class={{ "motion-safe:mb-rise": arriving() }}
+              style={{ "animation-delay": `${Math.min(item.index - first(), 8) * 24}ms` }}
             >
               {props.children(props.items[item.index] as T, item.index)}
             </div>

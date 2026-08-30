@@ -1,5 +1,5 @@
 import { useLinkProps } from "@tanstack/solid-router";
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import {
   Card,
   EmptyState,
@@ -12,9 +12,16 @@ import {
 import { SplitPage } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
-import { BackspaceIcon, ChevronRightIcon, CloseIcon, SearchIcon } from "~/components/Icons";
+import {
+  BackspaceIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  SearchIcon,
+  TrashIcon,
+} from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { browseLink, routeLink, stopLink } from "~/lib/links";
+import { createWide } from "~/lib/wide";
 import { useDb } from "~/data/context";
 import { CATEGORIES } from "~/data/categories";
 import {
@@ -178,14 +185,7 @@ export default function Search() {
    * is the only way in and the field just shows what it typed; on a desktop
    * the field takes letters directly, because typing "102" beats clicking it.
    */
-  const [wide, setWide] = createSignal(false, { ownedWrite: true });
-  const watchWidth = () => {
-    const media = window.matchMedia("(min-width: 64rem)");
-    const read = () => setWide(media.matches);
-    read();
-    media.addEventListener("change", read);
-    onCleanup(() => media.removeEventListener("change", read));
-  };
+  const wide = createWide();
 
   const empty = () => query().trim() === "";
 
@@ -303,13 +303,20 @@ export default function Search() {
             </span>
             <input
               ref={(el: HTMLInputElement) => {
-                watchWidth();
                 /* A window with a real keyboard should not ask for a click
                    before it will take a letter. Focusing raises no keyboard on
-                   a phone because no phone is this wide. */
-                if (window.matchMedia("(min-width: 64rem)").matches) {
-                  requestAnimationFrame(() => el.focus());
-                }
+                   a phone because no phone is this wide. Once the database
+                   is read, not on the next frame: on a cold start the ref
+                   runs while the database is still loading and the screen is
+                   held off the page, and focusing a node that is not in the
+                   document does nothing. An effect that reads the database is
+                   held with the screen and runs once it is on the page. */
+                createEffect(
+                  () => db(),
+                  () => {
+                    if (window.matchMedia("(min-width: 64rem)").matches) el.focus();
+                  },
+                );
               }}
               value={query()}
               onInput={(e) => setQuery(e.currentTarget.value)}
@@ -623,7 +630,7 @@ function Keypad(props: {
           {control(
             t("clearQuery", props.lang),
             () => (
-              <CloseIcon size={16} />
+              <TrashIcon size={17} />
             ),
             props.onClear,
             "h-11",
@@ -633,7 +640,7 @@ function Keypad(props: {
           {control(
             "backspace",
             () => (
-              <BackspaceIcon size={18} />
+              <BackspaceIcon size={20} />
             ),
             props.onBackspace,
             "h-11",
