@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { CloseIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
@@ -24,43 +24,75 @@ export function Alert(props: {
   class?: string;
 }) {
   const warn = () => props.tone === "warn";
-  const open = () => (props.id ? !dismissed.has(props.id) : true);
+
+  /*
+   * Closing is a departure, not a disappearance: the note folds up and fades,
+   * and only once that has played is it taken out of the page - so the gap it
+   * held closes with it rather than being left behind. A note already closed
+   * on an earlier visit is never mounted at all.
+   */
+  const [closing, setClosing] = createSignal(false);
+  const [gone, setGone] = createSignal(props.id ? dismissed.has(props.id) : false);
+  const close = (id: string) => {
+    setClosing(true);
+    dismissed.dismiss(id);
+    window.setTimeout(() => setGone(true), 300);
+  };
 
   return (
-    <Show when={open()}>
+    <Show when={!gone()}>
+      {/* Folds and fades on its way out. The same trick as `Reveal`, done here
+          rather than with it, because `Reveal` marks itself `data-open` and
+          the page counts those to know which stop rows are open. */}
       <div
-        /* A warning is announced; a hint is not, it merely sits there to be
-           read - the difference between Kobalte's alert and a status region. */
-        role={warn() ? "alert" : "status"}
         class={[
-          "flex items-center gap-2 rounded-lg py-1.5 pl-2.5 pr-1 text-[0.75rem] font-medium leading-snug motion-safe:mb-rise",
-          /* A hint sits on the page's own grey, a step quieter than a card and
-             with no frame, so it reads as a note in the margin. A warning gets
-             its own colour, because a warning has to be seen. */
-          warn() ? "bg-warning/12 text-warning" : "bg-secondary text-muted-foreground",
+          "grid transition-[grid-template-rows,opacity] duration-reveal ease-[var(--ease-out)]",
+          closing() ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
           props.class ?? "",
         ]}
+        inert={closing()}
       >
-        <span class={["shrink-0", warn() ? "" : "text-primary"]} aria-hidden="true">
-          <Show when={props.icon} fallback={<InfoMark />}>
-            {props.icon}
-          </Show>
-        </span>
-        <div class="min-w-0 grow">{props.children}</div>
-        <Show when={props.id}>
-          {(id) => (
-            <button
-              type="button"
-              onClick={() => dismissed.dismiss(id())}
-              aria-label={t("close", props.lang)}
-              /* Taller than the line it sits on, so the target is a finger's
-                 and not the glyph's. */
-              class="mb-press -my-2 flex size-7 shrink-0 items-center justify-center rounded-full text-faint-foreground transition-colors duration-state active:text-foreground"
-            >
-              <CloseIcon size={11} />
-            </button>
-          )}
-        </Show>
+        <div class="min-h-0 overflow-hidden">
+          <div
+            /* A warning is announced; a hint is not, it merely sits there to be
+           read - the difference between Kobalte's alert and a status region. */
+            role={warn() ? "alert" : "status"}
+            class={[
+              "flex items-center gap-2 rounded-lg py-1.5 pl-2.5 pr-1 text-[0.75rem] font-medium leading-snug motion-safe:mb-rise",
+              /* A hint sits on the page's own grey, a step quieter than a card and
+             with no frame, so it reads as a note in the margin. A warning gets
+             its own colour, because a warning has to be seen. */
+              warn() ? "bg-warning/12 text-warning" : "bg-secondary text-muted-foreground",
+            ]}
+          >
+            <span class={["shrink-0", warn() ? "" : "text-primary"]} aria-hidden="true">
+              <Show when={props.icon} fallback={<InfoMark />}>
+                {props.icon}
+              </Show>
+            </span>
+            <div class="min-w-0 grow">{props.children}</div>
+            <Show when={props.id}>
+              {(id) => (
+                <button
+                  type="button"
+                  onClick={() => close(id())}
+                  aria-label={t("close", props.lang)}
+                  /* A small disc on the note's own ground, so it reads as a
+                 control and not a stray glyph; the hit area is the row's full
+                 height, a finger's rather than the disc's. */
+                  class={[
+                    "mb-press -my-1.5 flex size-6 shrink-0 items-center justify-center rounded-full transition-colors duration-state",
+                    warn()
+                      ? "bg-warning/15 text-warning hover:bg-warning/25"
+                      : "bg-card text-faint-foreground shadow-card hover:text-foreground active:bg-background",
+                  ]}
+                >
+                  <CloseIcon size={10} />
+                </button>
+              )}
+            </Show>
+          </div>
+        </div>
       </div>
     </Show>
   );
