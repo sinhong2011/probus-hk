@@ -37,6 +37,8 @@ import { settings } from "~/stores/settings";
  * assumes it takes, to stay clear of it.
  */
 const SHEET_LIST = 0.4;
+/** How far the list can be pulled up, to read more of it over the map. */
+const SHEET_TALL = 0.9;
 const SHEET_STOP = 0.26;
 
 /**
@@ -1647,8 +1649,6 @@ export function RouteMap(props: {
    * the sheet rather than in the document, where the page's copy comes first.
    */
   const [sheetList, setSheetList] = createSignal<HTMLDivElement | null>(null);
-  /** The list level takes this much of the panel, less the row above it. */
-  const listHeight = () => Math.round(container.clientHeight * SHEET_LIST);
   createEffect(
     () => ({
       list: sheetList(),
@@ -1797,6 +1797,9 @@ export function RouteMap(props: {
               within
               dismissible={false}
               transitionResize
+              /* The list rests low and can be pulled up; the stop is as tall
+                 as itself and has nowhere else to be. */
+              snapPoints={level() === "list" ? [SHEET_LIST, SHEET_TALL] : undefined}
               label={t("mapSheet", props.lang)}
               class="lg:max-w-[36rem]"
             >
@@ -1812,7 +1815,11 @@ export function RouteMap(props: {
                     <div
                       ref={setSheetList}
                       class="mb-scroll min-h-0 touch-pan-y overflow-y-auto pb-safe-bottom motion-safe:mb-rise"
-                      style={{ height: `${listHeight()}px` }}
+                      /* As tall as the part of the sheet that shows, whichever
+                         rest it is at, so the visible part is the scrolling
+                         part and the rows under the fold are reached by
+                         pulling the sheet up, not by scrolling into the dark. */
+                      style={{ height: "var(--snap-point-height)" }}
                     >
                       <Show when={props.list}>{(list) => list()()}</Show>
                     </div>
