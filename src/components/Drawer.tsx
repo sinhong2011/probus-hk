@@ -51,6 +51,17 @@ export interface DrawerProps {
   /** A dialog: scrim, focus, Escape, and the page pinned behind it. */
   modal?: boolean;
   /**
+   * Whether a gesture may put the sheet away. Off, the lowest snap point is a
+   * floor: the sheet can be pushed down to it and no further, and only the
+   * screen that owns it can close it.
+   */
+  dismissible?: boolean;
+  /**
+   * Animate the sheet's height as what it shows changes size - a sheet with
+   * two views, sized to each, rather than a fixed frame around both.
+   */
+  transitionResize?: boolean;
+  /**
    * Live inside the nearest positioned ancestor rather than over the window,
    * for a sheet that belongs to one panel - the map's - and not to the page.
    */
@@ -133,6 +144,8 @@ export function Drawer(props: DrawerProps) {
         if (!open) props.onClose();
       }}
       modal={props.modal ?? false}
+      dismissible={props.dismissible ?? true}
+      transitionResize={props.transitionResize ?? false}
       snapPoints={points()}
       defaultActiveSnapPoint={points()?.[props.initialSnap ?? 0]}
       activeSnapPoint={active()}

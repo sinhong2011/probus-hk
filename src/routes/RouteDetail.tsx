@@ -1400,6 +1400,7 @@ export default function RouteDetail() {
   }, 3);
 
   /** The open stop, as the sheet under an opened-out map needs it. */
+
   const focusStop = createMemo(() => {
     const seq = focusSeq();
     const entry = seq === null ? undefined : stops()[seq - 1];

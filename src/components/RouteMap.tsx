@@ -11,7 +11,14 @@ import type { FeatureCollection } from "geojson";
 import type { JSX } from "@solidjs/web";
 import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { Drawer } from "~/components/Drawer";
-import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
+import {
+  BusIcon,
+  ChevronLeftIcon,
+  CloseIcon,
+  ExpandIcon,
+  PinIcon,
+  RouteIcon,
+} from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
 import { whenIdleAfter } from "~/lib/idle";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
@@ -24,12 +31,13 @@ import { plateStyle } from "~/lib/operators";
 import { settings } from "~/stores/settings";
 
 /**
- * Where the sheet over an opened-out map rests, as fractions of the window:
- * low enough that the route is what the window is for, high enough that the
- * first rows of the list show under the open stop and say there is more.
+ * The two levels of the sheet over an opened-out map, as shares of the panel:
+ * the list, held to a height that leaves the route the window's subject, and
+ * the stop, which is as tall as its own arrivals - this is what the camera
+ * assumes it takes, to stay clear of it.
  */
-const SHEET_PEEK = 0.28;
-const SHEET_TALL = 0.9;
+const SHEET_LIST = 0.4;
+const SHEET_STOP = 0.26;
 
 /**
  * Keyless CARTO basemaps: no API key, no sign-up, and one style per theme so
@@ -110,8 +118,6 @@ function withAlpha(hex: string, alpha: number): string {
 
 /** The sign a stop shows: its own, or the lit one while it is being read. */
 const SELECTED = ["==", ["get", "selected"], 1] as ExpressionSpecification;
-/** Lit signs are a step larger, and their names sit a step further up to clear them. */
-const LIT_SCALE = 1.1;
 
 /*
  * Two states a stop moves through rather than flips into: how far it is
@@ -659,18 +665,7 @@ const LABEL_GAP = 5;
 function byZoom(value: (size: { plain: number; terminus: number }) => [number, number]) {
   const stops = FLAG_SIZE.flatMap((size): [number, ExpressionSpecification] => {
     const [terminus, plain] = value(size);
-    /* The lit sign's step up is applied inside each zoom stop rather than
-       around the whole expression: a `zoom` may only sit at the top of an
-       `interpolate`, and multiplying the interpolate is a style error that
-       silently drops the layer, flags and all. */
-    return [
-      size.zoom,
-      [
-        "*",
-        ["case", ["==", ["get", "terminus"], 1], terminus, plain],
-        ["case", SELECTED, LIT_SCALE, 1],
-      ],
-    ];
+    return [size.zoom, ["case", ["==", ["get", "terminus"], 1], terminus, plain]];
   });
   return ["interpolate", ["linear"], ["zoom"], ...stops] as ExpressionSpecification;
 }
@@ -762,11 +757,10 @@ export function RouteMap(props: {
   /** Shown in place of the map when it cannot render. */
   unavailableLabel: string;
   /**
-   * What to say about the open stop while the map owns the whole window.
-   *
+   * What the sheet says about the stop the map is about: its first level.
    * A function rather than an element, so nothing is built for a sheet that is
-   * not open - and a slot rather than an `etas` prop, because arrivals belong
-   * to the page that already fetches them, not to a map.
+   * closed, and a slot rather than an `etas` prop, because arrivals belong to
+   * the page that already fetches them, not to a map.
    */
   sheet?: () => JSX.Element;
   /**
@@ -803,12 +797,6 @@ export function RouteMap(props: {
    * on a phone is exactly the thing a rider wants opened out.
    */
   const [expanded, setExpanded] = createSignal(false);
-  /**
-   * Where the sheet over an opened-out map rests: at its foot, showing the
-   * open stop, or pulled up to show the whole list. Held here as well as in
-   * the drawer so it can be sent back down when a stop is picked.
-   */
-  const [sheetSnap, setSheetSnap] = createSignal(0);
 
   const stopPositions = (): Position[] =>
     props.stops.map((s) => [s.stop.location.lng, s.stop.location.lat]);
@@ -1273,8 +1261,36 @@ export function RouteMap(props: {
     }
   };
 
+  /**
+   * The sheet has two levels, and is sized to whichever it is showing.
+   *
+   * Opened out, the sheet is the stop list, held to a share of the panel and
+   * brought to the stop the map is about. A stop picked - on the map, or in
+   * the list - opens over it: that stop's next buses, at the height they take,
+   * the sheet shrinking to fit. Back is the list again. It never goes away:
+   * pushed down, it comes back to its height, because a map without its
+   * arrivals is the page with the map at its usual size, and that has a
+   * button.
+   */
+  const [level, setLevel] = createSignal<"list" | "stop">("list");
+  // Opened out, the sheet begins as the list; a pick, on the map or in the
+  // list, opens the stop over it.
+  createEffect(
+    () => expanded(),
+    () => {
+      setLevel("list");
+    },
+  );
+  createEffect(
+    () => props.selectedIndex,
+    (index, previous) => {
+      if (index !== undefined && index !== previous && expanded()) setLevel("stop");
+    },
+  );
+
   /** How much of the opened-out map the sheet covers at rest, in pixels. */
-  const sheetHeight = () => Math.round(container.clientHeight * SHEET_PEEK);
+  const sheetHeight = () =>
+    Math.round(container.clientHeight * (level() === "list" ? SHEET_LIST : SHEET_STOP));
 
   /** Room for the sheet at the bottom, when there is a sheet. */
   const framePadding = (edge: number) =>
@@ -1613,14 +1629,35 @@ export function RouteMap(props: {
   );
 
   /*
-   * A stop picked from the pulled-up list is a question for the map, and the
-   * map is under the list: the sheet drops back to its foot so the answer can
-   * be seen. A stop closed again is not a question, so the sheet stays put.
+   * The sheet opens on the stop the map is about, and follows a new pick: the
+   * row is brought to the top of the sheet, where the peek shows it whole.
+   * The rows are a second copy of the page's list, so the row is found inside
+   * the sheet rather than in the document, where the page's copy comes first.
    */
+  const [sheetList, setSheetList] = createSignal<HTMLDivElement | null>(null);
+  /** The list level takes this much of the panel, less the row above it. */
+  const listHeight = () => Math.round(container.clientHeight * SHEET_LIST);
   createEffect(
-    () => props.selectedIndex,
-    (index) => {
-      if (index !== undefined && expanded()) setSheetSnap(0);
+    () => ({
+      list: sheetList(),
+      open: expanded(),
+      seq:
+        props.selectedIndex !== undefined
+          ? props.selectedIndex + 1
+          : props.nearestIndex !== undefined && props.nearestIndex >= 0
+            ? props.nearestIndex + 1
+            : null,
+    }),
+    ({ list, open, seq }) => {
+      if (!list || !open || seq === null) return;
+      // After the rows have laid out; a sheet still sliding in has no scroll to set.
+      const frame = requestAnimationFrame(() => {
+        const row = list.querySelector<HTMLElement>(`[data-stop-seq="${seq}"]`);
+        if (!row) return;
+        const top = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        list.scrollTo({ top: list.scrollTop + top });
+      });
+      return () => cancelAnimationFrame(frame);
     },
   );
 
@@ -1744,25 +1781,42 @@ export function RouteMap(props: {
           {(sheet) => (
             <Drawer
               open={expanded()}
-              /* Flicked away, the sheet takes the opened-out map with it: the
-                 arrivals are why the rider is here, and a map without them is
-                 the page with the map at its usual size. */
               onClose={() => setExpanded(false)}
               within
-              snapPoints={[SHEET_PEEK, SHEET_TALL]}
-              snap={sheetSnap()}
-              onSnapChange={setSheetSnap}
+              dismissible={false}
+              transitionResize
               label={t("mapSheet", props.lang)}
               class="lg:max-w-[36rem]"
             >
               {/* Built only while the map is opened out, so no arrivals are
                   laid out for a sheet nobody can see. */}
               <Show when={expanded()}>
-                {/* The open stop stays at the top while the list scrolls under
-                    it: pulled up, the sheet is still about this stop. */}
-                <div class="sticky top-0 z-10 bg-card">{sheet()()}</div>
-                <Show when={props.list}>
-                  {(list) => <div class="border-t border-border pb-safe-bottom">{list()()}</div>}
+                <Show
+                  when={level() === "stop"}
+                  fallback={
+                    /* The list at a fixed share of the panel, scrolling inside
+                       itself, so the sheet's height is the level's and not the
+                       route's. */
+                    <div
+                      ref={setSheetList}
+                      class="mb-scroll min-h-0 touch-pan-y overflow-y-auto pb-safe-bottom motion-safe:mb-rise"
+                      style={{ height: `${listHeight()}px` }}
+                    >
+                      <Show when={props.list}>{(list) => list()()}</Show>
+                    </div>
+                  }
+                >
+                  <div class="flex flex-col motion-safe:mb-rise">
+                    <button
+                      type="button"
+                      onClick={() => setLevel("list")}
+                      class="mb-tap flex items-center gap-1.5 px-4 pb-1 pt-0.5 text-[0.81rem] font-bold text-primary"
+                    >
+                      <ChevronLeftIcon size={13} />
+                      {t("allStops", props.lang)}
+                    </button>
+                    <div class="pb-safe-bottom">{sheet()()}</div>
+                  </div>
                 </Show>
               </Show>
             </Drawer>
