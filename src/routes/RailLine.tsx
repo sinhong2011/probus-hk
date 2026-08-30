@@ -1,17 +1,18 @@
-import { useParams } from "@solidjs/router";
+import { useLinkProps, useParams } from "@tanstack/solid-router";
 import { For, Show, createMemo, createSignal } from "solid-js";
 import { Card, Chip, EmptyState, Hairline, Reveal, SectionLabel } from "~/components/Chrome";
 import { Trail } from "~/components/Breadcrumb";
-import { ChevronRightIcon, PinIcon } from "~/components/Icons";
-import { EtaCountdown } from "~/components/EtaCountdown";
-import { Page, Section } from "~/components/Layout";
+import { ChevronRightIcon, CloseIcon, PinIcon } from "~/components/Icons";
+import { DirectionTrains } from "~/components/DirectionTrains";
+import { Page, Section, SplitPage } from "~/components/Layout";
 import { RoutePlate } from "~/components/RoutePlate";
-import { routeHref } from "~/components/RouteRow";
+import { routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
+import { NotFound } from "~/routes/NotFound";
 import { lineName, lineStations, railLine, type RailLine, type RailStation } from "~/data/rail";
+import { railFare, type RailFare } from "~/data/railFares";
 import { serviceSpan } from "~/data/schedule";
-import type { KeyedRoute } from "~/data/types";
-import { useEta } from "~/data/useEta";
+import type { Bilingual, KeyedRoute } from "~/data/types";
 import { distanceM } from "~/lib/geo";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { plateStyle } from "~/lib/operators";
@@ -35,18 +36,80 @@ const lineColor = (code: string) => plateStyle(["mtr"], code).background;
  */
 export default function RailLine() {
   const db = useDb();
-  const params = useParams<{ code: string }>();
+  const params = useParams({ from: "/rail/$code" });
   const lang = settings.lang;
   const { position } = useGeolocation();
 
-  const code = () => decodeURIComponent(params.code).toUpperCase();
+  const code = () => params().code.toUpperCase();
   const line = createMemo(() => railLine(db(), code()));
   const stations = createMemo(() => {
     const l = line();
     return l ? lineStations(db(), l) : [];
   });
 
-  const [openId, setOpenId] = createSignal<string | null>(null);
+  /*
+   * Two stations, in the order a rider names them: where they are standing,
+   * and where they are going. The first is also the one whose panel is open -
+   * a railway station's own question, both directions and their platforms - so
+   * a rider who only ever taps once never meets the second half of this at all.
+   */
+  const [fromId, setFromId] = createSignal<string | null>(null);
+  const [toId, setToId] = createSignal<string | null>(null);
+
+  const select = (id: string) => {
+    // Tapping the open station closes it, and closing is what clears the trip:
+    // there is no destination without somewhere to leave from.
+    if (fromId() === id) {
+      setFromId(null);
+      setToId(null);
+      return;
+    }
+    if (!fromId()) {
+      setFromId(id);
+      setToId(null);
+      return;
+    }
+    setToId((current) => (current === id ? null : id));
+  };
+
+  const clearTrip = () => {
+    setFromId(null);
+    setToId(null);
+  };
+
+  /**
+   * The stretch of line being priced, as positions in the list. Stations are
+   * in running order, so the ride is everything between the two - whichever
+   * way round they were tapped.
+   */
+  const ride = createMemo(() => {
+    const list = stations();
+    const from = list.findIndex((s) => s.id === fromId());
+    const to = list.findIndex((s) => s.id === toId());
+    if (from < 0 || to < 0) return null;
+    return { start: Math.min(from, to), end: Math.max(from, to) };
+  });
+
+  /** How a station takes part in the trip: its ends, its middle, or not at all. */
+  const roleOf = (id: string, index: number): StationRole => {
+    if (id === fromId()) return "from";
+    if (id === toId()) return "to";
+    const stretch = ride();
+    return stretch && index > stretch.start && index < stretch.end ? "between" : null;
+  };
+
+  /**
+   * The priced trip, ready to render: both station names and what it costs.
+   * The fare arrives with the table, which is fetched the first time anyone
+   * asks - until then this is a trip with no price on it yet, not no trip.
+   */
+  const trip = createMemo(() => {
+    const list = stations();
+    const from = list.find((s) => s.id === fromId());
+    const to = list.find((s) => s.id === toId());
+    if (!from || !to) return null;
+    return { from: from.stop.name, to: to.stop.name, fare: railFare(from.id, to.id) };
+  });
 
   /** The station you are standing at, if you are standing at one. */
   const nearestId = createMemo(() => {
@@ -67,47 +130,64 @@ export default function RailLine() {
   });
 
   return (
-    <Page wide>
-      <Trail extra={[{ href: "/rail", label: t("rail", lang()) }]} />
+    <Show when={line()} fallback={<EmptyStatePage lang={lang()} />}>
+      {(l) => (
+        /* The line is the context and the stations are the list, which is the
+           split every other detail screen on a wide window already uses: the
+           name, the colour and the two directions stay put while the trail of
+           stations scrolls beside them. */
+        <SplitPage
+          aside={
+            <>
+              <Trail extra={[{ href: "/rail", label: t("rail", lang()) }]} />
+              <LineHeader line={l()} lang={lang()} count={stations().length} />
+            </>
+          }
+        >
+          <Section>
+            <SectionLabel
+              trailing={
+                <span class="text-[0.75rem] font-semibold text-faint-foreground">
+                  {/* The second tap has to be taught, or it is not there. */}
+                  {fromId() ? t("tapDestination", lang()) : t("tapStation", lang())}
+                </span>
+              }
+            >
+              {t("lineStations", lang())}
+            </SectionLabel>
 
-      <Show when={line()} fallback={<EmptyState title={t("noResults", lang())} />}>
-        {(l) => (
-          <>
-            <LineHeader line={l()} lang={lang()} count={stations().length} />
+            <Card>
+              <For each={stations()}>
+                {(station, index) => (
+                  <StationRow
+                    station={station}
+                    line={l()}
+                    lang={lang()}
+                    first={index() === 0}
+                    last={index() === stations().length - 1}
+                    here={nearestId() === station.id}
+                    open={fromId() === station.id}
+                    role={roleOf(station.id, index())}
+                    trip={station.id === toId() ? trip() : null}
+                    onClear={clearTrip}
+                    onToggle={() => select(station.id)}
+                  />
+                )}
+              </For>
+            </Card>
+          </Section>
+        </SplitPage>
+      )}
+    </Show>
+  );
+}
 
-            <Section>
-              <SectionLabel
-                trailing={
-                  <span class="text-[0.75rem] font-semibold text-faint-foreground">
-                    {t("tapStation", lang())}
-                  </span>
-                }
-              >
-                {t("lineStations", lang())}
-              </SectionLabel>
-
-              <Card>
-                <For each={stations()}>
-                  {(station, index) => (
-                    <StationRow
-                      station={station}
-                      line={l()}
-                      lang={lang()}
-                      first={index() === 0}
-                      last={index() === stations().length - 1}
-                      here={nearestId() === station.id}
-                      open={openId() === station.id}
-                      onToggle={() =>
-                        setOpenId((current) => (current === station.id ? null : station.id))
-                      }
-                    />
-                  )}
-                </For>
-              </Card>
-            </Section>
-          </>
-        )}
-      </Show>
+/** The screen when the line in the URL is not one the database has. */
+function EmptyStatePage(props: { lang: Lang }) {
+  return (
+    <Page>
+      <Trail extra={[{ href: "/rail", label: t("rail", props.lang) }]} />
+      <NotFound kind="line" />
     </Page>
   );
 }
@@ -152,7 +232,10 @@ function LineHeader(props: { line: RailLine; lang: Lang; count: number }) {
           return (
             <>
               <Hairline />
-              <a href={routeHref(route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
+              <a
+                {...useLinkProps(routeLink(route.key))}
+                class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+              >
                 <span
                   class="size-2.5 shrink-0 rounded-full"
                   style={{ background: colour() }}
@@ -183,6 +266,16 @@ function LineHeader(props: { line: RailLine; lang: Lang; count: number }) {
   );
 }
 
+/** Where a station sits in the trip being priced, if there is one. */
+type StationRole = "from" | "to" | "between" | null;
+
+/** Both ends of the trip and what it costs, shown on the destination row. */
+interface Trip {
+  from: Bilingual;
+  to: Bilingual;
+  fare: RailFare | null;
+}
+
 /**
  * A station on the spine.
  *
@@ -190,6 +283,9 @@ function LineHeader(props: { line: RailLine; lang: Lang; count: number }) {
  * is both directions' next trains - which is one request, not two: the feed
  * answers per line and station, and the two directions come out of the same
  * response.
+ *
+ * Tapped a second time, somewhere further down the line, it is the other end of
+ * a journey, and it carries the fare.
  */
 function StationRow(props: {
   station: RailStation;
@@ -199,9 +295,18 @@ function StationRow(props: {
   last: boolean;
   here: boolean;
   open: boolean;
+  role: StationRole;
+  trip: Trip | null;
+  onClear: () => void;
   onToggle: () => void;
 }) {
   const colour = () => lineColor(props.line.code);
+
+  /* A station on the trip is filled in, the way a paper map inks the stretch
+     you are riding; the ends of it also carry the ring the "you are here" dot
+     uses, because they are the two the rider chose. */
+  const onTrip = () => props.role !== null;
+  const isEnd = () => props.role === "from" || props.role === "to";
 
   return (
     <div class="relative flex flex-col">
@@ -228,13 +333,17 @@ function StationRow(props: {
             style={{ height: "18px", background: props.first ? "transparent" : colour() }}
           />
           <div
-            class={["shrink-0 rounded-full", props.here ? "size-3" : "size-2.5"]}
+            class={[
+              "shrink-0 rounded-full transition-all duration-state",
+              props.here || isEnd() ? "size-3" : "size-2.5",
+            ]}
             style={{
-              background: props.here ? colour() : "var(--card)",
+              background: props.here || onTrip() ? colour() : "var(--card)",
               border: `3px solid ${colour()}`,
-              "box-shadow": props.here
-                ? `0 0 0 3px var(--card), 0 0 0 6px color-mix(in srgb, ${colour()} 28%, transparent)`
-                : undefined,
+              "box-shadow":
+                props.here || isEnd()
+                  ? `0 0 0 3px var(--card), 0 0 0 6px color-mix(in srgb, ${colour()} 28%, transparent)`
+                  : undefined,
             }}
           />
           <div class="w-[3px] grow" style={{ background: props.last ? "transparent" : colour() }} />
@@ -278,55 +387,135 @@ function StationRow(props: {
         </Show>
       </button>
 
-      <Reveal open={props.open}>
-        <div class="flex flex-col gap-2 px-3.5 pb-3 pl-[2.9375rem]">
-          <For each={props.line.directions}>
-            {(route) => (
-              <DirectionTrains
-                route={route}
-                stationId={props.station.id}
-                lang={props.lang}
-                active={props.open}
-              />
-            )}
-          </For>
-        </div>
-      </Reveal>
+      {/*
+       * The spine has to carry on behind the opened panel, or the line reads
+       * as cut in half at exactly the station you are looking at. The wrapper
+       * is only as tall as the reveal, so the segment grows and shrinks with
+       * it rather than being drawn and then hidden.
+       */}
+      <div class="relative">
+        <Show when={!props.last}>
+          <span
+            aria-hidden="true"
+            class="absolute inset-y-0 w-[3px]"
+            style={{ left: "19.5px", background: colour() }}
+          />
+        </Show>
+        <Reveal open={props.open}>
+          <div class="flex flex-col gap-2 px-3.5 pb-3 pl-[2.9375rem]">
+            <For each={props.line.directions}>
+              {(route) => (
+                <DirectionTrains
+                  route={route}
+                  stationId={props.station.id}
+                  lang={props.lang}
+                  active={props.open}
+                />
+              )}
+            </For>
+          </div>
+        </Reveal>
+
+        {/* The fare lands under the station just tapped, which is the one the
+            rider is looking at - not back up the line at the station they
+            started from, half a screen away. */}
+        <Reveal open={props.trip !== null}>
+          <Show when={props.trip}>
+            {(trip) => <FareCard trip={trip()} lang={props.lang} onClear={props.onClear} />}
+          </Show>
+        </Reveal>
+      </div>
     </div>
   );
 }
 
-/** One direction's next trains from this station, with its platform. */
-function DirectionTrains(props: {
-  route: KeyedRoute;
-  stationId: string;
-  lang: Lang;
-  active: boolean;
-}) {
-  /** 1-based position of the station along this direction, or 0 if it is not on it. */
-  const seq = createMemo(() => (props.route.stops.mtr?.indexOf(props.stationId) ?? -1) + 1);
-
-  const etas = useEta(() =>
-    // Closed rows ask for nothing: a thirty-station line would otherwise poll
-    // sixty feeds to fill a screen showing none of them.
-    props.active && seq() > 0
-      ? { route: props.route, seq: seq(), stopIdByCo: { mtr: props.stationId } }
-      : null,
-  );
+/**
+ * What the ride costs, in the classes a rider might be travelling on.
+ *
+ * Octopus first and largest: it is what almost everyone taps in with, and the
+ * single-journey ticket beside it is the price of not having one. The
+ * concessions come from the railway's own table rather than the government's
+ * $2 formula the bus screens compute - the railway prices its own child,
+ * elderly and student fares, and on the Airport Express it publishes none.
+ */
+function FareCard(props: { trip: Trip; lang: Lang; onClear: () => void }) {
+  const fare = () => props.trip.fare;
 
   return (
-    <Show when={seq() > 0}>
-      <div class="flex items-center gap-2.5 rounded-lg bg-secondary px-3 py-2">
-        <div class="flex min-w-0 grow flex-col gap-0.5">
-          <span class="truncate text-[0.88rem] font-bold text-foreground">
-            {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
-          </span>
-          <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-            {t("nextTrains", props.lang)}
-          </span>
-        </div>
-        <EtaCountdown etas={etas()} lang={props.lang} size="sm" limit={3} />
+    <div
+      data-rail-fare
+      class="mx-3.5 mb-3 ml-[2.9375rem] flex flex-col gap-2 rounded-lg bg-secondary px-3 py-2.5"
+    >
+      <div class="flex items-center gap-2">
+        <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
+          {pick(props.trip.from, props.lang)}
+          <span class="px-1.5 text-subtle-foreground">→</span>
+          {pick(props.trip.to, props.lang)}
+        </span>
+        <button
+          type="button"
+          aria-label={t("clearTrip", props.lang)}
+          title={t("clearTrip", props.lang)}
+          onClick={props.onClear}
+          class="mb-press flex size-7 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground"
+        >
+          <CloseIcon size={12} />
+        </button>
       </div>
-    </Show>
+
+      <Show
+        when={fare()}
+        fallback={
+          <span class="text-[0.75rem] font-medium text-subtle-foreground">
+            {t("loadingFares", props.lang)}
+          </span>
+        }
+      >
+        {(f) => (
+          <div class="flex flex-wrap items-center gap-1.5">
+            <Show when={f().octopus}>
+              {(value) => (
+                <Chip tone="accent" class="shrink-0">
+                  <span>{t("fareOctopusAdult", props.lang)}</span>
+                  <span class="tnum">{value()}</span>
+                </Chip>
+              )}
+            </Show>
+            <Show when={f().single}>
+              {(value) => (
+                <Chip class="shrink-0">
+                  <span>{t("fareSingleTicket", props.lang)}</span>
+                  <span class="tnum">{value()}</span>
+                </Chip>
+              )}
+            </Show>
+            <Show when={f().child}>
+              {(value) => (
+                <Chip class="shrink-0">
+                  <span>{t("fareChild", props.lang)}</span>
+                  <span class="tnum">{value()}</span>
+                </Chip>
+              )}
+            </Show>
+            <Show when={f().elderly}>
+              {(value) => (
+                <Chip class="shrink-0">
+                  <span>{t("fareElderly", props.lang)}</span>
+                  <span class="tnum">{value()}</span>
+                </Chip>
+              )}
+            </Show>
+            <Show when={f().student}>
+              {(value) => (
+                <Chip class="shrink-0">
+                  <span>{t("fareStudent", props.lang)}</span>
+                  <span class="tnum">{value()}</span>
+                </Chip>
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
+    </div>
   );
 }
