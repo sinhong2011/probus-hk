@@ -9,7 +9,7 @@ import { settings } from "~/stores/settings";
  * back out of them. Anything under one of these is refreshed on the shared
  * cadence and dropped together by "clear cache".
  */
-export const LIVE_KEYS = new Set(["eta", "stop", "departures", "vehicles"]);
+export const LIVE_KEYS = new Set(["eta", "stop", "departures", "vehicles", "arrivals"]);
 
 /**
  * How every live query behaves, in one place.

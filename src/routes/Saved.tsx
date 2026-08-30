@@ -24,7 +24,8 @@ import { useDb } from "~/data/context";
 import { routeAt } from "~/data/db";
 import { isRunningNow } from "~/data/schedule";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
-import { stopIdsFor, useEta } from "~/data/useEta";
+import { arrivals, type Arrival } from "~/data/arrivals";
+import { createLiveQuery } from "~/lib/tanstack/db";
 import { countdown } from "~/lib/format";
 import { distanceM, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
@@ -55,6 +56,8 @@ interface Resolved {
   stop: StopEntry | undefined;
   stopName: string;
   running: boolean;
+  /** The next buses, from the arrivals table; absent until it has answered. */
+  arrival: Arrival | undefined;
 }
 
 /**
@@ -105,19 +108,14 @@ function BookmarkCard(props: {
   showGroup: boolean;
   onRemove: () => void;
   onDrag: (event: PointerEvent) => void;
-  onArrivals: () => void;
-  onNext: (at: number) => void;
   onRegroup: () => void;
   /** Move the bookmark to another stop on the same route. */
   onRestop: () => void;
   /** Hold the bookmark at the top of the screen, or let it go. */
   onPin: () => void;
 }) {
-  const etas = useEta(() => ({
-    route: props.entry.route,
-    seq: props.entry.item.seq,
-    stopIdByCo: stopIdsFor(props.entry.route, props.entry.item.seq),
-  }));
+  // From the arrivals table, which the screen fetches for every card at once.
+  const etas = () => props.entry.arrival?.etas;
 
   const advice = () => leaveAdvice(etas() ?? [], props.metres, now());
 
@@ -131,32 +129,6 @@ function BookmarkCard(props: {
     if (!a) return 0;
     return a.nth < 0 ? Number.POSITIVE_INFINITY : a.nth;
   };
-
-  /*
-   * The timetable says the route has finished, yet the operator is still
-   * reporting a bus: trust the bus. The card tells the screen, which moves it
-   * back out of the dormant section.
-   */
-  createEffect(
-    () => (etas()?.length ?? 0) > 0,
-    (live) => {
-      if (live) props.onArrivals();
-    },
-  );
-
-  /*
-   * The soonest arrival, reported upward. Only the card knows it - each one
-   * fetches its own feed - and the screen needs it to be able to rank the list
-   * by which bus comes first.
-   */
-  createEffect(
-    () => etas()?.[0]?.at.getTime() ?? NO_ARRIVAL,
-    (at) => {
-      // Braces on purpose: an effect that returns anything but a cleanup
-      // function is an error in Solid 2, and a setter returns its new value.
-      props.onNext(at);
-    },
-  );
 
   const dim = () => !props.entry.running && etas()?.length === 0;
   const alerted = () =>
@@ -364,6 +336,30 @@ export default function Saved() {
   const [restopping, setRestopping] = createSignal<Resolved | null>(null);
   const [stopOpen, setStopOpen] = createSignal(false);
 
+  /*
+   * The arrivals table, read two ways: every row, to hand each card its
+   * buses, and the rows ranked by the next arrival, which is the order the
+   * "soonest" sort shows. Both are live queries over the same collection, so
+   * a bus that comes in on the next poll moves its card without anything
+   * here being told. Read only once the table has answered; before that the
+   * cards show their skeletons, the same as they did while each fetched its
+   * own.
+   */
+  const table = createLiveQuery<Arrival>((q) => q.from({ a: arrivals }));
+  const ranked = createLiveQuery<Arrival>((q) =>
+    q.from({ a: arrivals }).orderBy(({ a }) => a.next, "asc"),
+  );
+  const arrivalOf = createMemo(() => {
+    const byId = new Map<string, Arrival>();
+    if (table.isReady) for (const row of table()) byId.set(row.id, row);
+    return byId;
+  });
+  const rankOf = createMemo(() => {
+    const rank = new Map<string, number>();
+    if (ranked.isReady) ranked().forEach((row, index) => rank.set(row.id, index));
+    return rank;
+  });
+
   const resolved = createMemo<Resolved[]>(() =>
     saved.items().flatMap((item) => {
       const route = routeAt(db(), item.routeKey);
@@ -376,6 +372,7 @@ export default function Saved() {
           stop,
           stopName: stop ? stripStopCode(pick(stop.name, lang())) : "",
           running: isRunningNow(db(), route),
+          arrival: arrivalOf().get(item.id),
         },
       ];
     }),
@@ -396,17 +393,21 @@ export default function Saved() {
    * oscillate between the two sections as its feed refreshes.
    */
   const [live, setLive] = createSignal<Record<string, true>>({}, { ownedWrite: true });
-  const noteArrivals = (id: string) =>
-    setLive((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
-
-  /*
-   * Every card's soonest arrival, collected here so the list can be ranked by
-   * it. Each card owns its own feed, so this is the only place the whole set
-   * of them exists at once.
-   */
-  const [nextAt, setNextAt] = createSignal<Record<string, number>>({}, { ownedWrite: true });
-  const noteNext = (id: string, at: number) =>
-    setNextAt((prev) => (prev[id] === at ? prev : { ...prev, [id]: at }));
+  createEffect(
+    () =>
+      resolved()
+        .filter((r) => (r.arrival?.etas.length ?? 0) > 0)
+        .map((r) => r.item.id),
+    (ids) => {
+      setLive((prev) => {
+        const missing = ids.filter((id) => !prev[id]);
+        if (missing.length === 0) return prev;
+        const next = { ...prev };
+        for (const id of missing) next[id] = true;
+        return next;
+      });
+    },
+  );
 
   const isResting = (r: Resolved) => !r.running && !live()[r.item.id];
 
@@ -423,8 +424,10 @@ export default function Saved() {
   const sort = (list: Resolved[]): Resolved[] => {
     switch (order()) {
       case "eta":
+        // The table's own order; a bookmark it has not answered for yet goes last.
         return [...list].sort(
-          (a, b) => (nextAt()[a.item.id] ?? NO_ARRIVAL) - (nextAt()[b.item.id] ?? NO_ARRIVAL),
+          (a, b) =>
+            (rankOf().get(a.item.id) ?? NO_ARRIVAL) - (rankOf().get(b.item.id) ?? NO_ARRIVAL),
         );
       case "distance":
         return [...list].sort((a, b) => (metresTo(a) ?? NO_ARRIVAL) - (metresTo(b) ?? NO_ARRIVAL));
@@ -546,8 +549,6 @@ export default function Saved() {
       dragging={dragId() === entry.item.id}
       onRemove={() => saved.remove(entry.item.id)}
       onDrag={(e) => startDrag(e, entry.item.id, index)}
-      onArrivals={() => noteArrivals(entry.item.id)}
-      onNext={(at) => noteNext(entry.item.id, at)}
       onRegroup={() =>
         askGroup({
           current: entry.item.group,

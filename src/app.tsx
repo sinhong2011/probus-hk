@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { RouterProvider } from "@tanstack/solid-router";
+import { installArrivalsEffects } from "~/data/arrivals";
 import { installLiveEffects } from "~/data/live";
 import { queryClient } from "~/lib/query";
 import { router } from "~/router";
@@ -31,6 +32,7 @@ export function App() {
   installFrequentEffects();
   installClock();
   installLiveEffects();
+  installArrivalsEffects();
 
   return (
     <QueryClientProvider client={queryClient}>

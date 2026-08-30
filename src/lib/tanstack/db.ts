@@ -46,8 +46,9 @@ export type LiveQueryResult<T extends object> = Accessor<T[]> & {
   readonly collection: Collection<T, string | number, {}> | null;
 };
 
-type QueryFn = (q: InitialQueryBuilder) => QueryBuilder<Context> | null | undefined;
-type Context = Parameters<typeof createLiveQueryCollection>[0] extends infer _ ? never : never;
+// Any builder: the row type is the caller's to name, the shape is the query's.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type QueryFn = (q: InitialQueryBuilder) => QueryBuilder<any> | null | undefined;
 type SourceFn<T extends object> = () =>
   | Collection<T, string | number, {}>
   | LiveQueryCollectionConfig<never, never>

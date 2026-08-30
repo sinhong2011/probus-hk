@@ -20,11 +20,12 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@kobalte/core": "2.0.0-alpha.0",
-    "@sinhong2011/solid-drawer": "0.1.0",
+    "@sinhong2011/solid-drawer": "^0.1.2",
     "@solidjs/web": "2.0.0-rc.4",
     "@tanstack/db": "0.8.6",
     "@tanstack/hotkeys": "0.8.0",
     "@tanstack/pacer": "0.22.0",
+    "@tanstack/query-db-collection": "1.2.11",
     "@tanstack/solid-query": "6.0.0-rc.1",
     "@tanstack/solid-router": "2.0.0-rc.4",
     "@tanstack/table-core": "9.2.4",
