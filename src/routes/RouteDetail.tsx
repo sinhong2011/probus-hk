@@ -1887,6 +1887,13 @@ export default function RouteDetail() {
            * you are standing anyway.
            */}
 
+          {/* Said before the list, not after forty rows of it: the tap it
+              teaches is the first thing a rider does here, and the foot of a
+              list this long is a place most of them never reach. */}
+          <p class="-mb-2 shrink-0 text-center text-[0.75rem] font-medium text-faint-foreground">
+            {t("tapForEta", lang())}
+          </p>
+
           {/* The card is the frame; the rows move inside it. */}
           <Card class="lg:relative lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
             <div class="mb-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
@@ -1933,10 +1940,6 @@ export default function RouteDetail() {
               )}
             </Show>
           </Card>
-
-          <p class="-mt-2 shrink-0 text-center text-[0.75rem] font-medium text-faint-foreground">
-            {t("tapForEta", lang())}
-          </p>
 
           {/* The pinned band floats over the foot of the list, so the list has
               to end above it rather than under it. */}
