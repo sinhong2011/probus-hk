@@ -178,10 +178,13 @@ function stateTween(instance: MlMap) {
 }
 /**
  * The marker's drawing grid, before `icon-size` scales it: the artwork is laid
- * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement. The label
- * layer needs `height` to know how far above the stop the pole reaches.
+ * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement, with
+ * `headroom` more above it for the rings the lit sign wears - they reach past
+ * the top of the sign's own disc, and a canvas simply drops whatever is drawn
+ * outside it, which cut the top off the open stop's ring. The label layer
+ * needs `height` to know how far above the stop the pole reaches.
  */
-const FLAG = { width: 54, height: 58, ratio: 3 };
+const FLAG = { width: 54, height: 62, headroom: 4, ratio: 3 };
 
 /** The weighted cone the pole stands in, as SVG path data. */
 const FLAG_BASE = "M25.5 47.5h3l3.3 6.6a1.3 1.3 0 0 1-1.16 2.35h-7.28a1.3 1.3 0 0 1-1.16-2.35z";
@@ -327,13 +330,15 @@ function stopFlagImage(
   /** Lit: the sign of the stop being read, ringed in its own colour. */
   selected = false,
 ) {
-  const { width, height, ratio } = FLAG;
+  const { width, height, headroom, ratio } = FLAG;
   const canvas = document.createElement("canvas");
   canvas.width = width * ratio;
   canvas.height = height * ratio;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.scale(ratio, ratio);
+  // The artwork is laid out from the top of the sign; the headroom is above it.
+  ctx.translate(0, headroom);
 
   const cx = width / 2;
   const cy = 18;
