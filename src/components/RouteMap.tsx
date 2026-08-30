@@ -11,14 +11,7 @@ import type { FeatureCollection } from "geojson";
 import type { JSX } from "@solidjs/web";
 import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { Drawer } from "~/components/Drawer";
-import {
-  BusIcon,
-  ChevronLeftIcon,
-  CloseIcon,
-  ExpandIcon,
-  PinIcon,
-  RouteIcon,
-} from "~/components/Icons";
+import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
 import { whenIdleAfter } from "~/lib/idle";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
@@ -31,15 +24,11 @@ import { plateStyle } from "~/lib/operators";
 import { settings } from "~/stores/settings";
 
 /**
- * The two levels of the sheet over an opened-out map, as shares of the panel:
- * the list, held to a height that leaves the route the window's subject, and
- * the stop, which is as tall as its own arrivals - this is what the camera
- * assumes it takes, to stay clear of it.
+ * Where the sheet over an opened-out map rests, as shares of the panel: low
+ * enough that the route is what the window is for, and pulled up, most of it.
  */
-const SHEET_LIST = 0.26;
-/** How far the list can be pulled up, to read more of it over the map. */
+const SHEET_LOW = 0.26;
 const SHEET_TALL = 0.9;
-const SHEET_STOP = 0.26;
 
 /**
  * Keyless CARTO basemaps: no API key, no sign-up, and one style per theme so
@@ -763,13 +752,6 @@ export function RouteMap(props: {
   /** Shown in place of the map when it cannot render. */
   unavailableLabel: string;
   /**
-   * What the sheet says about the stop the map is about: its first level.
-   * A function rather than an element, so nothing is built for a sheet that is
-   * closed, and a slot rather than an `etas` prop, because arrivals belong to
-   * the page that already fetches them, not to a map.
-   */
-  sheet?: () => JSX.Element;
-  /**
    * Every stop on the route, for the sheet to show when it is pulled up: the
    * open stop is the answer to one question, and the list is the way to ask
    * the next one without leaving the map. Built only when it is on screen.
@@ -1276,44 +1258,19 @@ export function RouteMap(props: {
   };
 
   /**
-   * The sheet has two levels, and is sized to whichever it is showing.
-   *
-   * Opened out, the sheet is the stop list, held to a share of the panel and
-   * brought to the stop the map is about. A stop picked - on the map, or in
-   * the list - opens over it: that stop's next buses, at the height they take,
-   * the sheet shrinking to fit. Back is the list again. It never goes away:
-   * pushed down, it comes back to its height, because a map without its
-   * arrivals is the page with the map at its usual size, and that has a
-   * button.
-   */
-  const [level, setLevel] = createSignal<"list" | "stop">("list");
-  /**
-   * Which rest the list is at. Below the top one the list does not scroll:
-   * a finger moving up on content that can scroll is scrolling it, and the
-   * sheet would never rise. Held low, the list is a window onto its first
-   * rows and the whole sheet is what the finger moves; pulled to the top, it
-   * becomes a list again.
+   * The sheet over an opened-out map is the stop list, brought to the stop
+   * the map is about. It rests low and can be pulled up; below its top rest
+   * it does not scroll, because a finger moving up on content that can scroll
+   * is scrolling it and the sheet would never rise - held low it is a window
+   * onto its first rows and the whole sheet is what the finger moves. It
+   * never goes away: pushed down it comes back, and only the button that
+   * opened the map out puts it back.
    */
   const [listSnap, setListSnap] = createSignal(0);
   const listScrolls = () => listSnap() >= 1;
-  // Opened out, the sheet begins as the list; a pick, on the map or in the
-  // list, opens the stop over it.
-  createEffect(
-    () => expanded(),
-    () => {
-      setLevel("list");
-    },
-  );
-  createEffect(
-    () => props.selectedIndex,
-    (index, previous) => {
-      if (index !== undefined && index !== previous && expanded()) setLevel("stop");
-    },
-  );
 
   /** How much of the opened-out map the sheet covers at rest, in pixels. */
-  const sheetHeight = () =>
-    Math.round(container.clientHeight * (level() === "list" ? SHEET_LIST : SHEET_STOP));
+  const sheetHeight = () => Math.round(container.clientHeight * SHEET_LOW);
 
   /** Room for the sheet at the bottom, when there is a sheet. */
   const framePadding = (edge: number) =>
@@ -1798,59 +1755,34 @@ export function RouteMap(props: {
          * height it was opened out for; the camera moves pad themselves clear
          * of it instead.
          */}
-        <Show when={usable() && props.sheet}>
-          {(sheet) => (
+        <Show when={usable() && props.list}>
+          {(list) => (
             <Drawer
               open={expanded()}
               onClose={() => setExpanded(false)}
               within
               dismissible={false}
-              transitionResize
-              /* The list rests low and can be pulled up; the stop is as tall
-                 as itself and has nowhere else to be. */
-              snapPoints={level() === "list" ? [SHEET_LIST, SHEET_TALL] : undefined}
-              snap={level() === "list" ? listSnap() : undefined}
+              snapPoints={[SHEET_LOW, SHEET_TALL]}
+              snap={listSnap()}
               onSnapChange={setListSnap}
               label={t("mapSheet", props.lang)}
               class="lg:max-w-[36rem]"
             >
               {/* Built only while the map is opened out, so no arrivals are
-                  laid out for a sheet nobody can see. */}
+                  laid out for a sheet nobody can see. As tall as the part of
+                  the sheet that shows at whichever rest it is at, so the
+                  visible part is the scrolling part. */}
               <Show when={expanded()}>
-                <Show
-                  when={level() === "stop"}
-                  fallback={
-                    /* The list at a fixed share of the panel, scrolling inside
-                       itself, so the sheet's height is the level's and not the
-                       route's. */
-                    <div
-                      ref={setSheetList}
-                      class={[
-                        "mb-scroll min-h-0 pb-safe-bottom motion-safe:mb-rise",
-                        listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
-                      ]}
-                      /* As tall as the part of the sheet that shows, whichever
-                         rest it is at, so the visible part is the scrolling
-                         part and the rows under the fold are reached by
-                         pulling the sheet up, not by scrolling into the dark. */
-                      style={{ height: "var(--snap-point-height)" }}
-                    >
-                      <Show when={props.list}>{(list) => list()()}</Show>
-                    </div>
-                  }
+                <div
+                  ref={setSheetList}
+                  class={[
+                    "mb-scroll min-h-0 pb-safe-bottom",
+                    listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
+                  ]}
+                  style={{ height: "var(--snap-point-height)" }}
                 >
-                  <div class="flex flex-col motion-safe:mb-rise">
-                    <button
-                      type="button"
-                      onClick={() => setLevel("list")}
-                      class="mb-tap flex items-center gap-1.5 px-4 pb-1 pt-0.5 text-[0.81rem] font-bold text-primary"
-                    >
-                      <ChevronLeftIcon size={13} />
-                      {t("allStops", props.lang)}
-                    </button>
-                    <div class="pb-safe-bottom">{sheet()()}</div>
-                  </div>
-                </Show>
+                  {list()()}
+                </div>
               </Show>
             </Drawer>
           )}

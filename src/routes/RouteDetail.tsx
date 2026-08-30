@@ -1416,12 +1416,6 @@ export default function RouteDetail() {
 
   /** The open stop, as the sheet under an opened-out map needs it. */
 
-  const focusStop = createMemo(() => {
-    const seq = focusSeq();
-    const entry = seq === null ? undefined : stops()[seq - 1];
-    return entry && seq !== null ? { seq, entry } : null;
-  });
-
   /**
    * Where the buses are. Nobody publishes that, so it is worked backwards out
    * of the arrival times - see `~/data/vehicles`.
@@ -1765,48 +1759,6 @@ export default function RouteDetail() {
                   lang={lang()}
                   unavailableLabel={t("mapUnavailable", lang())}
                   list={() => <StopList />}
-                  sheet={() => (
-                    <Show
-                      when={focusStop()}
-                      fallback={
-                        <p class="px-4 py-3 text-center text-[0.81rem] font-semibold text-subtle-foreground">
-                          {t("mapTapStop", lang())}
-                        </p>
-                      }
-                    >
-                      {(target) => (
-                        <div class="flex flex-col gap-1.5 px-4 pb-1 pt-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="tnum shrink-0 text-[0.81rem] font-bold text-subtle-foreground">
-                              {target().seq}
-                            </span>
-                            <span class="truncate text-[1rem] font-bold">
-                              {stripStopCode(pick(target().entry.stop.name, lang()))}
-                            </span>
-                            <StopCode name={target().entry.stop.name} lang={lang()} />
-                          </div>
-
-                          {/* The same line the open row carries, because the
-                              question does not change when the map grows. */}
-                          <Show when={stopsAway(target().seq) !== null}>
-                            <div class="flex items-center gap-1.5 text-[0.75rem] font-semibold text-primary">
-                              <BusIcon size={12} />
-                              <span>{awayLabel(stopsAway(target().seq) as number, lang())}</span>
-                            </div>
-                          </Show>
-
-                          <div class="flex items-end justify-between gap-4">
-                            <EtaCountdown etas={focusEtas()} lang={lang()} size="lg" limit={1} />
-                            {/* Only the bottom padding: the block's own baseline
-                                alignment is what keeps the label on the first
-                                arrival, and an `items-end` here dropped it to
-                                the last line instead. */}
-                            <LaterArrivals class="pb-0.5" etas={focusEtas() ?? []} lang={lang()} />
-                          </div>
-                        </div>
-                      )}
-                    </Show>
-                  )}
                 />
 
                 {/*

@@ -320,7 +320,6 @@ const MESSAGES = {
   wholeNetwork: m.whole_network,
   noStationPicked: m.no_station_picked,
   linesHere: m.lines_here,
-  allStops: m.all_stops,
   serviceNotice: m.service_notice,
   noticeFromOperator: m.notice_from_operator,
 } as const satisfies Record<string, Message>;
