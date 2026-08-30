@@ -1479,13 +1479,16 @@ export default function RouteDetail() {
    */
   let jumped = false;
   let chosen = false;
+  /* The list's own scroller: the page is held to the window, so this is the
+     only thing a rider can have scrolled. */
+  let listPane!: HTMLDivElement;
 
   createEffect(
     () => nearestIndex(),
     (index) => {
       if (index < 0 || chosen) return;
       setOpenSeq(index + 1);
-      if (jumped || window.scrollY > 24) return;
+      if (jumped || (listPane?.scrollTop ?? 0) > 24) return;
       jumped = true;
       requestAnimationFrame(() => {
         const row = document.querySelector(`[data-stop-seq="${index + 1}"]`);
@@ -1607,7 +1610,7 @@ export default function RouteDetail() {
               hanging over the content when it does. */}
               <Trail />
 
-              <header class="-mt-3 -mb-2 flex items-center gap-3">
+              <header class="flex items-center gap-3 lg:-mt-3 lg:-mb-2">
                 {/* The plate and the destination are what the page is, not a
                     control: making the whole row a button meant every stray tap
                     near the title opened a timetable nobody asked for. The two
@@ -1864,15 +1867,15 @@ export default function RouteDetail() {
             {t("tapForEta", lang())}
           </Alert>
 
-          {/* The card is the frame; the rows move inside it. */}
-          <Card class="lg:relative lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
-            <div class="mb-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          {/* The card is the frame; the rows move inside it, at every width. */}
+          <Card class="relative flex min-h-0 flex-1 flex-col">
+            <div ref={listPane} class="mb-scroll min-h-0 flex-1 overflow-y-auto">
               <StopList />
 
-              {/* On a wide screen the card is the scroller, so this is where
-                  the list has to leave room for the band floating over it. */}
+              {/* The card is the scroller, so this is where the list has to
+                  leave room for the band floating over its foot. */}
               <Show when={boardSeq() !== null}>
-                <div class="hidden h-28 lg:block" />
+                <div class="h-20 lg:h-28" />
               </Show>
             </div>
 
@@ -1881,12 +1884,11 @@ export default function RouteDetail() {
                 /*
                  * A ride is planned by scrolling a list, so the ride cannot
                  * scroll away with it: the band floats over the foot of the
-                 * list at every width. On a phone that is above the tab bar,
-                 * where the thumb is; on a wide screen it is the foot of the
-                 * list pane, which is the same place measured against the same
-                 * list.
+                 * list, which is the foot of this card at every width - on a
+                 * phone the card ends just above the tab bar, where the thumb
+                 * is.
                  */
-                <div class="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-height)+0.5rem)] z-30 px-3.5 lg:absolute lg:inset-x-3 lg:bottom-3 lg:px-0">
+                <div class="pointer-events-none absolute inset-x-3 bottom-3 z-30">
                   <div
                     class="mb-dock pointer-events-auto mx-auto w-full max-w-[42rem]"
                     data-open={bandOpen() ? "true" : "false"}
@@ -1910,12 +1912,6 @@ export default function RouteDetail() {
               )}
             </Show>
           </Card>
-
-          {/* The pinned band floats over the foot of the list, so the list has
-              to end above it rather than under it. */}
-          <Show when={boardSeq() !== null}>
-            <div class="h-20 shrink-0 lg:hidden" />
-          </Show>
         </SplitPage>
       )}
     </Show>

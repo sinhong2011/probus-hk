@@ -577,6 +577,14 @@
     }
   }
 
+  /* The same at every width, for a screen that holds itself to a phone's
+     window too; see `Page`'s `fill="always"`. */
+  html.mb-fill-always,
+  html.mb-fill-always body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   /*
    * Set while something owns the whole window - the route map opened out. At
    * every width, unlike `mb-fill`: a phone is where a map is opened out most.

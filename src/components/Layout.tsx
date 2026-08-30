@@ -31,8 +31,12 @@ export function Page(props: {
    * On a wide screen, hold the page to the window and let a pane inside it do
    * the scrolling. Without this the map and the route header scroll away with
    * the stop list, which on a desktop is the one thing that should stay put.
+   *
+   * `"always"` holds the page to the window on a phone as well, ending it
+   * above the tab bar: for a screen whose list is the thing worth scrolling
+   * at every width, with the rest kept in view over it.
    */
-  fill?: boolean;
+  fill?: boolean | "always";
   class?: string;
 }) {
   /*
@@ -41,14 +45,15 @@ export function Page(props: {
    * scrolls feels broken. The root is pinned for as long as such a page is up.
    */
   createEffect(
-    () => Boolean(props.fill),
+    () => props.fill ?? false,
     (fill) => {
       if (!fill) return;
-      document.documentElement.classList.add("mb-fill");
+      const pinned = fill === "always" ? ["mb-fill", "mb-fill-always"] : ["mb-fill"];
+      document.documentElement.classList.add(...pinned);
       // Returned rather than `onCleanup`: the callback has no owner in Solid 2,
       // so a registered cleanup never ran and the root stayed pinned on every
       // screen visited after this one.
-      return () => document.documentElement.classList.remove("mb-fill");
+      return () => document.documentElement.classList.remove(...pinned);
     },
   );
 
@@ -67,6 +72,7 @@ export function Page(props: {
       class={[
         "pt-safe-top mb-scroll flex min-h-dvh flex-col",
         { "lg:h-dvh lg:min-h-0 lg:overflow-hidden": Boolean(props.fill) },
+        { "h-dvh min-h-0 overflow-hidden": props.fill === "always" },
       ]}
     >
       <div
@@ -76,6 +82,9 @@ export function Page(props: {
              `inset-y-3` from the window, and a pane that ran on to the very
              edge made the two look cut to different lengths. */
           { "lg:min-h-0 lg:pb-3": Boolean(props.fill) },
+          /* Held to the window on a phone too, the page ends above the tab
+             bar instead of scrolling a spacer past it. */
+          { "min-h-0 pb-[calc(var(--tabbar-height)+0.5rem)]": props.fill === "always" },
         ]}
       >
         {props.children}
@@ -97,7 +106,13 @@ export function Page(props: {
 
       {/* Keeps the last row clear of the tab bar. A filled page has no page
           scroll to run past, so the spacer would only steal height. */}
-      <div class={["h-28 shrink-0", { "lg:hidden": Boolean(props.fill) }]} />
+      <div
+        class={[
+          "h-28 shrink-0",
+          { "lg:hidden": Boolean(props.fill) },
+          { hidden: props.fill === "always" },
+        ]}
+      />
     </div>
   );
 }
@@ -239,7 +254,10 @@ export function SplitPage(props: {
    *
    * A long list inside a card looks wrong when the pane scrolls: the card's own
    * top and bottom edges slide out of the window with it. Set this and the card
-   * can fill the pane and scroll its rows inside its own frame.
+   * can fill the pane and scroll its rows inside its own frame - on a phone as
+   * well, where the aside stacks above it and the list takes whatever height is
+   * left under it. Held to the window like that, every pixel between blocks is
+   * taken from the list, so the blocks sit closer than on a scrolling page.
    */
   mainFills?: boolean;
   /**
@@ -252,7 +270,7 @@ export function SplitPage(props: {
   wideAside?: boolean;
 }) {
   return (
-    <Page dock={props.dock} fill>
+    <Page dock={props.dock} fill={props.mainFills ? "always" : true}>
       {/* Both panes together fill the window - the list used to be capped at
           42rem as well, which parked the pair of them in the middle with the
           rest of the screen empty. Which pane takes the surplus is the screen's
@@ -262,9 +280,17 @@ export function SplitPage(props: {
        * the row is sized to the tallest child, so a full height on either half
        * is a full height of something already taller than the window.
        */}
+      {/*
+       * On a phone a filling list is the second row, and the aside above it is
+       * given no more than it needs. The list keeps a floor rather than the
+       * aside keeping its full height: on a short screen the aside scrolls
+       * inside its row, which beats a list of one visible stop.
+       */}
       <div
         class={[
-          "grid gap-6 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
+          props.mainFills
+            ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-10"
+            : "grid gap-6 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
           props.wideAside
             ? "lg:grid-cols-[minmax(22rem,1fr)_minmax(0,46rem)]"
             : "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]",
@@ -276,15 +302,24 @@ export function SplitPage(props: {
          * corners then swallows the list inside it instead of letting the pane
          * scroll.
          */}
-        <div class="mb-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0">
+        <div
+          class={
+            props.mainFills
+              ? "mb-scroll flex min-h-0 flex-col gap-3 overflow-y-auto [&>*]:shrink-0 lg:h-full lg:gap-6"
+              : "mb-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0"
+          }
+        >
           {props.aside}
         </div>
         {/* The half that scrolls. On a phone there is only one column, so the
-            page scrolls as usual. */}
+            page scrolls as usual - unless the list fills, in which case this
+            row is the height it has and the card inside it does the scrolling. */}
         <div
           class={[
-            "mb-scroll flex min-w-0 flex-col gap-6 pb-2 lg:h-full lg:min-h-0 lg:gap-8 lg:pb-0",
-            props.mainFills ? "lg:overflow-hidden" : "lg:overflow-y-auto lg:[&>*]:shrink-0",
+            "mb-scroll flex min-w-0 flex-col lg:h-full lg:min-h-0",
+            props.mainFills
+              ? "min-h-0 gap-3 overflow-hidden lg:gap-8"
+              : "gap-6 pb-2 lg:gap-8 lg:overflow-y-auto lg:pb-0 lg:[&>*]:shrink-0",
           ]}
         >
           {props.children}
