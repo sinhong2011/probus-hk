@@ -944,7 +944,7 @@ export function RailDiagram(props: {
                         side().dy < -0.34 ? "auto" : side().dy > 0.34 ? "hanging" : "middle"
                       }
                       font-size={String((tram ? 8 : 9.2) * k())}
-                      class="pointer-events-none fill-muted-foreground font-medium"
+                      class="fill-muted-foreground font-medium"
                       stroke="var(--card)"
                       stroke-width={3 * k()}
                       style={{ "paint-order": "stroke" }}

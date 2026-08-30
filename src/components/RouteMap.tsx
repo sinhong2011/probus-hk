@@ -47,6 +47,7 @@ const SRC_ME = "mb-me";
 const SRC_BUS = "mb-buses";
 const SRC_BAND = "mb-bus-band";
 const LYR_HIT = "mb-stop-hit";
+const LYR_LABEL = "mb-stop-label";
 const ACCENT = "#4ed8ce";
 
 /*
@@ -749,17 +750,21 @@ export function RouteMap(props: {
 
       instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
 
-      // Picking a stop on the map is the fast way into a forty-stop list.
-      instance.on("click", LYR_HIT, (event) => {
-        const index = event.features?.[0]?.properties?.index;
-        if (typeof index === "number") props.onSelectStop?.(index);
-      });
-      instance.on("mouseenter", LYR_HIT, () => {
-        instance.getCanvas().style.cursor = "pointer";
-      });
-      instance.on("mouseleave", LYR_HIT, () => {
-        instance.getCanvas().style.cursor = "";
-      });
+      // Picking a stop on the map is the fast way into a forty-stop list. The
+      // name and the flag are the stop as much as the dot under them is - a
+      // tap on either picks it, not only one on the invisible circle.
+      for (const layer of [LYR_HIT, LYR_LABEL]) {
+        instance.on("click", layer, (event) => {
+          const index = event.features?.[0]?.properties?.index;
+          if (typeof index === "number") props.onSelectStop?.(index);
+        });
+        instance.on("mouseenter", layer, () => {
+          instance.getCanvas().style.cursor = "pointer";
+        });
+        instance.on("mouseleave", layer, () => {
+          instance.getCanvas().style.cursor = "";
+        });
+      }
 
       instance.on("load", () => {
         // The map is created during layout, so its container may still have
@@ -904,7 +909,7 @@ export function RouteMap(props: {
          * ends of the route, then everything else.
          */
         instance.addLayer({
-          id: "mb-stop-label",
+          id: LYR_LABEL,
           type: "symbol",
           source: SRC_STOPS,
           layout: {
