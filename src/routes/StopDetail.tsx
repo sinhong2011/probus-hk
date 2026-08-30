@@ -1,28 +1,28 @@
-import { useParams } from "@solidjs/router";
+import { useParams } from "@tanstack/solid-router";
 import { uniqBy } from "es-toolkit";
 import { For, Show, createMemo } from "solid-js";
-import { Card, Chip, EmptyState, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
+import { Chip, EmptyState, SectionLabel, StopCode } from "~/components/Chrome";
 import { Trail } from "~/components/Breadcrumb";
-import { Page, Section } from "~/components/Layout";
+import { Page, RowCard, Section } from "~/components/Layout";
 import { WalkIcon } from "~/components/Icons";
 import { RouteLine } from "~/components/RouteRow";
 import { useDb } from "~/data/context";
+import { NotFound } from "~/routes/NotFound";
 import { routesAtCluster } from "~/data/db";
-import { etaKey, fetchStopEtas } from "~/data/eta/batch";
-import { createAsyncMemo } from "~/lib/async";
+import { useStopEtas } from "~/data/useStopEtas";
+import { etaKey } from "~/data/eta/batch";
 import { distanceM, formatDistance, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t } from "~/lib/i18n";
-import { etaTick } from "~/stores/clock";
 import { useGeolocation } from "~/stores/geolocation";
 import { settings } from "~/stores/settings";
 
 export default function StopDetail() {
   const db = useDb();
-  const params = useParams<{ id: string }>();
+  const params = useParams({ from: "/stop/$id" });
   const lang = settings.lang;
   const { position } = useGeolocation();
 
-  const stopId = () => decodeURIComponent(params.id);
+  const stopId = () => params().id;
   const stop = () => db().stopList[stopId()];
 
   /** Every operator's id for this kerb, so nothing is missed. */
@@ -38,16 +38,7 @@ export default function StopDetail() {
     uniqBy(routesAtCluster(db(), memberIds()), (at) => `${at.route.route}/${at.route.dest.en}`),
   );
 
-  const etas = createAsyncMemo(async () => {
-    etaTick();
-    const list = routes();
-    if (list.length === 0) return new Map<string, never[]>();
-    try {
-      return await fetchStopEtas(db(), stopId(), list);
-    } catch {
-      return new Map<string, never[]>();
-    }
-  });
+  const etas = useStopEtas(stopId, routes);
 
   const ordered = createMemo(() => {
     const map = etas();
@@ -69,7 +60,7 @@ export default function StopDetail() {
     <Page>
       <Trail />
 
-      <Show when={stop()} fallback={<EmptyState title={t("noResults", lang())} />}>
+      <Show when={stop()} fallback={<NotFound kind="stop" />}>
         {(entry) => (
           <>
             {/* The name in the language being read, and the pole code beside
@@ -115,25 +106,23 @@ export default function StopDetail() {
                 when={ordered().length > 0}
                 fallback={<EmptyState title={t("noService", lang())} />}
               >
-                <Card>
+                {/* Every line calling at this kerb, soonest first. A wide
+                    window wraps them into columns: forty routes stretched one
+                    per full-width row is a list you have to scroll to read. */}
+                <RowCard>
                   <For each={ordered()}>
-                    {(row, index) => (
-                      <>
-                        <Show when={index() > 0}>
-                          <Hairline />
-                        </Show>
-                        <RouteLine
-                          route={row.at.route}
-                          seq={row.at.seq}
-                          lang={lang()}
-                          etas={row.etas}
-                          plateSize="md"
-                          countdownSize="lg"
-                        />
-                      </>
+                    {(row) => (
+                      <RouteLine
+                        route={row.at.route}
+                        seq={row.at.seq}
+                        lang={lang()}
+                        etas={row.etas}
+                        plateSize="md"
+                        countdownSize="lg"
+                      />
                     )}
                   </For>
-                </Card>
+                </RowCard>
               </Show>
             </Section>
           </>

@@ -1,15 +1,13 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
 import { concessionFare, fareAt } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
-
-export function routeHref(key: string): string {
-  return `/route/${encodeURIComponent(key)}`;
-}
 
 interface LineProps {
   route: KeyedRoute;
@@ -45,7 +43,10 @@ function subtitleFor(props: LineProps): string {
 /** Presentational row - takes arrivals it is given, so a stop can batch them. */
 export function RouteLine(props: LineProps) {
   return (
-    <a href={routeHref(props.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
+    <a
+      {...useLinkProps(routeLink(props.route.key))}
+      class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+    >
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 
       <div class="flex min-w-0 grow flex-col gap-0.5">

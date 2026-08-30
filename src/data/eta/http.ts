@@ -1,44 +1,77 @@
+import { AsyncQueuer } from "@tanstack/pacer";
+import { queryClient } from "~/lib/query";
+import { refreshLive } from "../live";
+
 /**
  * Every operator's ETA endpoint is polled from many rows at once - a route page
  * with 25 stops would otherwise fire 25 identical requests. Responses are
  * therefore memoised for a few seconds and concurrent callers share one flight.
+ *
+ * The memo is the app's query cache, under a key of its own, so the raw
+ * responses and the per-row answers built from them are one cache with two
+ * tiers rather than two caches that have to be cleared in step. A failure is
+ * never kept: a query with no data is stale by definition, so the next poll
+ * asks again.
  */
-
-interface Entry {
-  at: number;
-  value: Promise<unknown>;
-}
-
-const cache = new Map<string, Entry>();
 const TTL_MS = 8_000;
 
-function key(url: string, body?: string) {
-  return body ? `${url} ${body}` : url;
+/**
+ * How many operator requests may be in the air at once.
+ *
+ * Every row on screen asks at the same moment, and a poll of the nearby
+ * screen is forty stops across four operators. A browser lets six through
+ * per host and queues the rest itself, but a phone on a poor connection
+ * does better sending a handful, seeing them back, and sending the next -
+ * the first rows fill while the rest are still queued, instead of all of
+ * them waiting on the slowest. The cache above this dedupes; this paces.
+ */
+const IN_FLIGHT = 6;
+
+interface Flight {
+  run: () => Promise<unknown>;
+  settle: (result: PromiseSettledResult<unknown>) => void;
+}
+
+const flights = new AsyncQueuer<Flight>(
+  async (flight) => {
+    try {
+      flight.settle({ status: "fulfilled", value: await flight.run() });
+    } catch (reason) {
+      flight.settle({ status: "rejected", reason });
+    }
+  },
+  { concurrency: IN_FLIGHT, started: true },
+);
+
+/** Run when a slot is free; the caller sees an ordinary promise. */
+function paced<T>(run: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    flights.addItem({
+      run,
+      settle: (result) =>
+        result.status === "fulfilled" ? resolve(result.value as T) : reject(result.reason),
+    });
+  });
 }
 
 export function cachedJson<T>(url: string, init?: RequestInit & { body?: string }): Promise<T> {
-  const k = key(url, init?.body);
-  const hit = cache.get(k);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.value as Promise<T>;
-
-  const value = fetch(url, init)
-    .then((res) => {
-      if (!res.ok) throw new Error(`${url} -> ${res.status}`);
-      return res.json() as Promise<T>;
-    })
-    .catch((err) => {
-      // Never cache a failure: the next poll should retry immediately.
-      cache.delete(k);
-      throw err;
-    });
-
-  cache.set(k, { at: Date.now(), value });
-  return value as Promise<T>;
+  return queryClient.fetchQuery({
+    queryKey: ["http", url, init?.body ?? null],
+    queryFn: () =>
+      paced(async () => {
+        const res = await fetch(url, init);
+        if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+        return (await res.json()) as T;
+      }),
+    staleTime: TTL_MS,
+    // Long enough to outlive one poll on the slowest cadence, and no longer.
+    gcTime: 90_000,
+  });
 }
 
 /** Drop everything so a pull-to-refresh really refetches. */
 export function clearEtaCache() {
-  cache.clear();
+  refreshLive();
 }
 
 /**

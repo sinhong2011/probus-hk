@@ -1,0 +1,145 @@
+import { For, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import {
+  createCustomVirtualizer,
+  elementScroll,
+  observeElementOffset,
+  observeElementRect,
+  observeWindowOffset,
+  observeWindowRect,
+  windowScroll,
+  type VirtualizerOptions,
+} from "~/lib/tanstack/virtual";
+import { Hairline } from "./Chrome";
+
+/** The nearest ancestor that scrolls, or nothing if the page does. */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const overflow = getComputedStyle(node).overflowY;
+    if (overflow === "auto" || overflow === "scroll") return node;
+  }
+  return null;
+}
+
+/**
+ * A long list of rows, only the visible ones in the DOM.
+ *
+ * Two thousand routes is more than any screen shows, and it used to be paged
+ * - sixty at a time, a button at the bottom - which meant the list was never
+ * all there to scroll through, and the scrollbar lied about its length. This
+ * draws the rows in the window and a few beyond it, and the list is as long
+ * as it is.
+ *
+ * What scrolls is not the list's business: on a phone it is the page, on a
+ * wide window it is the pane the list sits in. The container is found from
+ * the DOM when the list mounts and again when the window changes size, and
+ * the virtualiser is pointed at whichever it is.
+ */
+export function VirtualRows<T>(props: {
+  items: T[];
+  /** A typical row height in pixels; rows are measured once drawn. */
+  estimate: number;
+  /** A hairline between rows, as a card of rows has. */
+  divided?: boolean;
+  children: (item: T, index: number) => JSX.Element;
+}) {
+  const [list, setList] = createSignal<HTMLDivElement>();
+  const [scroller, setScroller] = createSignal<HTMLElement | Window>(window, {
+    ownedWrite: true,
+  });
+  /** Where the list starts inside whatever scrolls, so row 0 is at the top of the list, not of the pane. */
+  const [margin, setMargin] = createSignal(0, { ownedWrite: true });
+
+  const place = () => {
+    const el = list();
+    if (!el) return;
+    const pane = scrollParent(el);
+    setScroller(pane ?? window);
+    const top = el.getBoundingClientRect().top;
+    setMargin(
+      pane ? top - pane.getBoundingClientRect().top + pane.scrollTop : top + window.scrollY,
+    );
+  };
+
+  // Placed once mounted, and again whenever the list above it could have
+  // changed height - a different set of rows means a different screen.
+  createEffect(
+    () => [list(), props.items.length] as const,
+    () => {
+      place();
+    },
+  );
+  window.addEventListener("resize", place);
+  onCleanup(() => window.removeEventListener("resize", place));
+
+  const isWindow = (target: HTMLElement | Window): target is Window => target === window;
+
+  type Options = VirtualizerOptions<HTMLElement | Window, HTMLDivElement>;
+  const virtualizer = createCustomVirtualizer<HTMLElement | Window, HTMLDivElement>({
+    get count() {
+      return props.items.length;
+    },
+    get estimateSize() {
+      const size = props.estimate;
+      return () => size;
+    },
+    // Read here so a change of scroller re-arms the virtualiser.
+    get getScrollElement() {
+      const target = scroller();
+      return () => target;
+    },
+    get observeElementRect() {
+      return (
+        isWindow(scroller()) ? observeWindowRect : observeElementRect
+      ) as Options["observeElementRect"];
+    },
+    get observeElementOffset() {
+      return (
+        isWindow(scroller()) ? observeWindowOffset : observeElementOffset
+      ) as Options["observeElementOffset"];
+    },
+    get scrollToFn() {
+      return (isWindow(scroller()) ? windowScroll : elementScroll) as Options["scrollToFn"];
+    },
+    get scrollMargin() {
+      return margin();
+    },
+    overscan: 6,
+  });
+
+  const first = () => virtualizer.getVirtualItems()[0]?.index ?? 0;
+
+  return (
+    <div
+      ref={setList}
+      class="relative w-full"
+      style={{ height: `${virtualizer.getTotalSize()}px` }}
+    >
+      <For each={virtualizer.getVirtualItems()}>
+        {(item) => (
+          <div
+            data-index={item.index}
+            // After the attributes are on: the measurer reads the index off
+            // the element, and a ref runs before the element is dressed.
+            ref={(el) => queueMicrotask(() => virtualizer.measureElement(el))}
+            class="absolute left-0 top-0 w-full"
+            style={{ transform: `translateY(${item.start - margin()}px)` }}
+          >
+            <Show when={props.divided && item.index > 0}>
+              <Hairline />
+            </Show>
+            {/* Rows arrive a beat apart from the top of what is visible, so a
+                new list is seen to arrive rather than to blink. Capped, so
+                the bottom is not still arriving while the top is read. */}
+            <div
+              class="mb-pop"
+              style={{ "animation-delay": `${Math.min(item.index - first(), 8) * 18}ms` }}
+            >
+              {props.children(props.items[item.index] as T, item.index)}
+            </div>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}

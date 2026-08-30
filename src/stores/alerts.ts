@@ -3,7 +3,7 @@ import type { Company } from "~/data/types";
 
 // The old name, kept on purpose: renaming the key empties a rider's armed reminders on every
 // device that already has one.
-const KEY = "motherbus:alerts";
+const KEY = "probus:alerts";
 
 /**
  * `arrival` watches the feed and fires when the bus is nearly at the stop you

@@ -1,12 +1,13 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
 import { routesAtCluster, type RouteAtStop } from "~/data/db";
 import { useDb } from "~/data/context";
-import { etaKey, fetchStopEtas } from "~/data/eta/batch";
+import { useStopEtas } from "~/data/useStopEtas";
+import { etaKey } from "~/data/eta/batch";
 import type { StopEntry } from "~/data/types";
-import { createAsyncMemo } from "~/lib/async";
 import { formatDistance } from "~/lib/geo";
+import { stopLink } from "~/lib/links";
 import { pick, stripStopCode, type Lang } from "~/lib/i18n";
-import { etaTick } from "~/stores/clock";
 import { Card, Chip, Hairline, StopCode } from "./Chrome";
 import { RouteLine } from "./RouteRow";
 
@@ -42,16 +43,7 @@ export function StopCard(props: {
     return out;
   });
 
-  const etas = createAsyncMemo(async () => {
-    etaTick();
-    const list = routes();
-    if (list.length === 0) return new Map<string, never[]>();
-    try {
-      return await fetchStopEtas(db(), props.stopId, list);
-    } catch {
-      return new Map<string, never[]>();
-    }
-  });
+  const etas = useStopEtas(() => props.stopId, routes);
 
   /** Soonest first: the whole point of the screen is what to run for. */
   const ordered = createMemo(() => {
@@ -69,7 +61,7 @@ export function StopCard(props: {
   return (
     <Card>
       <a
-        href={`/stop/${encodeURIComponent(props.stopId)}`}
+        {...useLinkProps(stopLink(props.stopId))}
         class="flex items-center gap-2.5 px-3.5 pb-2.5 pt-3"
       >
         {/* One language, and the pole code beside it. The name in the other

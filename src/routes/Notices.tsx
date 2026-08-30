@@ -1,22 +1,30 @@
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { enUS, zhHK } from "date-fns/locale";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 import { Chip, EmptyState, ScreenTitle } from "~/components/Chrome";
 import { Page, Section } from "~/components/Layout";
 import { RefreshIcon } from "~/components/Icons";
-import { fetchNotices, routesMentioned, type Notice } from "~/data/notices";
-import { createAsyncMemo } from "~/lib/async";
+import { routesMentioned, type Notice } from "~/data/notices";
+import { useNotices } from "~/data/useNotices";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { now } from "~/stores/clock";
 import { settings } from "~/stores/settings";
 
 /**
  * The feed's own geometry, in one place so the rule, the dots and the text
- * column cannot drift apart: the time column is `TIME` wide, the rule runs down
- * its right edge, and the text starts a gap beyond it.
+ * column cannot drift apart: the time column is 3.75rem wide, the rule runs
+ * down its right edge, and the text starts a gap beyond it.
  */
-const TIME = "3.75rem";
 const RULE = "left-[3.75rem]";
+/*
+ * Time, then the notice, and on a wide window the routes it names in a column
+ * of their own down the right. The prose keeps a readable measure whatever the
+ * window does - a paragraph of the department's own wording set 1,300px wide is
+ * one the eye loses its place in - so the space goes to the routes instead,
+ * which is what a rider scans this feed for.
+ */
+const COLUMNS =
+  "grid-cols-[3.75rem_minmax(0,1fr)] xl:grid-cols-[3.75rem_minmax(0,58rem)_minmax(0,1fr)]";
 
 /**
  * Service disruptions, straight from the Transport Department's feed.
@@ -27,16 +35,7 @@ const RULE = "left-[3.75rem]";
  */
 export default function Notices() {
   const lang = settings.lang;
-  const [reloads, setReloads] = createSignal(0);
-
-  const notices = createAsyncMemo<{ ok: boolean; list: Notice[] }>(async () => {
-    reloads();
-    try {
-      return { ok: true, list: await fetchNotices() };
-    } catch {
-      return { ok: false, list: [] };
-    }
-  });
+  const { notices, reload } = useNotices();
 
   /** The newest timestamp in the batch: how current the whole screen is. */
   const publishedAt = createMemo(() => {
@@ -77,7 +76,7 @@ export default function Notices() {
             <button
               type="button"
               aria-label={t("refresh", lang())}
-              onClick={() => setReloads((n) => n + 1)}
+              onClick={reload}
               class="mb-press flex size-8 items-center justify-center rounded-full bg-secondary text-muted-foreground"
             >
               <RefreshIcon size={15} />
@@ -94,7 +93,7 @@ export default function Notices() {
             action={
               <button
                 type="button"
-                onClick={() => setReloads((n) => n + 1)}
+                onClick={reload}
                 class="rounded-lg bg-primary px-4 py-2 text-[0.88rem] font-bold text-primary-foreground"
               >
                 {t("retry", lang())}
@@ -169,8 +168,7 @@ function NoticeRow(props: { notice: Notice; lang: Lang; first: boolean }) {
        * every row was a second answer to a question the line had answered -
        * and it cut the line in half on its way across.
        */
-      class={["relative grid motion-safe:mb-rise", props.first ? "pb-4" : "py-4"]}
-      style={{ "grid-template-columns": `${TIME} minmax(0, 1fr)` }}
+      class={[`relative grid ${COLUMNS} motion-safe:mb-rise`, props.first ? "pb-4" : "py-4"]}
     >
       {/*
        * When it was said, in the margin. A notice with no time on it cannot be
@@ -229,22 +227,24 @@ function NoticeRow(props: { notice: Notice; lang: Lang; first: boolean }) {
         <Show when={ago()}>
           <span class="text-[0.75rem] font-medium text-faint-foreground">{ago()}</span>
         </Show>
-
-        <Show when={routes().length > 0}>
-          <div class="flex flex-wrap items-center gap-1.5 pt-1">
-            <span class="text-[0.75rem] font-semibold text-faint-foreground">
-              {t("affectsRoutes", props.lang)}
-            </span>
-            <For each={routes()}>
-              {(route) => (
-                <span class="rounded-md bg-secondary px-1.5 py-0.5 text-[0.75rem] font-bold text-muted-foreground">
-                  {route}
-                </span>
-              )}
-            </For>
-          </div>
-        </Show>
       </div>
+
+      {/* Under the notice on a phone, beside it on a wide window - the same
+          block either way, moved by the grid rather than rendered twice. */}
+      <Show when={routes().length > 0}>
+        <div class="col-start-2 flex flex-wrap items-start gap-1.5 pl-4 pt-2 xl:col-start-3 xl:pl-8 xl:pt-0">
+          <span class="text-[0.75rem] font-semibold leading-5 text-faint-foreground">
+            {t("affectsRoutes", props.lang)}
+          </span>
+          <For each={routes()}>
+            {(route) => (
+              <span class="rounded-md bg-secondary px-1.5 py-0.5 text-[0.75rem] font-bold leading-4 text-muted-foreground">
+                {route}
+              </span>
+            )}
+          </For>
+        </div>
+      </Show>
     </article>
   );
 }

@@ -230,7 +230,9 @@ test("an opened-out map keeps the arrivals in reach", async ({ page }) => {
     const overlay = page.locator("div.z-50.bg-map");
     await expect(overlay.getByRole("button", { name: "關閉地圖" })).toBeVisible();
     // The stop the page is about, and the wait at it, without closing the map.
-    await expect(overlay.getByText("油麻地永星里")).toBeVisible({ timeout: 15_000 });
+    // `.first()`: the sheet names it at the top and again in the stop list
+    // under it, which the sheet pulls up into.
+    await expect(overlay.getByText("油麻地永星里").first()).toBeVisible({ timeout: 15_000 });
     await expect(overlay.getByText("分鐘").first()).toBeVisible();
   }
 });

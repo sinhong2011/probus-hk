@@ -2,7 +2,7 @@ import { installPersistence, persistedSignal } from "./persisted";
 
 // The old name, kept on purpose: renaming the key empties the routes a rider opens often on every
 // device that already has one.
-const KEY = "motherbus:frequent";
+const KEY = "probus:frequent";
 /** Anything untouched for two months has stopped being a habit. */
 const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
 const MAX_TRACKED = 60;
@@ -53,6 +53,24 @@ export const frequent = {
       .sort((a, b) => b.count - a.count || b.last - a.last);
     const habitual = ranked.filter((v) => v.count > 1);
     return (habitual.length > 0 ? habitual : ranked).slice(0, limit).map((v) => v.key);
+  },
+
+  /**
+   * What was opened last, newest first - the other question a search screen
+   * answers before anything is typed. "The route I looked at ten minutes ago"
+   * is not a habit, and `top` rightly leaves it out; this is where it goes.
+   */
+  recent(limit = 6): string[] {
+    return visits()
+      .slice()
+      .sort((a, b) => b.last - a.last)
+      .slice(0, limit)
+      .map((v) => v.key);
+  },
+
+  /** Drop one route from the record, at the rider's request. */
+  forget(routeKey: string) {
+    setVisits((prev) => prev.filter((v) => v.key !== routeKey));
   },
 
   clear() {

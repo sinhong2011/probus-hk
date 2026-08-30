@@ -1,4 +1,4 @@
-import { useSearchParams } from "@solidjs/router";
+import { useLinkProps, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import {
   Card,
@@ -22,7 +22,7 @@ import {
   WalkIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
-import { routeHref } from "~/components/RouteRow";
+import { routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { searchStops } from "~/data/db";
 import { planJourneys, type Journey } from "~/data/planner";
@@ -158,7 +158,10 @@ function JourneyCard(props: { journey: Journey; lang: Lang }) {
               </div>
             </Show>
 
-            <a href={routeHref(leg.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
+            <a
+              {...useLinkProps(routeLink(leg.route.key))}
+              class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+            >
               <RoutePlate route={leg.route.route} co={leg.route.co} size="sm" />
               <div class="flex min-w-0 grow flex-col gap-0.5">
                 <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
@@ -203,7 +206,7 @@ export default function Plan() {
   const [to, setTo] = createSignal<Endpoint | null>(null);
   const [picking, setPicking] = createSignal<"from" | "to" | null>("to");
   const [query, setQuery] = createSignal("");
-  const [params] = useSearchParams<{ from?: string; to?: string }>();
+  const search = useSearch({ from: "/plan" });
 
   const matches = createMemo(() => (picking() ? searchStops(db(), query(), 10) : []));
 
@@ -255,10 +258,10 @@ export default function Plan() {
    * than as an empty planner with a story attached.
    */
   createEffect(
-    () => `${params.from ?? ""}|${params.to ?? ""}`,
+    () => `${search().from ?? ""}|${search().to ?? ""}`,
     () => {
-      const start = endOf(params.from);
-      const end = endOf(params.to);
+      const start = endOf(search().from);
+      const end = endOf(search().to);
       if (start) setFrom(start);
       if (end) {
         setTo(end);

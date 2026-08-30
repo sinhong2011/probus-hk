@@ -239,6 +239,30 @@
   --shadow-card: var(--shadow-card);
 }
 
+/*
+ * Safe-area insets as spacing tokens, so they are reached through real
+ * utilities - `pt-safe-top`, `pb-safe-bottom`, and every variant of them -
+ * rather than a hand-written class. Tailwind ships no safe-area support of its
+ * own (its `*-safe` utilities are CSS overflow-safe alignment, a different
+ * thing), but a named `--spacing-*` key is all a utility needs to exist.
+ */
+@theme {
+  --spacing-safe-top: env(safe-area-inset-top, 0px);
+  --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * iOS home-screen apps only. With `apple-mobile-web-app-status-bar-style` set
+ * to black-translucent the web view is drawn under the status bar, and on a
+ * phone without a notch the inset reports 0 while the clock still sits over
+ * the page - hence the floor. No other platform draws over us, so nowhere else
+ * pays for a 44px band across the top of every screen. The flag is set from
+ * `main.tsx`, off `navigator.standalone`, which exists on iOS alone.
+ */
+:root[data-ios-standalone] {
+  --spacing-safe-top: max(2.75rem, env(safe-area-inset-top));
+}
+
 /* Operator brand colours are absolute, never themed. */
 @theme {
   --color-op-kmb: #d71920;
@@ -354,6 +378,12 @@
  * space a countdown was using. It springs in so the row reads as having gained
  * something, rather than as having been redrawn behind the rider's back.
  */
+@keyframes mb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes mb-pop {
   from {
     opacity: 0;
@@ -431,6 +461,14 @@
    */
   .mb-page-in {
     animation: mb-page-in var(--duration-reveal) var(--ease-out);
+  }
+
+  /*
+   * A control that is working rather than waiting to be pressed. One turn a
+   * second: fast enough to read as busy, slow enough not to nag.
+   */
+  .mb-spin {
+    animation: mb-spin 1s linear infinite;
   }
 
   /*
@@ -588,22 +626,6 @@
   }
   .mb-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
-  }
-  /*
-   * The floor is for a phone in standalone mode, where the status bar is drawn
-   * over the page. A desktop window has nothing above the viewport, so the same
-   * padding there is just an empty band across the top of every screen.
-   */
-  .mb-safe-top {
-    padding-top: max(2.75rem, env(safe-area-inset-top));
-  }
-  @media (min-width: 64rem) {
-    .mb-safe-top {
-      padding-top: env(safe-area-inset-top, 0px);
-    }
-  }
-  .mb-safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
   }
   /* Hides the scrollbar without disabling scrolling. */
   .mb-scroll {

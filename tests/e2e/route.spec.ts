@@ -108,9 +108,20 @@ test("carries a disruption beside the stop's name, and opens it in full", async 
   });
 
   await page.goto(`/route/${KMB_1}`);
-  const row = page.locator('[data-stop-seq]:has([aria-label^="班次通告"])').first();
-  await expect(row).toBeVisible({ timeout: 15_000 });
+  const notices = page.locator('[data-stop-seq]:has([aria-label^="班次通告"])');
+  await expect(notices.first()).toBeVisible({ timeout: 15_000 });
+
+  /*
+   * Pinned to one stop rather than left as `.first()`. The rows poll one at a
+   * time and the page scrolls itself to the stop nearest the rider, so for a
+   * second after the list appears "the first row with a notice" names a
+   * different row each time it is asked - and the state read before the tap
+   * then belongs to a row the tap never touched.
+   */
+  const seq = await notices.first().getAttribute("data-stop-seq");
+  const row = page.locator(`[data-stop-seq="${seq}"]`);
   const chip = row.locator('[aria-label^="班次通告"]');
+  await expect(chip).toBeVisible();
   const toggle = row.locator("button[aria-expanded]");
   const wasOpen = await toggle.getAttribute("aria-expanded");
 
@@ -124,6 +135,65 @@ test("carries a disruption beside the stop's name, and opens it in full", async 
   // And nothing else: the row it sits on is a control of its own, and the
   // notice is not a second way of working it.
   await expect(toggle).toHaveAttribute("aria-expanded", wasOpen ?? "false");
+});
+
+test("says a notice that covers a run of stops once, and paints the rail", async ({ page }) => {
+  // Eleven stops under one diversion were eleven identical badges, each
+  // costing the name beside it its tail. The words belong at the first stop
+  // of the run; after that the rail carries the meaning and each row keeps
+  // only the mark, which still opens the notice.
+  await page.route("**/data.etabus.gov.hk/**", (route) => {
+    const at = (minutes: number) => {
+      const hk = new Date(Date.now() + minutes * 60_000 + 8 * 60 * 60 * 1000);
+      return `${hk.toISOString().slice(0, 19)}+08:00`;
+    };
+    const data = [];
+    for (let seq = 1; seq <= 40; seq++) {
+      for (const dir of ["O", "I"]) {
+        data.push({
+          co: "KMB",
+          route: "1",
+          dir,
+          service_type: 1,
+          seq,
+          eta_seq: 1,
+          eta: at(6.5),
+          rmk_tc: "行車受阻",
+          rmk_en: "Traffic congestion",
+          dest_tc: "尖沙咀碼頭",
+          dest_en: "STAR FERRY",
+        });
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ type: "StopETA", version: "1.0", data }),
+    });
+  });
+
+  await page.goto(`/route/${KMB_1}`);
+  await expect
+    .poll(async () => page.locator('[data-notice="continued"]').count(), { timeout: 15_000 })
+    .toBeGreaterThan(3);
+
+  // One row says it in words; the rest wear the mark alone.
+  await expect(page.locator('[data-notice="start"]')).toHaveCount(1);
+  await expect(page.locator('[data-notice="start"]')).toContainText("行車受阻");
+  await expect(page.locator('[data-notice="continued"]').first()).not.toContainText("行車受阻");
+
+  // And the mark is still a way in.
+  await page.locator('[data-notice="continued"]').first().click();
+  await expect(page.getByRole("dialog", { name: "班次通告" }).getByText("行車受阻")).toBeVisible();
+});
+
+test("draws the bus on the rail between the stops it is between", async ({ page }) => {
+  // A countdown that jumps from fourteen minutes at one stop to one at the
+  // next reads as a mistake until the bus between them is drawn.
+  await mockRunningBuses(page);
+  await page.goto(`/route/${KMB_1}`);
+  await expect(page.locator("[data-rail-bus]").first()).toBeAttached({ timeout: 15_000 });
 });
 
 test("states the ends of the service day when neither end is near", async ({ page }) => {
@@ -160,8 +230,8 @@ test("shows the full fare and the concession on every stop", async ({ page }) =>
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
-  await expect(page.getByText(/車費 \$\d/).first()).toBeVisible();
-  await expect(page.getByText("樂悠車費 $2.0", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(/車費\s?\$\d/).first()).toBeVisible();
+  await expect(page.getByText(/樂悠車費\s?\$2\.0/).first()).toBeVisible();
 });
 
 test("shows the next arrival on every stop without tapping", async ({ page }) => {
@@ -334,7 +404,7 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
   await expect
     .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))
     .toBe(true);
-  await page.getByRole("navigation", { name: "導覽" }).getByRole("link", { name: "附近" }).click();
+  await page.getByRole("navigation", { name: "導覽" }).getByRole("link", { name: "主頁" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect
     .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))

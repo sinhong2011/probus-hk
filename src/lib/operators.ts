@@ -92,6 +92,30 @@ const PRECEDENCE: Company[] = [
   "fortuneferry",
 ];
 
+/**
+ * The kinds a rider sorts routes into. "1" is a KMB bus, a Citybus bus, a
+ * Lantau bus and a green minibus, and someone typing it knows which of those
+ * they are waiting for; this is the axis the results can be narrowed on.
+ */
+export type Kind = "bus" | "minibus" | "rail" | "ferry";
+
+const KINDS: Record<Company, Kind> = {
+  kmb: "bus",
+  ctb: "bus",
+  nlb: "bus",
+  lrtfeeder: "bus",
+  gmb: "minibus",
+  mtr: "rail",
+  lightRail: "rail",
+  sunferry: "ferry",
+  hkkf: "ferry",
+  fortuneferry: "ferry",
+};
+
+export function kindOf(co: Company): Kind {
+  return KINDS[co];
+}
+
 export function operatorRank(co: Company): number {
   const index = PRECEDENCE.indexOf(co);
   return index < 0 ? PRECEDENCE.length : index;
@@ -180,6 +204,11 @@ export function plateStyle(co: Company[], route: string): { background: string; 
     };
   }
   return { background: a.color, color: a.ink };
+}
+
+/** The short form, for the line under a route number: "九巴", "KMB · CTB". */
+export function operatorShort(co: Company[], lang: "zh" | "en"): string {
+  return co.map((c) => OPERATORS[c].short[lang]).join(" · ");
 }
 
 /** Label such as "九巴 KMB" or "聯營 KMB · Citybus". */

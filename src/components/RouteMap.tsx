@@ -9,9 +9,11 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
 import type { JSX } from "@solidjs/web";
-import { Show, createEffect, createMemo, createSignal } from "solid-js";
+import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { Drawer } from "~/components/Drawer";
 import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
+import { whenIdleAfter } from "~/lib/idle";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
 import { measureOf, spreadMetres } from "~/data/placement";
 import type { VehicleFeed } from "~/data/useVehicles";
@@ -20,6 +22,14 @@ import type { LatLng } from "~/lib/geo";
 import { measureLine, measureStops, pointAt, sliceLine, stitchLines } from "~/lib/alongLine";
 import { plateStyle } from "~/lib/operators";
 import { settings } from "~/stores/settings";
+
+/**
+ * Where the sheet over an opened-out map rests, as fractions of the window:
+ * low enough that the route is what the window is for, high enough that the
+ * first rows of the list show under the open stop and say there is more.
+ */
+const SHEET_PEEK = 0.28;
+const SHEET_TALL = 0.9;
 
 /**
  * Keyless CARTO basemaps: no API key, no sign-up, and one style per theme so
@@ -619,8 +629,9 @@ export function RouteMap(props: {
   me?: LatLng | null;
   /**
    * Tailwind height classes rather than a fixed value, so the map can be taller
-   * where there is room for it - the sticky column on a wide screen has a lot
-   * of it, and a map you cannot see the shape of the route in is decoration.
+   * where there is room for it - and `flex-1` where it should take all of it,
+   * as it does in the column on a wide screen. A map you cannot see the shape
+   * of the route in is decoration.
    */
   heightClass?: string;
   lang: Lang;
@@ -634,6 +645,12 @@ export function RouteMap(props: {
    * to the page that already fetches them, not to a map.
    */
   sheet?: () => JSX.Element;
+  /**
+   * Every stop on the route, for the sheet to show when it is pulled up: the
+   * open stop is the answer to one question, and the list is the way to ask
+   * the next one without leaving the map. Built only when it is on screen.
+   */
+  list?: () => JSX.Element;
 }) {
   let container!: HTMLDivElement;
   /** How many stop signs are in the sprite - see `paintStopFlags`. */
@@ -658,6 +675,12 @@ export function RouteMap(props: {
    * on a phone is exactly the thing a rider wants opened out.
    */
   const [expanded, setExpanded] = createSignal(false);
+  /**
+   * Where the sheet over an opened-out map rests: at its foot, showing the
+   * open stop, or pulled up to show the whole list. Held here as well as in
+   * the drawer so it can be sent back down when a stop is picked.
+   */
+  const [sheetSnap, setSheetSnap] = createSignal(0);
 
   const stopPositions = (): Position[] =>
     props.stops.map((s) => [s.stop.location.lng, s.stop.location.lat]);
@@ -680,12 +703,28 @@ export function RouteMap(props: {
   const markerPositions = createMemo(stopPositions);
 
   /*
+   * The map is built after the page has arrived, not while it is arriving.
+   *
+   * Creating it means a WebGL context, a style, and the first draw - a few
+   * hundred milliseconds of the main thread on a phone - and done during the
+   * page's own entrance it was the entrance stuttering, every time. The rows
+   * are what a rider came for and they paint first; the map fills its frame
+   * once the entrance has played out and the browser has a moment. "Idle"
+   * alone is not enough - it arrives the instant the rows have painted, with
+   * the entrance still running - so the wait is at least the entrance's
+   * length. The deadline is so a page that never goes idle still gets its map.
+   */
+  const [settled, setSettled] = createSignal(false, { ownedWrite: true });
+  onCleanup(whenIdleAfter(() => setSettled(true), 320, 1_000));
+
+  /*
    * Solid 2 splits every effect: the first function does the reactive reads and
    * the second acts on the result untracked, optionally returning a cleanup.
    */
   createEffect(
-    () => prefersDark(settings.theme()),
+    () => (settled() ? prefersDark(settings.theme()) : null),
     (dark) => {
+      if (dark === null) return;
       const instance = new MlMap({
         container,
         style: dark ? STYLES.dark : STYLES.light,
@@ -1042,7 +1081,7 @@ export function RouteMap(props: {
       instance.easeTo({
         center: coming.position,
         // Off-centre by half the sheet, so the bus does not land behind it.
-        offset: expanded() ? [0, -70] : [0, 0],
+        offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
         // Close enough to read the road it is on, without throwing away a
         // wider view the rider has deliberately zoomed out to.
         zoom: Math.max(instance.getZoom(), 15),
@@ -1058,9 +1097,12 @@ export function RouteMap(props: {
     }
   };
 
+  /** How much of the opened-out map the sheet covers at rest, in pixels. */
+  const sheetHeight = () => Math.round(container.clientHeight * SHEET_PEEK);
+
   /** Room for the sheet at the bottom, when there is a sheet. */
   const framePadding = (edge: number) =>
-    expanded() ? { top: edge, left: edge, right: edge, bottom: edge + 180 } : edge;
+    expanded() ? { top: edge, left: edge, right: edge, bottom: edge + sheetHeight() } : edge;
 
   const fitRoute = () => {
     const instance = map();
@@ -1394,6 +1436,18 @@ export function RouteMap(props: {
     },
   );
 
+  /*
+   * A stop picked from the pulled-up list is a question for the map, and the
+   * map is under the list: the sheet drops back to its foot so the answer can
+   * be seen. A stop closed again is not a question, so the sheet stays put.
+   */
+  createEffect(
+    () => props.selectedIndex,
+    (index) => {
+      if (index !== undefined && expanded()) setSheetSnap(0);
+    },
+  );
+
   const mapHeight = () => {
     if (usable() === false) return "";
     return expanded() ? "h-full" : (props.heightClass ?? "h-[18rem]");
@@ -1444,7 +1498,12 @@ export function RouteMap(props: {
 
   return (
     <>
-      <div class={expanded() ? "fixed inset-0 z-50 bg-map" : "relative"}>
+      {/* A flex column, so a height class of `flex-1` on the canvas lets it
+          fill a card that is itself filling its column - the map's height then
+          comes from the window rather than from a number. */}
+      <div
+        class={expanded() ? "fixed inset-0 z-50 bg-map" : "relative flex min-h-0 flex-1 flex-col"}
+      >
         <div
           ref={container}
           // Kept in the layout while loading so MapLibre can measure it, then
@@ -1493,20 +1552,32 @@ export function RouteMap(props: {
          * height it was opened out for; the camera moves pad themselves clear
          * of it instead.
          */}
-        <Show when={expanded() && usable() && props.sheet}>
+        <Show when={usable() && props.sheet}>
           {(sheet) => (
-            <div
-              class="mb-rise absolute inset-x-0 bottom-0 z-10 rounded-t-2xl border-t border-border bg-card/95 shadow-card backdrop-blur"
-              style={{ "padding-bottom": "max(0.75rem, env(safe-area-inset-bottom))" }}
+            <Drawer
+              open={expanded()}
+              /* Flicked away, the sheet takes the opened-out map with it: the
+                 arrivals are why the rider is here, and a map without them is
+                 the page with the map at its usual size. */
+              onClose={() => setExpanded(false)}
+              within
+              snapPoints={[SHEET_PEEK, SHEET_TALL]}
+              snap={sheetSnap()}
+              onSnapChange={setSheetSnap}
+              label={t("mapSheet", props.lang)}
+              class="lg:max-w-[36rem]"
             >
-              {/* The grabber says which edge this came from, even though it is
-                  not draggable: a panel that appears from nowhere reads as an
-                  overlay that has broken, not as a drawer. */}
-              <div aria-hidden="true" class="flex justify-center pt-2">
-                <span class="h-1 w-9 rounded-full bg-faint-foreground/50" />
-              </div>
-              {sheet()()}
-            </div>
+              {/* Built only while the map is opened out, so no arrivals are
+                  laid out for a sheet nobody can see. */}
+              <Show when={expanded()}>
+                {/* The open stop stays at the top while the list scrolls under
+                    it: pulled up, the sheet is still about this stop. */}
+                <div class="sticky top-0 z-10 bg-card">{sheet()()}</div>
+                <Show when={props.list}>
+                  {(list) => <div class="border-t border-border pb-safe-bottom">{list()()}</div>}
+                </Show>
+              </Show>
+            </Drawer>
           )}
         </Show>
 

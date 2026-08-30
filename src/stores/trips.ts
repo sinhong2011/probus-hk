@@ -2,7 +2,7 @@ import { installPersistence, persistedSignal } from "./persisted";
 
 // The old name, kept on purpose: renaming the key empties a rider's saved trips on every
 // device that already has one.
-const KEY = "motherbus:trips";
+const KEY = "probus:trips";
 
 /** An end of a trip: where the rider is, or a stop they named. */
 export type TripEnd = { kind: "me" } | { kind: "stop"; id: string };

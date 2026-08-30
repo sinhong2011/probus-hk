@@ -1,3 +1,5 @@
+import { useLinkProps } from "@tanstack/solid-router";
+import { useQuery } from "@tanstack/solid-query";
 import { uniqBy } from "es-toolkit";
 import { For, Show, createMemo } from "solid-js";
 import {
@@ -10,14 +12,17 @@ import {
   SectionLabel,
   Segmented,
 } from "~/components/Chrome";
-import { CardColumns, CardColumnItem, Page, Section } from "~/components/Layout";
+import { CardColumns, CardColumnItem, Page, RowCard, Section } from "~/components/Layout";
 import { ChevronRightIcon, MegaphoneIcon, PinIcon, RefreshIcon } from "~/components/Icons";
-import { RouteLine, RouteRow, routeHref } from "~/components/RouteRow";
+import { RouteLine } from "~/components/RouteRow";
+import { routeLink } from "~/lib/links";
 import { RoutePlate } from "~/components/RoutePlate";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { StopCard } from "~/components/StopCard";
 import { StopListSkeleton } from "~/components/Skeleton";
 import { useDb } from "~/data/context";
+import { presetRoutes } from "~/data/presets";
+import { operatorLabel } from "~/lib/operators";
 import {
   nearbyStopClusters,
   routeAt,
@@ -28,11 +33,12 @@ import {
 import { etaKey, fetchStopEtas } from "~/data/eta/batch";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
-import { fetchNotices, routesMentioned } from "~/data/notices";
-import { createAsyncMemo } from "~/lib/async";
+import { live } from "~/data/live";
+import { routesMentioned } from "~/data/notices";
+import { useNotices } from "~/data/useNotices";
 import { distanceM, formatDistance, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { etaTick, etaTickAt } from "~/stores/clock";
+import { liveUpdatedAt } from "~/data/live";
 import { frequent } from "~/stores/frequent";
 import { geo, useGeolocation } from "~/stores/geolocation";
 import { saved } from "~/stores/saved";
@@ -51,6 +57,63 @@ interface Departure {
   etas: Eta[];
   /** Soonest arrival, or `Infinity` where the feed has nothing. */
   next: number;
+}
+
+/**
+ * The routes most of the city knows by number, for a screen with no position
+ * to fill itself from: a rider who has just installed the app on a desk, or
+ * refused the location prompt, still gets somewhere to go from here.
+ */
+function PopularRoutes(props: { lang: Lang }) {
+  const db = useDb();
+  const routes = createMemo(() => presetRoutes(db()));
+
+  return (
+    <Show when={routes().length > 0}>
+      <Section>
+        <SectionLabel
+          trailing={
+            <span class="text-[0.75rem] font-semibold text-faint-foreground">
+              {t("popularRoutesHint", props.lang)}
+            </span>
+          }
+        >
+          {t("popularRoutes", props.lang)}
+        </SectionLabel>
+        <RowCard>
+          <For each={routes()}>
+            {(route, index) => (
+              <>
+                <Show when={index() > 0}>
+                  <Hairline />
+                </Show>
+                <a
+                  {...useLinkProps(routeLink(route.key))}
+                  class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+                >
+                  <RoutePlate route={route.route} co={route.co} size="sm" />
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                      <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
+                        {t("towards", props.lang)}
+                      </span>
+                      {pick(route.dest, props.lang)}
+                    </span>
+                    <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                      {operatorLabel(route.co, props.lang)} · {pick(route.orig, props.lang)}
+                    </span>
+                  </div>
+                  <span class="text-faint-foreground">
+                    <ChevronRightIcon size={15} />
+                  </span>
+                </a>
+              </>
+            )}
+          </For>
+        </RowCard>
+      </Section>
+    </Show>
+  );
 }
 
 /** How far a stop can be and still be the one you are heading for. */
@@ -91,7 +154,7 @@ function NextTrip(props: { trip: Guess; lang: Lang }) {
   return (
     <Card>
       <a
-        href={`${routeHref(props.trip.route.key)}?stop=${props.trip.seq}`}
+        {...useLinkProps(routeLink(props.trip.route.key, props.trip.seq))}
         class="mb-tap flex items-center gap-3 px-3.5 py-3"
       >
         <RoutePlate route={props.trip.route.route} co={props.trip.route.co} size="md" />
@@ -208,13 +271,7 @@ export default function Nearby() {
    * Arrivals are batched per kerb, so the merged list costs the same requests
    * as the grouped one rather than one per row.
    */
-  const departures = createAsyncMemo<Departure[]>(async () => {
-    etaTick();
-    if (settings.nearbyMode() !== "routes") return [];
-
-    const clusters = stops();
-    if (clusters.length === 0) return [];
-
+  const load = async (clusters: StopCluster[]): Promise<Departure[]> => {
     const perStop = await Promise.all(
       clusters.map(async (cluster) => {
         // One route number can call at a kerb as several service types; to
@@ -251,7 +308,21 @@ export default function Nearby() {
       .sort((a, b) => a.next - b.next || a.cluster.metres - b.cluster.metres);
 
     return uniqBy(sorted, (row) => row.at.route.key).slice(0, MAX_DEPARTURES);
+  };
+
+  const departureQuery = useQuery(() => {
+    const clusters = stops();
+    return {
+      ...live(),
+      queryKey: ["departures", clusters.map((cluster) => cluster.stopId)] as const,
+      // Only fetched while the merged view is the one on screen; the grouped
+      // view's cards ask for the same kerbs themselves.
+      enabled: settings.nearbyMode() === "routes" && clusters.length > 0,
+      queryFn: () => load(clusters),
+    };
   });
+  const departures = (): Departure[] =>
+    settings.nearbyMode() === "routes" && stops().length > 0 ? departureQuery.data : [];
 
   /*
    * The route you are probably about to take: the one you open most often,
@@ -295,13 +366,7 @@ export default function Nearby() {
    * Notices that name a route you keep or use, so a disruption reaches the
    * screen the rider actually opens rather than waiting in a tab.
    */
-  const notices = createAsyncMemo(async () => {
-    try {
-      return await fetchNotices();
-    } catch {
-      return [];
-    }
-  });
+  const { notices } = useNotices();
 
   const mine = createMemo(() => {
     const numbers = new Set<string>();
@@ -319,7 +384,7 @@ export default function Nearby() {
   const affecting = createMemo(() => {
     const numbers = mine();
     if (numbers.size === 0) return [];
-    return (notices() ?? []).filter((notice) =>
+    return notices().list.filter((notice) =>
       routesMentioned(notice).some((route) => numbers.has(route)),
     );
   });
@@ -331,11 +396,11 @@ export default function Nearby() {
   ];
 
   return (
-    <Page wide>
+    <Page>
       {/* Where you are belongs beside the title, and how far you will walk for
           a bus belongs beside both - one band, not three stacked rows. */}
       <ScreenTitle
-        title={t("nearby", lang())}
+        title={t("home", lang())}
         trailing={
           <div class="flex min-w-0 items-center gap-1.5 pb-1 text-primary lg:pb-0">
             <PinIcon size={15} />
@@ -385,7 +450,7 @@ export default function Nearby() {
             <SectionLabel
               trailing={
                 <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                  {t("updatedAt", lang())} {clockTime(etaTickAt())}
+                  {t("updatedAt", lang())} {clockTime(liveUpdatedAt())}
                 </span>
               }
             >
@@ -399,9 +464,9 @@ export default function Nearby() {
       {/* One line for the state of the network, and only about the routes this
           rider actually uses - a tab full of notices is not an answer to
           "is anything wrong with my bus". */}
-      <Show when={mine().size > 0 && notices() !== undefined}>
+      <Show when={mine().size > 0}>
         <a
-          href="/notices"
+          {...useLinkProps({ to: "/notices" })}
           class={[
             "mb-press flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5",
             affecting().length > 0
@@ -439,6 +504,15 @@ export default function Nearby() {
             ? t("nearbyRoutes", lang())
             : t("nearbyStops", lang())}
         </SectionLabel>
+
+        {/*
+         * Something to open before the phone knows where it is - and
+         * something to open if it never will. A home screen that is a
+         * blank until a permission dialog is answered is not a home screen.
+         */}
+        <Show when={position() === null}>
+          <PopularRoutes lang={lang()} />
+        </Show>
 
         <Show
           when={status() !== "denied" && status() !== "unavailable"}

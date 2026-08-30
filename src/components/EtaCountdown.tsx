@@ -9,9 +9,21 @@ import { now } from "~/stores/clock";
 export type CountdownSize = "sm" | "md" | "lg";
 
 const LEAD: Record<CountdownSize, string> = {
-  sm: "1.5rem",
-  md: "1.85rem",
-  lg: "2.15rem",
+  sm: "1.35rem",
+  md: "1.65rem",
+  lg: "1.95rem",
+};
+
+/**
+ * One size down, for a timetable estimate in the hero position. A live number
+ * and a guess were set at the same size, and down a list the eye reads the
+ * size before it reads the tilde; the guess is now literally the smaller
+ * claim.
+ */
+const LEAD_SCHEDULED: Record<CountdownSize, string> = {
+  sm: "1.13rem",
+  md: LEAD.sm,
+  lg: LEAD.md,
 };
 
 /**
@@ -24,8 +36,9 @@ const LEAD: Record<CountdownSize, string> = {
  *
  * Four states must be distinguishable at a glance, and colour alone is not
  * enough, so each also differs in shape: a live arrival is a bare numeral, an
- * imminent one becomes words beside a pulsing dot, a timetable estimate wears a
- * tilde, and no service is words only. A rule under the number read as an
+ * imminent one becomes words beside a pulsing dot, a timetable estimate is
+ * smaller and named as one - the word under a lone number, a tilde on the ones
+ * stacked - and no service is words only. A rule under the number read as an
  * underline rather than as a meaning, and cost a row of height to say it.
  */
 export function EtaCountdown(props: {
@@ -64,6 +77,8 @@ export function EtaCountdown(props: {
    * same sentence said twice, once too small to read.
    */
   notices?: boolean;
+  /** Milliseconds before the digits roll; see `RollingNumber`. */
+  stagger?: number;
 }) {
   const size = () => props.size ?? "md";
 
@@ -114,6 +129,21 @@ export function EtaCountdown(props: {
 
   /** The clock time of the arrival the countdown at the top is counting to. */
   const leadAt = () => upcoming()[heroIndex()]?.at ?? null;
+
+  /**
+   * A lone number that is a timetable estimate. The word underneath is the
+   * whole of what marks it, so it wears no tilde: beside the number the word
+   * was taking a third of the row from the stop's own name.
+   *
+   * A missed arrival is excluded - it wears the strike, and is not an answer
+   * any more.
+   */
+  const loneScheduled = () =>
+    upcoming().length === 1 && heroIndex() >= missed() && upcoming()[0]?.state.scheduled === true;
+
+  /** Whether "these are timetable estimates" is said in a word underneath. */
+  const wordBelow = () =>
+    loneScheduled() || (upcoming().length > 1 && upcoming().some((entry) => entry.state.scheduled));
 
   return (
     <Show when={props.etas !== undefined} fallback={<EtaSkeleton size={size()} />}>
@@ -195,17 +225,32 @@ export function EtaCountdown(props: {
                            */
                           "text-faint-foreground line-through decoration-1 decoration-faint-foreground/60":
                             gone(),
-                          // The arrival the decision turns on.
-                          "text-foreground": hero() && !gone() && !state().scheduled,
-                          "text-muted-foreground": hero() && !gone() && state().scheduled,
+                          /*
+                           * The arrival the decision turns on, in the app's
+                           * own colour: down a card of grey type the eye
+                           * lands on it first, which is the point of putting
+                           * it at the top. A timetable estimate takes the
+                           * same colour weaker - it is the same claim, made
+                           * with less behind it.
+                           */
+                          "text-primary": hero() && !gone() && !state().scheduled,
+                          "text-primary/60": hero() && !gone() && state().scheduled,
                           "text-subtle-foreground": !hero() && !gone(),
                         },
                       ]}
                       style={{
-                        "font-size": hero() ? LEAD[size()] : gone() ? "0.88rem" : "1rem",
+                        "font-size": hero()
+                          ? (state().scheduled ? LEAD_SCHEDULED : LEAD)[size()]
+                          : gone()
+                            ? "0.88rem"
+                            : "1rem",
                       }}
                     >
-                      <Show when={state().scheduled}>
+                      {/* A stack keeps the tilde on every line: the word under
+                          it covers all of them, and which of the three it
+                          meant would otherwise be a guess. A lone number is
+                          named by that word alone - see `loneScheduled`. */}
+                      <Show when={state().scheduled && !loneScheduled()}>
                         <span class="opacity-60">~</span>
                       </Show>
                       {/* A bus already out of reach is not counting down to
@@ -216,7 +261,10 @@ export function EtaCountdown(props: {
                         when={!gone()}
                         fallback={state().kind === "arriving" ? 0 : state().minutes}
                       >
-                        <RollingNumber value={state().kind === "arriving" ? 0 : state().minutes} />
+                        <RollingNumber
+                          value={state().kind === "arriving" ? 0 : state().minutes}
+                          delay={props.stagger}
+                        />
                       </Show>
                     </span>
                     <span
@@ -241,18 +289,26 @@ export function EtaCountdown(props: {
 
           {/* Under the number rather than beside it: the two are one answer
               read at two scales, and a rider who wants the clock time is
-              looking at the countdown already. */}
-          <Show when={props.clock && leadAt()}>
-            {(at) => (
-              <span class="tnum -mt-px text-[0.75rem] font-semibold text-faint-foreground">
-                {clockTime(at())}
-              </span>
-            )}
+              looking at the countdown already. What kind of answer it is -
+              a timetable estimate rather than a reported bus - reads on the
+              same line, under the number it qualifies. */}
+          <Show when={wordBelow() || (props.clock && leadAt())}>
+            <span class="-mt-px flex items-baseline gap-1">
+              <Show when={wordBelow()}>
+                <span class="text-[0.69rem] font-semibold text-faint-foreground">
+                  {t("scheduled", props.lang)}
+                </span>
+              </Show>
+              <Show when={props.clock && leadAt()}>
+                {(at) => (
+                  <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                    {clockTime(at())}
+                  </span>
+                )}
+              </Show>
+            </span>
           </Show>
 
-          {/* In a list every row would repeat this; the dashed underline already
-            marks a timetable estimate, so the words are only worth the space
-            where several arrivals are stacked. */}
           {/*
            * Where to stand. A rail arrival is not answered by a number of minutes
            * alone - the platform is the rest of the answer, and it was being
@@ -273,12 +329,6 @@ export function EtaCountdown(props: {
                 </Show>
               </span>
             )}
-          </Show>
-
-          <Show when={upcoming().length > 1 && upcoming().some((e) => e.state.scheduled)}>
-            <span class="text-[0.69rem] font-semibold text-faint-foreground">
-              {t("scheduled", props.lang)}
-            </span>
           </Show>
         </div>
       </Show>

@@ -1,10 +1,16 @@
-import { useLocation } from "@solidjs/router";
-import { For, Show, createEffect } from "solid-js";
+import { useLinkProps, useLocation, useNavigate } from "@tanstack/solid-router";
+import { For, Show, createEffect, getOwner, runWithOwner } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { t, type Lang, type MessageKey } from "~/lib/i18n";
 import { trail } from "~/stores/trail";
 import { settings, type ThemeChoice } from "~/stores/settings";
 import { pointerOrigin, swapTheme } from "~/lib/themeSwap";
+import {
+  createHotkey,
+  createHotkeys,
+  formatForDisplay,
+  type RegisterableHotkey,
+} from "~/lib/tanstack/hotkeys";
 import { AppMark } from "./AppMark";
 import { Segmented } from "./Chrome";
 import { SlidingPill } from "./SlidingPill";
@@ -24,21 +30,28 @@ import {
 } from "./Icons";
 
 /**
- * The key that opens search, named the way the machine in front of the rider
- * names it. Read once: it cannot change while the page is open.
+ * The keys, named the way the machine in front of the rider names them: ⌘K
+ * on a Mac, Ctrl+K elsewhere. Read once - the platform cannot change while
+ * the page is open.
  */
-const SHORTCUT =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
+const SEARCH_KEY = "Mod+K";
+const SEARCH_SHORTCUT = formatForDisplay(SEARCH_KEY);
+
+/** The tab at this position in the navigation is reached with this key. */
+const tabKey = (index: number): RegisterableHotkey => `Alt+${index + 1}` as RegisterableHotkey;
+
+/** The six places the navigation itself can take you, and nowhere else. */
+type TabPath = "/" | "/saved" | "/search" | "/rail" | "/notices" | "/settings";
 
 interface Destination {
-  href: string;
+  href: TabPath;
   label: MessageKey;
   Icon: (p: IconProps) => JSX.Element;
 }
 
 /** Where the app can take you. Settings is not one of these; it is the drawer. */
 const TABS: Destination[] = [
-  { href: "/", label: "nearby", Icon: PinIcon },
+  { href: "/", label: "home", Icon: PinIcon },
   { href: "/saved", label: "saved", Icon: BookmarkIcon },
   { href: "/search", label: "search", Icon: SearchIcon },
   { href: "/rail", label: "rail", Icon: TrainIcon },
@@ -49,6 +62,9 @@ const TABS: Destination[] = [
 const SIDEBAR_TABS = TABS.filter((tab) => tab.href !== "/search");
 
 const SETTINGS: Destination = { href: "/settings", label: "settings", Icon: SettingsIcon };
+
+/** Every destination in the order the keys count them: ⌥1 is nearby, ⌥6 is settings. */
+const REACHABLE: Destination[] = [...TABS, SETTINGS];
 
 /**
  * A bottom bar on a phone; a sidebar on a desktop.
@@ -66,7 +82,20 @@ export function TabBar(props: { lang: Lang }) {
    * belonged to nothing. A detail screen is owned by the tab you reached it
    * from, and that tab stays lit while you are inside it.
    */
-  const isActive = (href: string) => trail.owns(href, location.pathname);
+  const isActive = (href: string) => trail.owns(href, location().pathname);
+
+  /*
+   * A keyboard reaches every tab without a pointer: ⌥ and a digit, in the
+   * order the sidebar lists them. Alt rather than ⌘, because ⌘1 to ⌘9 are
+   * the browser's own tabs and it will not give them up.
+   */
+  const navigate = useNavigate();
+  createHotkeys(
+    REACHABLE.map((tab, index) => ({
+      hotkey: tabKey(index),
+      callback: () => void navigate({ to: tab.href }),
+    })),
+  );
 
   return (
     <>
@@ -76,9 +105,18 @@ export function TabBar(props: { lang: Lang }) {
   );
 }
 
-/** Sets `aria-current` from an effect: bound in the markup it never updated. */
-function current(el: HTMLAnchorElement, active: () => boolean) {
-  createEffect(active, (on) => el.setAttribute("aria-current", on ? "page" : "false"));
+/**
+ * Sets `aria-current` from an effect: bound in the markup it never updated.
+ *
+ * The router calls a link's ref from outside any owner, so an effect created
+ * there would never be disposed. The owner is taken where the ref is made -
+ * inside the component - and the effect is put under it when the element
+ * arrives.
+ */
+function current(el: HTMLAnchorElement, active: () => boolean, owner = getOwner()) {
+  runWithOwner(owner, () =>
+    createEffect(active, (on) => el.setAttribute("aria-current", on ? "page" : "false")),
+  );
 }
 
 function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
@@ -87,7 +125,7 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
   return (
     <nav
       aria-label={t("navigation", props.lang)}
-      class="mb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden"
+      class="pb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden"
       style={{
         background: "color-mix(in srgb, var(--background) 94%, transparent)",
         "backdrop-filter": "blur(18px)",
@@ -100,8 +138,13 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
         <For each={items()}>
           {(tab) => (
             <a
-              href={tab.href}
-              ref={(el: HTMLAnchorElement) => current(el, () => props.isActive(tab.href))}
+              {...useLinkProps({
+                to: tab.href,
+                ref: (
+                  (owner) => (el: HTMLAnchorElement) =>
+                    current(el, () => props.isActive(tab.href), owner)
+                )(getOwner()),
+              })}
               class={[
                 "mb-press relative flex h-12 min-w-0 flex-1 flex-col items-center justify-start gap-[5px] transition-colors duration-state",
                 {
@@ -155,22 +198,13 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
 
   /*
    * ⌘K is where a pointer-and-keyboard user reaches for search without
-   * thinking. The link is clicked rather than the router called directly, so
-   * the keystroke and the box take exactly the same path.
+   * thinking, and `/` is where the rest of the web has taught them to look.
+   * The link is clicked rather than the router called directly, so the
+   * keystroke and the box take exactly the same path. A bare `/` typed into a
+   * field is a `/`, not a shortcut; the registry knows to leave those alone.
    */
-  createEffect(
-    () => null,
-    () => {
-      const onKey = (event: KeyboardEvent) => {
-        if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
-        event.preventDefault();
-        searchLink.click();
-      };
-      document.addEventListener("keydown", onKey);
-      // Returned: an `onCleanup` inside an effect callback has no owner in Solid 2.
-      return () => document.removeEventListener("keydown", onKey);
-    },
-  );
+  createHotkey(SEARCH_KEY, () => searchLink.click());
+  createHotkey("/", () => searchLink.click());
 
   return (
     <nav
@@ -180,7 +214,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
     >
       <div class={["flex items-center gap-2.5", { "flex-col gap-2": !open() }]}>
         <a
-          href="/"
+          {...useLinkProps({ to: "/" })}
           aria-label={t("appName", props.lang)}
           class="mb-press flex shrink-0 items-center gap-2.5 rounded-xl px-0.5 py-1"
         >
@@ -209,11 +243,13 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
 
       {/* The way in by typing, which is how a route number is looked up. */}
       <a
-        ref={(el: HTMLAnchorElement) => {
-          searchLink = el;
-          current(el, searching);
-        }}
-        href="/search"
+        {...useLinkProps({
+          to: "/search",
+          ref: ((owner) => (el: HTMLAnchorElement) => {
+            searchLink = el;
+            current(el, searching, owner);
+          })(getOwner()),
+        })}
         class={[
           "mb-press mt-3 flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border transition-colors",
           {
@@ -230,7 +266,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
             {t("searchRoutes", props.lang)}
           </span>
           <kbd class="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 text-[0.75rem] font-bold text-faint-foreground">
-            {SHORTCUT}
+            {SEARCH_SHORTCUT}
           </kbd>
         </Show>
       </a>
@@ -254,13 +290,28 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
           </Show>
 
           <For each={SIDEBAR_TABS}>
-            {(tab) => <Row tab={tab} lang={props.lang} isActive={props.isActive} open={open()} />}
+            {(tab) => (
+              <Row
+                tab={tab}
+                lang={props.lang}
+                isActive={props.isActive}
+                open={open()}
+                shortcut={formatForDisplay(tabKey(REACHABLE.indexOf(tab)))}
+              />
+            )}
           </For>
         </div>
       </div>
 
       <div class="flex shrink-0 flex-col gap-1 pt-3">
-        <Row tab={SETTINGS} lang={props.lang} isActive={props.isActive} open={open()} quiet />
+        <Row
+          tab={SETTINGS}
+          lang={props.lang}
+          isActive={props.isActive}
+          open={open()}
+          shortcut={formatForDisplay(tabKey(REACHABLE.indexOf(SETTINGS)))}
+          quiet
+        />
 
         <div class="my-1 h-px bg-border" />
 
@@ -365,13 +416,20 @@ function Row(props: {
   open: boolean;
   /** Settings is a destination too, but it does not carry the travelling pill. */
   quiet?: boolean;
+  /** The key that reaches this row, shown beside it when there is room. */
+  shortcut?: string;
 }) {
   const active = () => props.isActive(props.tab.href);
 
   return (
     <a
-      href={props.tab.href}
-      ref={(el: HTMLAnchorElement) => current(el, active)}
+      {...useLinkProps({
+        to: props.tab.href,
+        ref: (
+          (owner) => (el: HTMLAnchorElement) =>
+            current(el, active, owner)
+        )(getOwner()),
+      })}
       data-pill-active={active() && !props.quiet ? "true" : "false"}
       title={props.open ? undefined : t(props.tab.label, props.lang)}
       class={[
@@ -390,10 +448,18 @@ function Row(props: {
       </span>
       <Show when={props.open}>
         <span
-          class={["truncate text-[0.88rem]", { "font-bold": active(), "font-semibold": !active() }]}
+          class={[
+            "min-w-0 grow truncate text-[0.88rem]",
+            { "font-bold": active(), "font-semibold": !active() },
+          ]}
         >
           {t(props.tab.label, props.lang)}
         </span>
+        <Show when={props.shortcut}>
+          <kbd class="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 text-[0.69rem] font-bold text-faint-foreground">
+            {props.shortcut}
+          </kbd>
+        </Show>
       </Show>
     </a>
   );

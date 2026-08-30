@@ -127,6 +127,37 @@ test("a bookmark can be moved to another stop on its route", async ({ page }) =>
   await expect(card).not.toContainText("天虹小學");
 });
 
+test("a pinned bookmark is held at the top of the list", async ({ page }) => {
+  await bookmark(page, 1);
+  await bookmark(page, 2);
+
+  await page.goto("/saved");
+  const cards = page.locator('a[href^="/route/"]');
+  await expect(cards.first()).toContainText("天虹小學", { timeout: 15_000 });
+
+  // Pin the second one: the actions sit under the card while the list is being
+  // edited, in the order the cards are in.
+  await page.getByRole("button", { name: "編輯" }).click();
+  await page.getByRole("button", { name: "置頂", exact: true }).nth(1).click();
+  await page.getByRole("button", { name: "完成" }).click();
+
+  // Out of the list, into a band of its own at the top.
+  // First: the label sits in a span inside the section heading, so it matches twice.
+  await expect(page.getByText("置頂", { exact: true }).first()).toBeVisible();
+  await expect(cards.first()).toContainText("馬仔坑遊樂場");
+
+  // A pin is part of the bookmark, so it outlives the visit.
+  await page.reload();
+  await expect(cards.first()).toContainText("馬仔坑遊樂場", { timeout: 15_000 });
+
+  // And it comes off the same way it went on.
+  await page.getByRole("button", { name: "編輯" }).click();
+  await page.getByRole("button", { name: "取消置頂" }).click();
+  await page.getByRole("button", { name: "完成" }).click();
+  await expect(page.getByText("置頂", { exact: true })).toHaveCount(0);
+  await expect(cards.first()).toContainText("天虹小學");
+});
+
 test("an arrival reminder can be armed from a stop and called off from the list", async ({
   page,
 }) => {

@@ -1,6 +1,21 @@
 import { createEffect, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 
 /**
+ * The app used to be called something else, and every rider who installed it
+ * then has their bookmarks, reminders and settings under the old name. A
+ * value missing under the new name is looked for under the old one, once,
+ * and carried across; the old copy is left where it is, so a tab still
+ * running the old build keeps working and nothing is lost if the carry-over
+ * itself fails.
+ */
+const LEGACY_PREFIX = "motherbus:";
+const PREFIX = "probus:";
+
+function legacyKeyOf(key: string): string | null {
+  return key.startsWith(PREFIX) ? LEGACY_PREFIX + key.slice(PREFIX.length) : null;
+}
+
+/**
  * A signal backed by `localStorage`, kept in step across tabs.
  *
  * `@solid-primitives/storage` is the library for this, but it peers on
@@ -21,7 +36,12 @@ export function persistedSignal<T>(
 ): [Accessor<T>, Setter<T>] {
   const read = (): T => {
     try {
-      const raw = localStorage.getItem(key);
+      let raw = localStorage.getItem(key);
+      if (raw === null) {
+        const legacy = legacyKeyOf(key);
+        raw = legacy ? localStorage.getItem(legacy) : null;
+        if (raw !== null) localStorage.setItem(key, raw);
+      }
       return raw === null ? fallback : revive(JSON.parse(raw));
     } catch {
       return fallback;

@@ -1,6 +1,7 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { groupBy } from "es-toolkit";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
-import { Card, EmptyState, Hairline, ScreenTitle, SectionLabel } from "~/components/Chrome";
+import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, type SortChoice } from "~/components/SortSheet";
@@ -13,11 +14,12 @@ import {
   LayersIcon,
   MinusIcon,
   SortIcon,
+  ThumbtackIcon,
   WalkIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
-import { Page, Section } from "~/components/Layout";
-import { routeHref } from "~/components/RouteRow";
+import { CardGrid, Page, RowCard, Section } from "~/components/Layout";
+import { routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { routeAt } from "~/data/db";
 import { isRunningNow } from "~/data/schedule";
@@ -108,6 +110,8 @@ function BookmarkCard(props: {
   onRegroup: () => void;
   /** Move the bookmark to another stop on the same route. */
   onRestop: () => void;
+  /** Hold the bookmark at the top of the screen, or let it go. */
+  onPin: () => void;
 }) {
   const etas = useEta(() => ({
     route: props.entry.route,
@@ -162,7 +166,11 @@ function BookmarkCard(props: {
   return (
     <div
       class={[
-        "mb-press overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-state motion-safe:mb-rise",
+        /* A column so the strip under the card can be pushed to the bottom of
+           it: side by side in the grid, two cards share a height, and a leave-
+           now line floating halfway up one of them reads as a different kind of
+           thing from the same line sitting on the edge of its neighbour. */
+        "mb-press flex flex-col overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-state motion-safe:mb-rise",
         {
           "border-primary shadow-lg": props.dragging,
           "border-border": !props.dragging,
@@ -190,7 +198,10 @@ function BookmarkCard(props: {
           muted={dim()}
         />
 
-        <a href={routeHref(props.entry.route.key)} class="flex min-w-0 grow flex-col gap-0.5">
+        <a
+          {...useLinkProps(routeLink(props.entry.route.key))}
+          class="flex min-w-0 grow flex-col gap-0.5"
+        >
           <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
             {t("towards", props.lang)} {pick(props.entry.route.dest, props.lang)}
           </span>
@@ -238,7 +249,25 @@ function BookmarkCard(props: {
        * before this the only way to move it was to delete it and start again.
        */}
       <Show when={props.editing}>
-        <div class="flex items-center gap-2 border-t border-border px-3.5 py-2">
+        <div class="mt-auto flex items-center gap-2 border-t border-border px-3.5 py-2">
+          {/* Lit when it is on: the button wears the state as well as the
+              action, so a pinned card says so even under a filter that has
+              hoisted every card on screen into the pinned section. */}
+          <button
+            type="button"
+            aria-pressed={props.entry.item.pinned ? "true" : "false"}
+            onClick={props.onPin}
+            class={[
+              "flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-150",
+              {
+                "bg-primary text-primary-foreground": !!props.entry.item.pinned,
+                "bg-secondary text-muted-foreground": !props.entry.item.pinned,
+              },
+            ]}
+          >
+            <ThumbtackIcon size={11} />
+            {t(props.entry.item.pinned ? "unpinTop" : "pinTop", props.lang)}
+          </button>
           <button
             type="button"
             onClick={props.onRestop}
@@ -267,28 +296,17 @@ function BookmarkCard(props: {
         </div>
       </Show>
 
-      {/* The one line that turns arrival times into a decision. */}
+      {/*
+       * The one line that turns arrival times into a decision. Urgency is
+       * carried by the ink alone: a filled strip, a 7% wash and finally a rule
+       * down the left edge each made the row a second plate competing with the
+       * route's - and with two bookmarks due at once the list became two
+       * indigo bands. Indigo on the icon and the minutes says the same thing,
+       * and only where the eye already reads.
+       */}
       <Show when={!props.editing && advice()}>
         {(a) => (
-          <div
-            class="flex items-center gap-2 border-t border-border px-3.5 py-2"
-            /*
-             * Urgency as an edge, not as a slab. Filled solid, the strip was
-             * the loudest surface on the screen - and with two bookmarks due
-             * at once the list became two indigo bars arguing with thered route
-             * plates between them. A rule down the left says the same thing at
-             * a tenth of the volume, and it says it at the edge the eye
-             * already runs down.
-             */
-            style={
-              a().urgent
-                ? {
-                    "box-shadow": "inset 3px 0 0 var(--primary)",
-                    background: "color-mix(in srgb, var(--primary) 7%, transparent)",
-                  }
-                : undefined
-            }
-          >
+          <div class="mt-auto flex items-center gap-2 border-t border-border px-3.5 py-2">
             <span class={a().urgent ? "text-primary" : "text-subtle-foreground"}>
               <WalkIcon size={12} />
             </span>
@@ -315,7 +333,7 @@ function BookmarkCard(props: {
 
             {/* The group, said once, on the side the eye is already leaving. */}
             <Show when={props.showGroup && props.entry.item.group}>
-              <span class="ml-auto shrink-0 truncate text-[0.75rem] font-bold uppercase tracking-[0.1em] text-faint-foreground">
+              <span class="ml-auto min-w-0 shrink truncate rounded-full bg-secondary px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 {props.entry.item.group}
               </span>
             </Show>
@@ -422,11 +440,23 @@ export default function Saved() {
     }
   };
 
+  /*
+   * Pinned bookmarks come out of the list entirely and sit in a band of their
+   * own at the top, ranked among themselves by whatever order is in force.
+   *
+   * Pinning beats the dormant section too: a route that has finished for the
+   * night is demoted because nothing asked for it, and a pin is exactly that
+   * asking. The card still dims itself, so a pinned bookmark with no buses
+   * looks as quiet as it is without being moved out from under the thumb.
+   */
+  const pinned = createMemo(() =>
+    sort(resolved().filter((r) => r.item.pinned && matchesFilter(r))),
+  );
   const active = createMemo(() =>
-    sort(resolved().filter((r) => !isResting(r) && matchesFilter(r))),
+    sort(resolved().filter((r) => !r.item.pinned && !isResting(r) && matchesFilter(r))),
   );
   const resting = createMemo(() =>
-    sort(resolved().filter((r) => isResting(r) && matchesFilter(r))),
+    sort(resolved().filter((r) => !r.item.pinned && isResting(r) && matchesFilter(r))),
   );
 
   /*
@@ -499,14 +529,20 @@ export default function Saved() {
     handle.addEventListener("pointerup", onUp);
   };
 
-  const cardFor = (entry: Resolved, index: number) => (
+  /*
+   * `atTop` is the pinned band. Its cards are lifted out of the group sections,
+   * so they name their own group the way a ranked list's do; and their place in
+   * it is not the hand-dragged one, so they do not offer a grip that would move
+   * them somewhere they are not.
+   */
+  const cardFor = (entry: Resolved, index: number, atTop = false) => (
     <BookmarkCard
       entry={entry}
       lang={lang()}
       metres={metresTo(entry)}
       editing={editing()}
-      draggable={manual()}
-      showGroup={!manual() && filter() === null}
+      draggable={manual() && !atTop}
+      showGroup={atTop ? filter() === null : !manual() && filter() === null}
       dragging={dragId() === entry.item.id}
       onRemove={() => saved.remove(entry.item.id)}
       onDrag={(e) => startDrag(e, entry.item.id, index)}
@@ -522,6 +558,7 @@ export default function Saved() {
         setRestopping(entry);
         requestAnimationFrame(() => setStopOpen(true));
       }}
+      onPin={() => saved.togglePin(entry.item.id)}
     />
   );
 
@@ -579,38 +616,33 @@ export default function Saved() {
           >
             {t("alerts", lang())}
           </SectionLabel>
-          <Card>
+          <RowCard>
             <For each={armed()}>
-              {(entry, index) => (
-                <>
-                  <Show when={index() > 0}>
-                    <Hairline />
-                  </Show>
-                  <div class="flex items-center gap-3 px-3.5 py-2.5">
-                    <RoutePlate route={entry.route.route} co={entry.route.co} size="sm" />
-                    <div class="flex min-w-0 grow flex-col gap-0.5">
-                      <span class="truncate text-[0.88rem] font-bold text-foreground">
-                        {entry.stopName}
-                      </span>
-                      <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-                        {entry.alert.kind === "arrival"
-                          ? `${t("alertArrival", lang())} · ${entry.alert.leadMinutes} ${t("minute", lang())}`
-                          : `${t("alertDestination", lang())} · ${entry.alert.radiusM} m`}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => alerts.remove(entry.alert.id)}
-                      class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-[0.75rem] font-bold text-destructive"
-                    >
-                      <AlarmIcon size={11} />
-                      {t("alertOff", lang())}
-                    </button>
+              {(entry) => (
+                <div class="flex items-center gap-3 px-3.5 py-2.5">
+                  <RoutePlate route={entry.route.route} co={entry.route.co} size="sm" />
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="truncate text-[0.88rem] font-bold text-foreground">
+                      {entry.stopName}
+                    </span>
+                    <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                      {entry.alert.kind === "arrival"
+                        ? `${t("alertArrival", lang())} · ${entry.alert.leadMinutes} ${t("minute", lang())}`
+                        : `${t("alertDestination", lang())} · ${entry.alert.radiusM} m`}
+                    </span>
                   </div>
-                </>
+                  <button
+                    type="button"
+                    onClick={() => alerts.remove(entry.alert.id)}
+                    class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-[0.75rem] font-bold text-destructive"
+                  >
+                    <AlarmIcon size={11} />
+                    {t("alertOff", lang())}
+                  </button>
+                </div>
               )}
             </For>
-          </Card>
+          </RowCard>
         </Section>
       </Show>
 
@@ -625,43 +657,38 @@ export default function Saved() {
             <Show when={suggestions().length > 0}>
               <Section>
                 <SectionLabel>{t("bookmarkThese", lang())}</SectionLabel>
-                <Card>
+                <RowCard>
                   <For each={suggestions()}>
-                    {(route, index) => (
-                      <>
-                        <Show when={index() > 0}>
-                          <Hairline />
-                        </Show>
-                        <div class="flex items-center gap-3 px-3.5 py-2.5">
-                          <RoutePlate route={route.route} co={route.co} size="sm" />
-                          <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
-                            {t("towards", lang())} {pick(route.dest, lang())}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const co = route.co[0] ?? "kmb";
-                              const stopId = route.stops[co]?.[0];
-                              if (!stopId) return;
-                              // Made here, grouped here - the same question the
-                              // pin on a route asks before it saves anything.
-                              askGroup({
-                                current: "",
-                                confirm: t("addBookmark", lang()),
-                                apply: (group) =>
-                                  saved.toggle({ routeKey: route.key, co, stopId, seq: 1, group }),
-                              });
-                            }}
-                            class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[0.81rem] font-bold text-primary-foreground"
-                          >
-                            <BookmarkIcon size={13} />
-                            {t("addBookmark", lang())}
-                          </button>
-                        </div>
-                      </>
+                    {(route) => (
+                      <div class="flex items-center gap-3 px-3.5 py-2.5">
+                        <RoutePlate route={route.route} co={route.co} size="sm" />
+                        <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
+                          {t("towards", lang())} {pick(route.dest, lang())}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const co = route.co[0] ?? "kmb";
+                            const stopId = route.stops[co]?.[0];
+                            if (!stopId) return;
+                            // Made here, grouped here - the same question the
+                            // pin on a route asks before it saves anything.
+                            askGroup({
+                              current: "",
+                              confirm: t("addBookmark", lang()),
+                              apply: (group) =>
+                                saved.toggle({ routeKey: route.key, co, stopId, seq: 1, group }),
+                            });
+                          }}
+                          class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[0.81rem] font-bold text-primary-foreground"
+                        >
+                          <BookmarkIcon size={13} />
+                          {t("addBookmark", lang())}
+                        </button>
+                      </div>
                     )}
                   </For>
-                </Card>
+                </RowCard>
               </Section>
             </Show>
           </div>
@@ -722,9 +749,25 @@ export default function Saved() {
           </Show>
 
           <Show
-            when={active().length > 0 || resting().length > 0}
+            when={pinned().length > 0 || active().length > 0 || resting().length > 0}
             fallback={<EmptyState title={t("nothingInFilter", lang())} />}
           >
+            <Show when={pinned().length > 0}>
+              <Section>
+                {/* The thumbtack, so the band reads as "held here" rather than
+                    as one more group that happens to be called that. */}
+                <SectionLabel>
+                  <span class="inline-flex items-center gap-1.5">
+                    <ThumbtackIcon size={11} />
+                    {t("pinnedTop", lang())}
+                  </span>
+                </SectionLabel>
+                <CardGrid single={editing()}>
+                  <For each={pinned()}>{(entry, index) => cardFor(entry, index(), true)}</For>
+                </CardGrid>
+              </Section>
+            </Show>
+
             <For each={groupedActive()}>
               {([group, entries]) => (
                 <Show when={entries.length > 0}>
@@ -738,9 +781,12 @@ export default function Saved() {
                       </div>
                     </Show>
 
-                    <div class="flex flex-col gap-2.5">
+                    {/* One column while the list is being re-ordered: a drag
+                        is measured in rows, and rows only mean something in a
+                        single file. */}
+                    <CardGrid single={editing()}>
                       <For each={entries}>{(entry, index) => cardFor(entry, index())}</For>
-                    </div>
+                    </CardGrid>
                   </Section>
                 </Show>
               )}
@@ -749,9 +795,9 @@ export default function Saved() {
             <Show when={resting().length > 0}>
               <Section>
                 <SectionLabel>{t("notRunning", lang())}</SectionLabel>
-                <div class="flex flex-col gap-2.5">
+                <CardGrid single={editing()}>
                   <For each={resting()}>{(entry, index) => cardFor(entry, index())}</For>
-                </div>
+                </CardGrid>
               </Section>
             </Show>
           </Show>

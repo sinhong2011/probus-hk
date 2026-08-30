@@ -25,7 +25,10 @@ export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class
       {(value) => (
         <span
           class={[
-            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.69rem] font-bold tracking-[0.06em] text-faint-foreground",
+            // Set well under the name it follows: the code is what a rider
+            // checks once they are already at the right row, so it only has
+            // to be legible, not weigh the same as the name.
+            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.55rem] font-bold tracking-[0.06em] text-faint-foreground",
             props.class ?? "",
           ]}
         >
@@ -82,6 +85,20 @@ export function Reveal(props: { open: boolean; children: JSX.Element; class?: st
 }
 
 /** Inset divider matching the card's left padding. */
+/**
+ * One fare, as a tag on the line that names it - set a step below the words
+ * around it. A fare is a thing to check, not the answer the row is giving,
+ * and at the same size as the small type beside it the tags were the loudest
+ * thing on the line.
+ */
+export function FareTag(props: { children: JSX.Element }) {
+  return (
+    <span class="tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.59rem] font-bold text-muted-foreground">
+      {props.children}
+    </span>
+  );
+}
+
 export function Hairline() {
   return <div class="ml-3.5 h-px bg-border" />;
 }

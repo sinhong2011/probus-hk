@@ -1,4 +1,4 @@
-import { useLocation } from "@solidjs/router";
+import { useLinkProps, useLocation } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 import { CATEGORIES } from "~/data/categories";
@@ -6,6 +6,7 @@ import { useDb } from "~/data/context";
 import { routeAt } from "~/data/db";
 import { lineName } from "~/data/rail";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { pathLink } from "~/lib/links";
 import { settings } from "~/stores/settings";
 import { trail, type Crumb } from "~/stores/trail";
 import type { RouteDb } from "~/data/types";
@@ -33,7 +34,7 @@ export function Breadcrumb(props: { crumbs: Crumb[] }) {
             </Show>
 
             <a
-              href={crumb.href}
+              {...useLinkProps(pathLink(crumb.href))}
               class="mb-press flex h-8 min-w-0 shrink items-center gap-1 rounded-full bg-secondary pl-2 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground motion-safe:mb-rise"
             >
               <Show when={index() === 0}>
@@ -87,7 +88,7 @@ export function Trail(props: { extra?: Crumb[] }) {
   const lang = settings.lang;
 
   const crumbs = createMemo<Crumb[]>(() => {
-    const walked = trail.ancestors(location.pathname).flatMap((path) => {
+    const walked = trail.ancestors(location().pathname).flatMap((path) => {
       const label = labelFor(db(), lang(), path);
       return label ? [{ href: path, label }] : [];
     });

@@ -1,9 +1,9 @@
-import type { Accessor } from "solid-js";
-import { createAsyncMemo } from "~/lib/async";
-import { etaTick } from "~/stores/clock";
+import { useQuery } from "@tanstack/solid-query";
+import { createEffect, createMemo, latest, type Accessor } from "solid-js";
 import { hasLiveFeed } from "./eta";
 import { fetchGmbRouteEtaTable } from "./eta/gmb";
 import { fetchKmbRouteEtaTable } from "./eta/kmb";
+import { live } from "./live";
 import { pacedByDistance, pacedByFeed, type RideTime } from "./pace";
 import type { Eta, KeyedRoute } from "./types";
 import type { LatLng } from "~/lib/geo";
@@ -97,13 +97,7 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
   let previous: Vehicle[] = [];
   let previousKey = "";
 
-  return createAsyncMemo(async () => {
-    // Read the ticker before awaiting, so this memo subscribes to it.
-    etaTick();
-
-    const t = target();
-    if (!t) return undefined;
-
+  const feed = async (t: VehicleTarget): Promise<VehicleFeed> => {
     // A different route is a different set of buses; nothing carries over.
     if (t.route.key !== previousKey) {
       previousKey = t.route.key;
@@ -149,5 +143,54 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
     );
     previous = tracked;
     return { status: "ready" as const, vehicles: tracked, ride };
+  };
+
+  // Under `latest` for the reason given in `useEta`: the target reads the
+  // open stop's arrivals, which are another query's answer.
+  const query = useQuery(() => {
+    const t = latest(target);
+    return {
+      ...live(),
+      /*
+       * Only the route names the query. The open stop and its arrivals used
+       * to be in the key as well, so a fresh answer there was a fresh
+       * placement here - but the open stop's arrivals are another query's
+       * answer, and a key that changes the moment another query settles
+       * re-keys this one inside the same update. On a railway line, where
+       * every placement comes from the open stop, that spun the scheduler
+       * until it ran out of memory. A key is built from what the page knows
+       * synchronously, never from what a query answered; the answer drives a
+       * refetch instead, below.
+       */
+      queryKey: ["vehicles", t?.route.key ?? ""] as const,
+      enabled: t !== null,
+      queryFn: () => feed(t as VehicleTarget),
+    };
   });
+
+  /*
+   * Where the operator only answers per stop, the open stop's arrivals are
+   * what moves the buses: when they change, place again. An effect rather
+   * than part of the key, so the change lands after the update that carried
+   * it, not inside it - and without cancelling a placement already under
+   * way. The arrivals usually land while the first placement is still being
+   * worked out, and cancelling it there handed the page a rejected promise
+   * in the middle of its own update, which in production spun the scheduler
+   * until it ran out of memory. The placement in flight finishes; the next
+   * one reads the new arrivals.
+   */
+  const arrivals = createMemo(() => {
+    const t = latest(target);
+    return t?.atStop
+      ? `${t.atStop.seq}:${t.atStop.etas.map((eta) => eta.at.getTime()).join(",")}`
+      : "";
+  });
+  createEffect(
+    () => arrivals(),
+    (now, before) => {
+      if (before !== undefined && now !== before) void query.refetch({ cancelRefetch: false });
+    },
+  );
+
+  return () => (target() ? query.data : undefined);
 }

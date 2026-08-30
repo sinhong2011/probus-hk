@@ -15,17 +15,21 @@ import IconFunnel from "~icons/lineicons/funnel-1";
 import IconGithub from "~icons/lineicons/github";
 import IconLayers from "~icons/lineicons/layers-1";
 import IconLayout from "~icons/lineicons/layout-9";
+import IconMap from "~icons/lineicons/map";
 import IconMapMarker from "~icons/lineicons/map-marker";
 import IconMegaphone from "~icons/lineicons/megaphone-1";
 import IconMenu from "~icons/lineicons/menu";
 import IconMonitor from "~icons/lineicons/monitor";
 import IconNight from "~icons/lineicons/night";
 import IconMinus from "~icons/lineicons/minus";
+import IconPin from "~icons/lineicons/pin";
 import IconPlus from "~icons/lineicons/plus";
 import IconReload from "~icons/lineicons/reload";
 import IconRoute from "~icons/lineicons/route-1";
 import IconSearch from "~icons/lineicons/search-alt";
 import IconInformation from "~icons/lineicons/information";
+import IconClipboard from "~icons/lineicons/clipboard";
+import IconWarning from "~icons/lineicons/warning";
 import IconSortAmount from "~icons/lineicons/sort-amount-asc";
 import IconSun from "~icons/lineicons/sun";
 import IconTag from "~icons/lineicons/tag";
@@ -66,6 +70,7 @@ function wrap(Component: IconComponent) {
 }
 
 export const PinIcon = wrap(IconMapMarker as IconComponent);
+export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
 export const BookmarkIcon = wrap(IconBookmark as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
@@ -111,6 +116,8 @@ export function ExchangeIcon(props: IconProps): JSX.Element {
 export const WalkIcon = wrap(IconTimer as IconComponent);
 export const GripIcon = wrap(IconMenu as IconComponent);
 export const MinusIcon = wrap(IconMinus as IconComponent);
+/** A thumbtack. `PinIcon` is the map marker; this is the one that holds a row at the top. */
+export const ThumbtackIcon = wrap(IconPin as IconComponent);
 export const PlusIcon = wrap(IconPlus as IconComponent);
 export const CloseIcon = wrap(IconXmark as IconComponent);
 export const ExpandIcon = wrap(IconExpand as IconComponent);
@@ -138,6 +145,10 @@ export const ShareIcon = wrap(IconShare as IconComponent);
 export const FlagIcon = wrap(IconFlag as IconComponent);
 /** What else there is to know: the stop's own page, and everything at it. */
 export const InfoIcon = wrap(IconInformation as IconComponent);
+/** The app has hit an error of its own - not a network one. */
+export const WarningIcon = wrap(IconWarning as IconComponent);
+/** Copy the text beside it. */
+export const ClipboardIcon = wrap(IconClipboard as IconComponent);
 /** The repository the app is built from, on the one row that links to it. */
 export const GithubIcon = wrap(IconGithub as IconComponent);
 /**

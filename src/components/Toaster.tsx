@@ -15,7 +15,7 @@ import { t, type Lang } from "~/lib/i18n";
 export function Toaster(props: { lang: Lang }) {
   return (
     <div
-      class="mb-safe-top pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4"
+      class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4"
       aria-live="assertive"
     >
       <For each={toast.items()}>

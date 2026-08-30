@@ -12,7 +12,7 @@ test("switches the whole interface to English and back", async ({ page }) => {
   await page.getByRole("radio", { name: "EN" }).click();
   await expect(page.getByRole("radio", { name: "EN" })).toHaveAttribute("aria-checked", "true");
   // The tab bar is the quickest proof the change reached the whole shell.
-  await expect(page.getByText("Nearby").first()).toBeVisible();
+  await expect(page.getByText("Home").first()).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
   await page.getByRole("radio", { name: "繁中" }).click();

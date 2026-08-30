@@ -13,18 +13,27 @@
     "test:watch": "vp test",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide"
+    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
+    "fares": "bun scripts/build-rail-fares.ts",
+    "railmap": "bun scripts/build-rail-map.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@kobalte/core": "2.0.0-alpha.0",
-    "@solidjs/router": "2.0.0-next.18",
-    "@solidjs/web": "2.0.0-rc.3",
+    "@sinhong2011/solid-drawer": "0.1.0",
+    "@solidjs/web": "2.0.0-rc.4",
+    "@tanstack/db": "0.8.6",
+    "@tanstack/hotkeys": "0.8.0",
+    "@tanstack/pacer": "0.22.0",
+    "@tanstack/solid-query": "6.0.0-rc.1",
+    "@tanstack/solid-router": "2.0.0-rc.4",
+    "@tanstack/table-core": "9.2.4",
+    "@tanstack/virtual-core": "3.17.8",
     "date-fns": "^4.4.0",
     "es-toolkit": "^1.51.0",
     "idb": "^8.0.3",
     "maplibre-gl": "^6.6.0",
-    "solid-js": "2.0.0-rc.3"
+    "solid-js": "2.0.0-rc.4"
   },
   "devDependencies": {
     "@iconify-json/lineicons": "^1.2.6",

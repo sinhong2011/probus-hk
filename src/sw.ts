@@ -38,6 +38,20 @@ const serwist = new Serwist({
     },
 
     /**
+     * The rail fare table: a quarter of a megabyte of station pairs that moves
+     * about once a year. It is not precached - a rider who never prices a
+     * train ride should not pay for it on install - but once it has been
+     * fetched it stays, so the fare is still there in a tunnel.
+     */
+    {
+      matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname === "/rail-fares.json",
+      handler: new StaleWhileRevalidate({
+        cacheName: "mb-rail-fares",
+        plugins: [new ExpirationPlugin({ maxEntries: 2, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+      }),
+    },
+
+    /**
      * Arrival times are worthless when stale, so they always try the network
      * first. The short cache exists only so a brief tunnel does not blank the
      * screen - and the UI still shows how old the reading is.

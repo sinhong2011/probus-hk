@@ -7,7 +7,7 @@ import { distanceM } from "~/lib/geo";
 import { buzz, systemNotify } from "~/lib/notify";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { alerts, type AlertItem } from "~/stores/alerts";
-import { etaTick, now } from "~/stores/clock";
+import { now } from "~/stores/clock";
 import { geo, useGeolocation } from "~/stores/geolocation";
 import { toast } from "~/stores/toast";
 
@@ -93,15 +93,15 @@ function ArrivalRunner(props: { alert: AlertItem; lang: Lang }) {
   const minutes = createMemo(() => {
     const list = etas();
     /*
-     * Both clocks are read only to subscribe to them, and the real value comes
-     * from `Date.now()`. The one-second tick stops while the tab is hidden -
-     * which is exactly when a reminder matters most - and reading its frozen
-     * value would make every arrival look further away than it is. The poll
-     * keeps running in the background, so this recomputes against the true
-     * clock each time it fires.
+     * The clock is read only to subscribe to it, and the real value comes from
+     * `Date.now()`. The one-second tick stops while the tab is hidden - which
+     * is exactly when a reminder matters most - and reading its frozen value
+     * would make every arrival look further away than it is. The poll keeps
+     * running in the background while an alert is armed, and every answer it
+     * brings back is a new list, so this recomputes against the true clock
+     * each time one lands.
      */
     now();
-    etaTick();
     if (!list || list.length === 0) return null;
     const at = Date.now();
     for (const eta of list) {

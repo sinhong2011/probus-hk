@@ -10,7 +10,7 @@ export type SavedOrder = "manual" | "eta" | "distance" | "route";
 
 // The old name, kept on purpose: renaming the key empties a rider's settings on every
 // device that already has one.
-const KEY = "motherbus:settings";
+const KEY = "probus:settings";
 
 interface Persisted {
   lang: Lang;
