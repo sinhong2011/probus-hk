@@ -1,4 +1,4 @@
-import { installPersistence, persistedSignal } from "./persisted";
+import { persistedCollection } from "./collection";
 
 /**
  * Notes the rider has closed, and does not want to see again.
@@ -9,21 +9,29 @@ import { installPersistence, persistedSignal } from "./persisted";
  * is no way to bring one back from the app, on purpose: a note is for the
  * first reading, and a rider who closed it has done that.
  */
-const KEY = "probus:dismissed";
+interface Dismissal {
+  id: string;
+}
 
-const revive = (raw: unknown): string[] =>
-  Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
-
-const [ids, setIds] = persistedSignal<string[]>(KEY, [], revive);
+const store = persistedCollection<Dismissal>({
+  id: "dismissed",
+  storageKey: "probus:db:dismissed",
+  getKey: (row) => row.id,
+  legacyKeys: ["probus:dismissed", "motherbus:dismissed"],
+  revive: (raw) =>
+    Array.isArray(raw)
+      ? raw.filter((id): id is string => typeof id === "string").map((id) => ({ id }))
+      : [],
+});
 
 export const dismissed = {
-  has: (id: string) => ids().includes(id),
+  has: (id: string) => store.rows().some((row) => row.id === id),
   dismiss: (id: string) => {
-    if (!ids().includes(id)) setIds([...ids(), id]);
+    if (!store.collection.has(id)) store.collection.insert({ id });
   },
 };
 
 /** Once at start-up, from an owner that lives as long as the app. */
 export function installDismissedEffects() {
-  installPersistence(KEY, ids, setIds, revive);
+  store.install();
 }

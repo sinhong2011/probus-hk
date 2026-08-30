@@ -1,8 +1,5 @@
-import { installPersistence, persistedSignal } from "./persisted";
+import { persistedCollection } from "./collection";
 
-// The old name, kept on purpose: renaming the key empties the routes a rider opens often on every
-// device that already has one.
-const KEY = "probus:frequent";
 /** Anything untouched for two months has stopped being a habit. */
 const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
 const MAX_TRACKED = 60;
@@ -13,9 +10,14 @@ interface Visit {
   last: number;
 }
 
-const revive = (raw: unknown): Visit[] => (Array.isArray(raw) ? (raw as Visit[]) : []);
+const store = persistedCollection<Visit>({
+  id: "frequent",
+  storageKey: "probus:db:frequent",
+  getKey: (visit) => visit.key,
+  legacyKeys: ["probus:frequent", "motherbus:frequent"],
+});
 
-const [visits, setVisits] = persistedSignal<Visit[]>(KEY, [], revive);
+const byUse = (a: Visit, b: Visit) => b.count - a.count || b.last - a.last;
 
 /**
  * Which routes this person actually uses, learned rather than configured.
@@ -25,22 +27,35 @@ const [visits, setVisits] = persistedSignal<Visit[]>(KEY, [], revive);
  * reach. Old habits age out so a holiday route does not linger for a year.
  */
 export const frequent = {
-  visits,
+  visits: store.rows,
 
   /** Called when a route page is opened. */
   record(routeKey: string) {
     const now = Date.now();
-    setVisits((prev) => {
-      const fresh = prev.filter((v) => now - v.last < MAX_AGE_MS);
-      const existing = fresh.find((v) => v.key === routeKey);
+    const { collection } = store;
+    const existing = collection.get(routeKey);
+    if (existing) {
+      collection.update(routeKey, (draft) => {
+        draft.count += 1;
+        draft.last = now;
+      });
+    } else {
+      collection.insert({ key: routeKey, count: 1, last: now });
+    }
 
-      const next = existing
-        ? fresh.map((v) => (v.key === routeKey ? { ...v, count: v.count + 1, last: now } : v))
-        : [...fresh, { key: routeKey, count: 1, last: now }];
-
-      // Keep the list bounded; drop the least-used, oldest entries first.
-      return next.sort((a, b) => b.count - a.count || b.last - a.last).slice(0, MAX_TRACKED);
-    });
+    // Keep the record bounded: what has aged out goes, then the least-used,
+    // oldest entries past the cap.
+    const kept = store
+      .current()
+      .filter((v) => now - v.last < MAX_AGE_MS)
+      .sort(byUse)
+      .slice(0, MAX_TRACKED);
+    const keep = new Set(kept.map((v) => v.key));
+    const drop = store
+      .current()
+      .map((v) => v.key)
+      .filter((key) => !keep.has(key));
+    if (drop.length > 0) collection.delete(drop);
   },
 
   /**
@@ -48,9 +63,7 @@ export const frequent = {
    * once are excluded unless nothing else qualifies.
    */
   top(limit = 5): string[] {
-    const ranked = visits()
-      .slice()
-      .sort((a, b) => b.count - a.count || b.last - a.last);
+    const ranked = store.rows().slice().sort(byUse);
     const habitual = ranked.filter((v) => v.count > 1);
     return (habitual.length > 0 ? habitual : ranked).slice(0, limit).map((v) => v.key);
   },
@@ -61,7 +74,8 @@ export const frequent = {
    * is not a habit, and `top` rightly leaves it out; this is where it goes.
    */
   recent(limit = 6): string[] {
-    return visits()
+    return store
+      .rows()
       .slice()
       .sort((a, b) => b.last - a.last)
       .slice(0, limit)
@@ -70,14 +84,15 @@ export const frequent = {
 
   /** Drop one route from the record, at the rider's request. */
   forget(routeKey: string) {
-    setVisits((prev) => prev.filter((v) => v.key !== routeKey));
+    if (store.collection.has(routeKey)) store.collection.delete(routeKey);
   },
 
   clear() {
-    setVisits([]);
+    const keys = store.current().map((v) => v.key);
+    if (keys.length > 0) store.collection.delete(keys);
   },
 };
 
 export function installFrequentEffects() {
-  installPersistence(KEY, visits, setVisits, revive);
+  store.install();
 }

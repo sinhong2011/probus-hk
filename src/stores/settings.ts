@@ -1,5 +1,5 @@
 import { createEffect } from "solid-js";
-import { installPersistence, persistedSignal } from "./persisted";
+import { persistedCollection } from "./collection";
 import type { Lang } from "~/lib/i18n";
 
 export type ThemeChoice = "auto" | "light" | "dark";
@@ -7,10 +7,6 @@ export type ThemeChoice = "auto" | "light" | "dark";
 export type NearbyMode = "stop" | "routes";
 /** How the bookmark list is ordered. `manual` is the hand-dragged order. */
 export type SavedOrder = "manual" | "eta" | "distance" | "route";
-
-// The old name, kept on purpose: renaming the key empties a rider's settings on every
-// device that already has one.
-const KEY = "probus:settings";
 
 interface Persisted {
   lang: Lang;
@@ -42,17 +38,37 @@ const DEFAULTS: Persisted = {
   railOpen: true,
 };
 
-/** A stored value missing a key, or written by an older build, keeps working. */
-const revive = (raw: unknown): Persisted => ({ ...DEFAULTS, ...(raw as Partial<Persisted>) });
+/**
+ * One row. Settings are a single object rather than a list, and a collection
+ * is a set of rows, so they are the one row it holds, under a fixed key.
+ * Every field is optional in storage - a value an older build never wrote,
+ * or a newer one adds, reads as its default.
+ */
+type Row = { id: "settings" } & Partial<Persisted>;
+const ROW = "settings";
 
-const [stored, setStored] = persistedSignal<Persisted>(KEY, DEFAULTS, revive);
+const store = persistedCollection<Row>({
+  id: "settings",
+  storageKey: "probus:db:settings",
+  getKey: (row) => row.id,
+  legacyKeys: ["probus:settings", "motherbus:settings"],
+  revive: (raw) =>
+    raw && typeof raw === "object" ? [{ id: ROW, ...(raw as Partial<Persisted>) }] : [],
+});
 
-/** One field of the settings object, read and written like its own signal. */
+/** One field of the settings row, read and written like its own signal. */
 function field<K extends keyof Persisted>(key: K) {
-  return [
-    () => stored()[key],
-    (value: Persisted[K]) => setStored((prev) => ({ ...prev, [key]: value })),
-  ] as const;
+  const read = () => (store.rows()[0]?.[key] ?? DEFAULTS[key]) as Persisted[K];
+  const write = (value: Persisted[K]) => {
+    if (store.collection.has(ROW)) {
+      store.collection.update(ROW, (draft) => {
+        (draft as Partial<Persisted>)[key] = value;
+      });
+    } else {
+      store.collection.insert({ id: ROW, [key]: value } as Row);
+    }
+  };
+  return [read, write] as const;
 }
 
 const [lang, setLang] = field("lang");
@@ -111,13 +127,13 @@ export function reflectTheme(choice: ThemeChoice) {
 }
 
 /**
- * Persists settings and reflects theme and language onto the document.
+ * Brings the settings in and reflects theme and language onto the document.
  *
  * Solid 2 splits an effect in two: the first function does the reactive reads,
  * the second performs the side effects with that value and is not tracked.
  */
 export function installSettingsEffects() {
-  installPersistence(KEY, stored, setStored, revive);
+  store.install();
 
   createEffect(
     () => ({ theme: theme(), lang: lang() }),

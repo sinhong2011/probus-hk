@@ -1,9 +1,5 @@
-import { installPersistence, persistedSignal } from "./persisted";
+import { persistedCollection } from "./collection";
 import type { Company } from "~/data/types";
-
-// The old name, kept on purpose: renaming the key empties a rider's armed reminders on every
-// device that already has one.
-const KEY = "probus:alerts";
 
 /**
  * `arrival` watches the feed and fires when the bus is nearly at the stop you
@@ -32,40 +28,48 @@ export function alertId(kind: AlertKind, routeKey: string, stopId: string): stri
   return `${kind}:${routeKey}@${stopId}`;
 }
 
-/** A stored list that is not a list is not an alert list. */
-const revive = (raw: unknown): AlertItem[] => (Array.isArray(raw) ? (raw as AlertItem[]) : []);
-
-const [items, setItems] = persistedSignal<AlertItem[]>(KEY, [], revive);
+const store = persistedCollection<AlertItem>({
+  id: "alerts",
+  storageKey: "probus:db:alerts",
+  getKey: (item) => item.id,
+  legacyKeys: ["probus:alerts", "motherbus:alerts"],
+});
 
 export const alerts = {
-  items,
+  items: store.rows,
 
   has(kind: AlertKind, routeKey: string, stopId: string): boolean {
     const id = alertId(kind, routeKey, stopId);
-    return items().some((a) => a.id === id);
+    return store.rows().some((a) => a.id === id);
   },
 
   find(kind: AlertKind, routeKey: string, stopId: string): AlertItem | undefined {
     const id = alertId(kind, routeKey, stopId);
-    return items().find((a) => a.id === id);
+    return store.rows().find((a) => a.id === id);
   },
 
   /** Sets an alert, replacing any earlier one of the same kind at the stop. */
   arm(entry: Omit<AlertItem, "id" | "createdAt">) {
     const id = alertId(entry.kind, entry.routeKey, entry.stopId);
     const next: AlertItem = { ...entry, id, createdAt: Date.now() };
-    setItems((prev) => [...prev.filter((a) => a.id !== id), next]);
+    if (store.collection.has(id)) {
+      // In place: a delete and an insert under one key do not both land.
+      store.collection.update(id, (draft) => Object.assign(draft, next));
+    } else {
+      store.collection.insert(next);
+    }
   },
 
   remove(id: string) {
-    setItems((prev) => prev.filter((a) => a.id !== id));
+    if (store.collection.has(id)) store.collection.delete(id);
   },
 
   clear() {
-    setItems([]);
+    const ids = store.current().map((a) => a.id);
+    if (ids.length > 0) store.collection.delete(ids);
   },
 };
 
 export function installAlertEffects() {
-  installPersistence(KEY, items, setItems, revive);
+  store.install();
 }

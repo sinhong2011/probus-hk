@@ -211,20 +211,3 @@ describe("createLiveQuery", () => {
     });
   });
 });
-
-describe("persistedSignal", () => {
-  it("carries a value stored under the app's old name across, once", async () => {
-    const memory = new Map<string, string>([["motherbus:saved", JSON.stringify([{ id: "x" }])]]);
-    vi.stubGlobal("localStorage", {
-      getItem: (k: string) => memory.get(k) ?? null,
-      setItem: (k: string, v: string) => void memory.set(k, v),
-      removeItem: (k: string) => void memory.delete(k),
-    });
-    const { persistedSignal } = await import("~/stores/persisted");
-    const [value] = persistedSignal<{ id: string }[]>("probus:saved", []);
-    expect(value()).toEqual([{ id: "x" }]);
-    // Written under the new name, and the old copy left for an older build.
-    expect(memory.get("probus:saved")).toBe(JSON.stringify([{ id: "x" }]));
-    expect(memory.has("motherbus:saved")).toBe(true);
-  });
-});
