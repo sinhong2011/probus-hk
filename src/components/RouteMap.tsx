@@ -110,19 +110,75 @@ function withAlpha(hex: string, alpha: number): string {
 
 /** The sign a stop shows: its own, or the lit one while it is being read. */
 const SELECTED = ["==", ["get", "selected"], 1] as ExpressionSpecification;
-const HOVERED = ["boolean", ["feature-state", "hover"], false] as ExpressionSpecification;
 /** Lit signs are a step larger, and their names sit a step further up to clear them. */
-const LIT_SCALE = 1.16;
+const LIT_SCALE = 1.1;
 
-/** The name's colour: the route's own for the stop being read or pointed at. */
+/*
+ * Two states a stop moves through rather than flips into: how far it is
+ * pointed at, and how far it is the stop being read, each 0 to 1. MapLibre
+ * transitions a paint property's *value* but not a feature's state, so the
+ * state is driven by hand over a few frames (see `tween`), and every paint
+ * expression below reads the fraction rather than a flag - which is what lets
+ * a ring grow under the pointer instead of appearing.
+ */
+const HOVER = ["number", ["feature-state", "hover"], 0] as ExpressionSpecification;
+const LIT = ["number", ["feature-state", "lit"], 0] as ExpressionSpecification;
+/** Over this many milliseconds, on a curve that arrives rather than stops. */
+const STATE_MS = 220;
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** The name's colour: the route's own as a stop is read or pointed at. */
 const labelColour = (colour: string, dark: boolean): ExpressionSpecification => [
   "case",
   SELECTED,
   colour,
-  HOVERED,
-  colour,
-  dark ? "#b9c0cc" : "#4a5160",
+  ["interpolate", ["linear"], HOVER, 0, dark ? "#b9c0cc" : "#4a5160", 1, colour],
 ];
+
+/** A radius by zoom, opened out by a fraction of a state: base + reach * state. */
+const ringRadius = (reach: number, state: ExpressionSpecification): ExpressionSpecification => [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  11,
+  ["+", 5.5, ["*", reach * 0.7, state]],
+  14,
+  ["+", 7.5, ["*", reach, state]],
+  17,
+  ["+", 9.5, ["*", reach * 1.3, state]],
+];
+
+/**
+ * Drives one feature's state from where it is to a target over a few frames.
+ * Keeps its own record of where each one is, because the map will not say,
+ * and a hover that leaves halfway in has to come back from halfway.
+ */
+function stateTween(instance: MlMap) {
+  const at = new Map<string, number>();
+  const frames = new Map<string, number>();
+  return (id: number, key: string, to: number) => {
+    const slot = `${key}:${id}`;
+    const from = at.get(slot) ?? 0;
+    if (from === to) return;
+    const started = performance.now();
+    const pending = frames.get(slot);
+    if (pending !== undefined) cancelAnimationFrame(pending);
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / STATE_MS);
+      const value = from + (to - from) * easeOut(t);
+      at.set(slot, value);
+      try {
+        instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
+      } catch {
+        // The source is not there yet, or has gone; there is nothing to move.
+      }
+      if (t < 1) frames.set(slot, requestAnimationFrame(step));
+      else frames.delete(slot);
+    };
+    frames.set(slot, requestAnimationFrame(step));
+  };
+}
 /**
  * The marker's drawing grid, before `icon-size` scales it: the artwork is laid
  * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement. The label
@@ -287,22 +343,21 @@ function stopFlagImage(
   const radius = 17;
 
   /*
-   * The stop being read wears a halo: a soft pool of its own colour and a
-   * hard white ring outside the disc, so it is picked out from forty
-   * identical signs at a glance and from across the map.
+   * The stop being read wears a ring: white against the disc, and a fine one
+   * in its own colour outside that, so it is picked out from forty identical
+   * signs at a glance. The glow under it is the map's, because the map can
+   * animate it and a rasterised sign cannot.
    */
   if (selected) {
-    const halo = ctx.createRadialGradient(cx, cy, radius, cx, cy, radius + 9);
-    halo.addColorStop(0, withAlpha(colour, 0.45));
-    halo.addColorStop(1, withAlpha(colour, 0));
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 9, 0, Math.PI * 2);
-    ctx.fill();
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.arc(cx, cy, radius + 1.6, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius + 1.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = withAlpha(colour, 0.55);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 3.6, 0, Math.PI * 2);
     ctx.stroke();
   }
 
@@ -727,6 +782,10 @@ export function RouteMap(props: {
   /** How the map has framed itself so far - see the geometry effect. */
   let opened: "none" | "route" | "nearest" = "none";
   const [map, setMap] = createSignal<MlMap | null>(null);
+  /** The state driver, once there is a map to drive. */
+  const [tween, setTween] = createSignal<((id: number, key: string, to: number) => void) | null>(
+    null,
+  );
   const [shape, setShape] = createSignal<Position[][] | null>(null);
   /**
    * WebGL is not available everywhere - locked-down browsers, some embedded
@@ -821,14 +880,13 @@ export function RouteMap(props: {
       // Picking a stop on the map is the fast way into a forty-stop list. The
       // name and the flag are the stop as much as the dot under them is - a
       // tap on either picks it, not only one on the invisible circle.
+      const tween = stateTween(instance);
+      setTween(() => tween);
       let hovered: number | null = null;
       const hover = (index: number | null) => {
         if (hovered === index) return;
-        if (hovered !== null) {
-          instance.setFeatureState({ source: SRC_STOPS, id: hovered }, { hover: false });
-        }
-        if (index !== null)
-          instance.setFeatureState({ source: SRC_STOPS, id: index }, { hover: true });
+        if (hovered !== null) tween(hovered, "hover", 0);
+        if (index !== null) tween(index, "hover", 1);
         hovered = index;
       };
       for (const layer of [LYR_HIT, LYR_LABEL]) {
@@ -971,12 +1029,27 @@ export function RouteMap(props: {
           id: "mb-stop-selected",
           type: "circle",
           source: SRC_STOPS,
-          filter: ["==", ["get", "selected"], 1],
           paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 5.5, 14, 7.5, 17, 9.5],
+            "circle-radius": ringRadius(3, LIT),
             "circle-color": colour,
+            "circle-opacity": LIT,
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 2.5,
+            "circle-stroke-opacity": LIT,
+          },
+        });
+
+        // A soft pool of the route's colour spreading out from it, which is
+        // what makes the pick read as a settle rather than a switch.
+        instance.addLayer({
+          id: "mb-stop-selected-glow",
+          type: "circle",
+          source: SRC_STOPS,
+          paint: {
+            "circle-radius": ringRadius(14, LIT),
+            "circle-color": colour,
+            "circle-opacity": ["*", 0.18, LIT],
+            "circle-blur": 0.6,
           },
         });
 
@@ -987,11 +1060,12 @@ export function RouteMap(props: {
           type: "circle",
           source: SRC_STOPS,
           paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 7, 14, 9.5, 17, 12],
-            "circle-color": "rgba(0,0,0,0)",
+            "circle-radius": ringRadius(5, HOVER),
+            "circle-color": colour,
+            "circle-opacity": ["*", 0.14, HOVER],
             "circle-stroke-color": colour,
             "circle-stroke-width": 2,
-            "circle-stroke-opacity": ["case", HOVERED, 0.9, 0],
+            "circle-stroke-opacity": ["*", 0.95, HOVER],
           },
         });
 
@@ -1058,6 +1132,8 @@ export function RouteMap(props: {
         instance.setPaintProperty("mb-route-line", "line-color", colour);
         instance.setPaintProperty("mb-stop-selected", "circle-color", colour);
         instance.setPaintProperty("mb-stop-hover", "circle-stroke-color", colour);
+        instance.setPaintProperty("mb-stop-hover", "circle-color", colour);
+        instance.setPaintProperty("mb-stop-selected-glow", "circle-color", colour);
         instance.setPaintProperty(LYR_LABEL, "text-color", labelColour(colour, dark));
         // Colour, route number and stop names are all baked into the signs,
         // so they are repainted whenever any of them moves.
@@ -1545,6 +1621,18 @@ export function RouteMap(props: {
     () => props.selectedIndex,
     (index) => {
       if (index !== undefined && expanded()) setSheetSnap(0);
+    },
+  );
+
+  /* The pick settles rather than switches: the ring under the last stop lets
+     go as the one under the new stop takes hold, over the same few frames. */
+  createEffect(
+    () => ({ index: props.selectedIndex, drive: tween() }),
+    ({ index, drive }, previous) => {
+      if (!drive) return;
+      const before = previous?.index;
+      if (before !== undefined && before !== index) drive(before, "lit", 0);
+      if (index !== undefined) drive(index, "lit", 1);
     },
   );
 
