@@ -1,4 +1,4 @@
-import { useLinkProps } from "@tanstack/solid-router";
+import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Chip, ScreenTitle, SectionLabel } from "~/components/Chrome";
 import { Trail } from "~/components/Breadcrumb";
@@ -48,7 +48,28 @@ export default function RailMap() {
   const lang = settings.lang;
   const { position } = useGeolocation();
 
-  const [sheet, setSheet] = createSignal<Sheet>(null);
+  /*
+   * What the sheet shows is the URL's, not the screen's: a station or a line
+   * in the search, so a link to "the map at Admiralty" is a link, a reload
+   * comes back to it, and the back button closes the sheet. Replaced rather
+   * than pushed - reading three stations in a row is one visit to the map,
+   * not three screens to come back through.
+   */
+  const search = useSearch({ from: "/rail/map" });
+  const navigate = useNavigate();
+  const sheet = (): Sheet => {
+    const s = search();
+    if (s.station) return { kind: "station", id: s.station };
+    if (s.line) return { kind: "line", code: s.line };
+    return null;
+  };
+  const setSheet = (next: Sheet) =>
+    navigate({
+      to: "/rail/map",
+      search:
+        next === null ? {} : next.kind === "station" ? { station: next.id } : { line: next.code },
+      replace: true,
+    });
   const selected = () => {
     const s = sheet();
     return s?.kind === "station" ? s.id : null;

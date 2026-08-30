@@ -85,6 +85,13 @@ const railRoute = createRoute({
 const railMapRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/rail/map",
+  // What the map is showing: a station or a line, so a shared link and a
+  // reload open the same sheet, and the back button closes it.
+  validateSearch: (search: Record<string, unknown>) => {
+    const station = asText(search.station);
+    const line = asText(search.line);
+    return { ...(station ? { station } : {}), ...(line ? { line } : {}) };
+  },
   component: lazyScreen(() => import("~/routes/RailMap")),
 });
 
@@ -123,9 +130,12 @@ const routeDetailRoute = createRoute({
   path: "/route/$key",
   // Which stop along the route to open at, so a saved trip and a shared link
   // both land on the right row rather than the top of the list.
+  // And whether the map is opened out over it: that is a place a rider is
+  // in, so the back button should be the way out of it.
   validateSearch: (search: Record<string, unknown>) => {
     const stop = asCount(search.stop);
-    return stop === undefined ? {} : { stop };
+    const map = search.map === true;
+    return { ...(stop === undefined ? {} : { stop }), ...(map ? { map } : {}) };
   },
   component: lazyScreen(() => import("~/routes/RouteDetail")),
 });

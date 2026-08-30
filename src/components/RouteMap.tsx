@@ -736,6 +736,10 @@ export function RouteMap(props: {
   nearestIndex?: number;
   /** Index of the stop the list currently has open; the map follows it. */
   selectedIndex?: number;
+  /** Whether the map fills the window, when the screen keeps that state. */
+  expanded?: boolean;
+  /** Told when the rider opens the map out or puts it back. */
+  onExpandedChange?: (open: boolean) => void;
   /** Picking a stop on the map opens it in the list. */
   onSelectStop?: (index: number) => void;
   /**
@@ -796,7 +800,15 @@ export function RouteMap(props: {
    * Safari refuses `requestFullscreen` on anything but a video, and a route map
    * on a phone is exactly the thing a rider wants opened out.
    */
-  const [expanded, setExpanded] = createSignal(false);
+  const [ownExpanded, setOwnExpanded] = createSignal(false);
+  /* Owned by the screen when it says so - the route page keeps it in the URL,
+     so the back button is the way out - and by the map otherwise. */
+  const expanded = () => props.expanded ?? ownExpanded();
+  const setExpanded = (next: boolean | ((open: boolean) => boolean)) => {
+    const open = typeof next === "function" ? next(expanded()) : next;
+    if (props.onExpandedChange) props.onExpandedChange(open);
+    else setOwnExpanded(open);
+  };
 
   const stopPositions = (): Position[] =>
     props.stops.map((s) => [s.stop.location.lng, s.stop.location.lat]);

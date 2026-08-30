@@ -458,3 +458,28 @@ test("the tap-for-departures note can be closed for good", async ({ page }) => {
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
   await expect(note).toBeHidden();
 });
+
+/**
+ * The opened-out map is a place the rider is in, so it is in the URL: the
+ * back button is the way out of it, and a reload lands back in it.
+ */
+test("the opened-out map is a place the back button leaves", async ({ page }) => {
+  await mockTransit(page);
+  await page.goto(`/route/${KMB_1}`);
+  const expand = page.getByRole("button", { name: "放大地圖" });
+  const degraded = page.getByText("呢部機顯示唔到地圖");
+  await expect
+    .poll(async () => (await expand.count()) > 0 || (await degraded.count()) > 0, {
+      timeout: 20_000,
+    })
+    .toBe(true);
+  if (!(await expand.count())) return;
+
+  await expand.click();
+  await expect(page).toHaveURL(/map=true/);
+  await expect(page.getByRole("button", { name: "關閉地圖" })).toBeVisible();
+
+  await page.goBack();
+  await expect(page).not.toHaveURL(/map=true/);
+  await expect(page.getByRole("button", { name: "放大地圖" })).toBeVisible();
+});

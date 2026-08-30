@@ -274,3 +274,29 @@ test("the light rail unfolds when you go into it", async ({ page }) => {
   await expect(pier).toHaveAttribute("opacity", "1");
   await expect(pier.locator("text").first()).toBeVisible();
 });
+
+/**
+ * What the map's sheet shows is the URL's: a link to the map at a station is
+ * a link, a reload comes back to it, and back closes it.
+ */
+test("the network map's sheet lives in the URL", async ({ page }) => {
+  await page.goto("/rail/map");
+  await settled(page);
+
+  const station = page.locator('g[data-station="YMT"] circle').first();
+  const box = await station.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page).toHaveURL(/station=YMT/);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "油麻地" }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.goto("/rail/map?line=TWL");
+  await expect(page.getByRole("heading", { name: /荃灣綫/ }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+});

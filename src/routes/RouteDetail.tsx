@@ -1,4 +1,4 @@
-import { useLinkProps, useParams, useRouter, useSearch } from "@tanstack/solid-router";
+import { useLinkProps, useNavigate, useParams, useRouter, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal, lazy, onCleanup } from "solid-js";
 import {
   Card,
@@ -1129,6 +1129,21 @@ export default function RouteDetail() {
   const params = useParams({ from: "/route/$key" });
   /** `?stop=19` - a shared link naming the stop the sender was standing at. */
   const search = useSearch({ from: "/route/$key" });
+  const navigate = useNavigate();
+
+  /*
+   * The opened-out map is a place the rider is in, so it lives in the URL:
+   * opening it out is a step the back button undoes, and a reload or a shared
+   * link lands in it. Putting it back replaces rather than pushes, so leaving
+   * is one step and not two.
+   */
+  const setMapOpen = (open: boolean) =>
+    navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, map: open ? true : undefined }),
+      replace: !open,
+    });
   const lang = settings.lang;
   const { position } = useGeolocation();
 
@@ -1742,6 +1757,8 @@ export default function RouteDetail() {
                   nearestIndex={nearestIndex() >= 0 ? nearestIndex() : undefined}
                   selectedIndex={openSeq() !== null ? (openSeq() as number) - 1 : undefined}
                   onSelectStop={(index) => openStop(index + 1)}
+                  expanded={search().map === true}
+                  onExpandedChange={setMapOpen}
                   feed={vehicles()}
                   me={position()}
                   heightClass="h-[17rem] lg:h-auto lg:min-h-0 lg:flex-1"
