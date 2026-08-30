@@ -82,6 +82,8 @@ function stopFeatures(
     type: "FeatureCollection",
     features: coords.map((coordinates, index) => ({
       type: "Feature",
+      // An id, so a hover can be set on the feature without rewriting the source.
+      id: index,
       properties: {
         index,
         // Every stop carries its own sign, because its own name is printed on
@@ -98,6 +100,29 @@ function stopFeatures(
 }
 
 const IMG_STOP = "mb-stop-flag";
+
+/** `#rrggbb` at an opacity, for the halo gradients. */
+function withAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1]!, 16)}, ${parseInt(m[2]!, 16)}, ${parseInt(m[3]!, 16)}, ${alpha})`;
+}
+
+/** The sign a stop shows: its own, or the lit one while it is being read. */
+const SELECTED = ["==", ["get", "selected"], 1] as ExpressionSpecification;
+const HOVERED = ["boolean", ["feature-state", "hover"], false] as ExpressionSpecification;
+/** Lit signs are a step larger, and their names sit a step further up to clear them. */
+const LIT_SCALE = 1.16;
+
+/** The name's colour: the route's own for the stop being read or pointed at. */
+const labelColour = (colour: string, dark: boolean): ExpressionSpecification => [
+  "case",
+  SELECTED,
+  colour,
+  HOVERED,
+  colour,
+  dark ? "#b9c0cc" : "#4a5160",
+];
 /**
  * The marker's drawing grid, before `icon-size` scales it: the artwork is laid
  * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement. The label
@@ -241,7 +266,14 @@ function fitText(
  * stop's own coordinate - a dot centred on the point sat half in the road,
  * which is not where the pole is.
  */
-function stopFlagImage(colour: string, surface: string, number: string, name: string) {
+function stopFlagImage(
+  colour: string,
+  surface: string,
+  number: string,
+  name: string,
+  /** Lit: the sign of the stop being read, ringed in its own colour. */
+  selected = false,
+) {
   const { width, height, ratio } = FLAG;
   const canvas = document.createElement("canvas");
   canvas.width = width * ratio;
@@ -253,6 +285,26 @@ function stopFlagImage(colour: string, surface: string, number: string, name: st
   const cx = width / 2;
   const cy = 18;
   const radius = 17;
+
+  /*
+   * The stop being read wears a halo: a soft pool of its own colour and a
+   * hard white ring outside the disc, so it is picked out from forty
+   * identical signs at a glance and from across the map.
+   */
+  if (selected) {
+    const halo = ctx.createRadialGradient(cx, cy, radius, cx, cy, radius + 9);
+    halo.addColorStop(0, withAlpha(colour, 0.45));
+    halo.addColorStop(1, withAlpha(colour, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 1.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   /*
    * The pool of shade at the foot, which is what stops the pole from looking
@@ -374,17 +426,22 @@ function paintStopFlags(
   names: string[],
   painted: number,
 ) {
+  // Two signs per stop: the one it carries, and the one it carries while it is
+  // the stop being read - the same sign, lit.
   names.forEach((name, index) => {
-    const id = `${IMG_STOP}-${index}`;
-    const image = stopFlagImage(colour, surface, number, name);
-    if (!image) return;
-    if (instance.hasImage(id)) instance.updateImage(id, image);
-    else instance.addImage(id, image, { pixelRatio: FLAG.ratio });
+    for (const on of [false, true]) {
+      const id = `${IMG_STOP}-${index}${on ? "-on" : ""}`;
+      const image = stopFlagImage(colour, surface, number, name, on);
+      if (!image) continue;
+      if (instance.hasImage(id)) instance.updateImage(id, image);
+      else instance.addImage(id, image, { pixelRatio: FLAG.ratio });
+    }
   });
 
   for (let index = names.length; index < painted; index += 1) {
-    const id = `${IMG_STOP}-${index}`;
-    if (instance.hasImage(id)) instance.removeImage(id);
+    for (const id of [`${IMG_STOP}-${index}`, `${IMG_STOP}-${index}-on`]) {
+      if (instance.hasImage(id)) instance.removeImage(id);
+    }
   }
 
   return names.length;
@@ -547,7 +604,18 @@ const LABEL_GAP = 5;
 function byZoom(value: (size: { plain: number; terminus: number }) => [number, number]) {
   const stops = FLAG_SIZE.flatMap((size): [number, ExpressionSpecification] => {
     const [terminus, plain] = value(size);
-    return [size.zoom, ["case", ["==", ["get", "terminus"], 1], terminus, plain]];
+    /* The lit sign's step up is applied inside each zoom stop rather than
+       around the whole expression: a `zoom` may only sit at the top of an
+       `interpolate`, and multiplying the interpolate is a style error that
+       silently drops the layer, flags and all. */
+    return [
+      size.zoom,
+      [
+        "*",
+        ["case", ["==", ["get", "terminus"], 1], terminus, plain],
+        ["case", SELECTED, LIT_SCALE, 1],
+      ],
+    ];
   });
   return ["interpolate", ["linear"], ["zoom"], ...stops] as ExpressionSpecification;
 }
@@ -753,16 +821,31 @@ export function RouteMap(props: {
       // Picking a stop on the map is the fast way into a forty-stop list. The
       // name and the flag are the stop as much as the dot under them is - a
       // tap on either picks it, not only one on the invisible circle.
+      let hovered: number | null = null;
+      const hover = (index: number | null) => {
+        if (hovered === index) return;
+        if (hovered !== null) {
+          instance.setFeatureState({ source: SRC_STOPS, id: hovered }, { hover: false });
+        }
+        if (index !== null)
+          instance.setFeatureState({ source: SRC_STOPS, id: index }, { hover: true });
+        hovered = index;
+      };
       for (const layer of [LYR_HIT, LYR_LABEL]) {
         instance.on("click", layer, (event) => {
           const index = event.features?.[0]?.properties?.index;
           if (typeof index === "number") props.onSelectStop?.(index);
+        });
+        instance.on("mousemove", layer, (event) => {
+          const index = event.features?.[0]?.properties?.index;
+          hover(typeof index === "number" ? index : null);
         });
         instance.on("mouseenter", layer, () => {
           instance.getCanvas().style.cursor = "pointer";
         });
         instance.on("mouseleave", layer, () => {
           instance.getCanvas().style.cursor = "";
+          hover(null);
         });
       }
 
@@ -897,6 +980,21 @@ export function RouteMap(props: {
           },
         });
 
+        // And a hollow one under whichever pole the pointer is over: the stop
+        // that would be picked, shown before it is.
+        instance.addLayer({
+          id: "mb-stop-hover",
+          type: "circle",
+          source: SRC_STOPS,
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 7, 14, 9.5, 17, 12],
+            "circle-color": "rgba(0,0,0,0)",
+            "circle-stroke-color": colour,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": ["case", HOVERED, 0.9, 0],
+          },
+        });
+
         /*
          * Every stop says its name, not only the one that was tapped. A row of
          * anonymous dots asks the rider to guess which is theirs, and a map of
@@ -913,7 +1011,7 @@ export function RouteMap(props: {
           type: "symbol",
           source: SRC_STOPS,
           layout: {
-            "icon-image": ["get", "icon"],
+            "icon-image": ["case", SELECTED, ["concat", ["get", "icon"], "-on"], ["get", "icon"]],
             // The foot of the pole is the stop; everything else is above it.
             "icon-anchor": "bottom",
             "icon-allow-overlap": true,
@@ -951,12 +1049,7 @@ export function RouteMap(props: {
              * The stop being read is white; the rest are quieter, so the map
              * still has a subject rather than forty equal shouts.
              */
-            "text-color": [
-              "case",
-              ["==", ["get", "selected"], 1],
-              dark ? "#ffffff" : "#111111",
-              dark ? "#b9c0cc" : "#4a5160",
-            ],
+            "text-color": labelColour(colour, dark),
             "text-halo-color": dark ? "#000000" : "#ffffff",
             "text-halo-width": 1.6,
           },
@@ -964,6 +1057,8 @@ export function RouteMap(props: {
       } else {
         instance.setPaintProperty("mb-route-line", "line-color", colour);
         instance.setPaintProperty("mb-stop-selected", "circle-color", colour);
+        instance.setPaintProperty("mb-stop-hover", "circle-stroke-color", colour);
+        instance.setPaintProperty(LYR_LABEL, "text-color", labelColour(colour, dark));
         // Colour, route number and stop names are all baked into the signs,
         // so they are repainted whenever any of them moves.
         painted = paintStopFlags(instance, colour, surface, number, names, painted);
