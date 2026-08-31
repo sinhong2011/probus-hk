@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../fixtures/routeDb.json" with { type: "json" };
-import { CATEGORIES, categoryById, categoryCounts, routesInCategory } from "~/data/categories";
+import {
+  CATEGORIES,
+  SCENIC_SERIES,
+  categoryById,
+  categoryCounts,
+  pairDirections,
+  routesInCategory,
+  scenicGroups,
+  scenicSeriesOf,
+} from "~/data/categories";
 import { routeAt } from "~/data/db";
 import type { KeyedRoute, RouteDb } from "~/data/types";
 
@@ -148,6 +157,79 @@ describe("shape-based categories", () => {
   it("spots an MTR feeder by prefix, suffix or operator", () => {
     expect(match("feeder", fake({ route: "K12" }))).toBe(true);
     expect(match("feeder", fake({ route: "46M" }))).toBe(true);
+  });
+});
+
+describe("tourism", () => {
+  it("catches a curated scenic route under its own operator", () => {
+    expect(match("tourism", fake({ route: "15", co: ["ctb"] }))).toBe(true);
+    expect(match("tourism", fake({ route: "51", co: ["kmb"] }))).toBe(true);
+    expect(match("tourism", fake({ route: "11", co: ["nlb"] }))).toBe(true);
+  });
+
+  it("does not mistake another operator's use of the same number", () => {
+    // KMB also runs a 6 and a 15; only the Citybus ones climb to Stanley
+    // and the Peak.
+    expect(match("tourism", fake({ route: "6", co: ["kmb"] }))).toBe(false);
+    expect(match("tourism", fake({ route: "15", co: ["kmb"] }))).toBe(false);
+  });
+
+  it("catches any Citybus H route, listed or future", () => {
+    expect(match("tourism", fake({ route: "H1", co: ["ctb"] }))).toBe(true);
+    expect(match("tourism", fake({ route: "H2K", co: ["ctb"] }))).toBe(true);
+    expect(match("tourism", fake({ route: "H9", co: ["ctb"] }))).toBe(true);
+  });
+
+  it("leaves an ordinary route alone", () => {
+    expect(match("tourism", kmb1)).toBe(false);
+    expect(match("tourism", gmb1)).toBe(false);
+  });
+
+  it("files an unlisted Citybus H route under the open-top series", () => {
+    expect(scenicSeriesOf(fake({ route: "H20", co: ["ctb"] }))?.id).toBe("openTop");
+  });
+
+  it("groups routes by series in the curated order, each in its own series", () => {
+    const order = SCENIC_SERIES.map((series) => series.id);
+    const groups = scenicGroups(db);
+    const ids = groups.map((group) => group.series.id);
+    expect(ids).toEqual([...ids].sort((a, b) => order.indexOf(a) - order.indexOf(b)));
+    for (const group of groups) {
+      expect(group.routes.length).toBeGreaterThan(0);
+      for (const route of group.routes) {
+        expect(scenicSeriesOf(route)?.id).toBe(group.series.id);
+      }
+    }
+  });
+});
+
+describe("pairDirections", () => {
+  const towards = (route: string, dest: string) =>
+    fake({ route, co: ["ctb"], dest: { zh: dest, en: dest } });
+
+  it("seats a route's two directions in one pair and a lone one alone", () => {
+    const pairs = pairDirections([
+      towards("6", "Stanley"),
+      towards("6", "Central"),
+      towards("9", "Shek O"),
+    ]);
+    expect(pairs.map((p) => [p.out.dest.en, p.back?.dest.en])).toEqual([
+      ["Stanley", "Central"],
+      ["Shek O", undefined],
+    ]);
+  });
+
+  it("starts a new pair for a third variant and across operators", () => {
+    const pairs = pairDirections([
+      towards("15", "The Peak"),
+      towards("15", "Central"),
+      towards("15", "Central (Exchange Square)"),
+      fake({ route: "15", co: ["kmb"], dest: { zh: "x", en: "Elsewhere" } }),
+    ]);
+    expect(pairs).toHaveLength(3);
+    expect(pairs[0]?.back).toBeDefined();
+    expect(pairs[1]?.back).toBeUndefined();
+    expect(pairs[2]?.out.co[0]).toBe("kmb");
   });
 });
 

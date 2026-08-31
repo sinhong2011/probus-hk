@@ -1,28 +1,29 @@
-import { useParams } from "@solidjs/router";
+import { useParams } from "@tanstack/solid-router";
 import { uniqBy } from "es-toolkit";
-import { For, Show, createMemo } from "solid-js";
-import { Card, Chip, EmptyState, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
-import { Trail } from "~/components/Breadcrumb";
-import { Page, Section } from "~/components/Layout";
-import { WalkIcon } from "~/components/Icons";
+import { For, Show, createMemo, createSignal } from "solid-js";
+import { Chip, EmptyState, SectionLabel, StopCode } from "~/components/Chrome";
+import { Page, RowCard, Section } from "~/components/Layout";
+import { CameraSheet } from "~/components/CameraSheet";
+import { CameraIcon, WalkIcon } from "~/components/Icons";
 import { RouteLine } from "~/components/RouteRow";
+import { nearestCamera } from "~/data/cameras";
 import { useDb } from "~/data/context";
+import { NotFound } from "~/routes/NotFound";
 import { routesAtCluster } from "~/data/db";
-import { etaKey, fetchStopEtas } from "~/data/eta/batch";
-import { createAsyncMemo } from "~/lib/async";
+import { useStopEtas } from "~/data/useStopEtas";
+import { etaKey } from "~/data/eta/batch";
 import { distanceM, formatDistance, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t } from "~/lib/i18n";
-import { etaTick } from "~/stores/clock";
 import { useGeolocation } from "~/stores/geolocation";
 import { settings } from "~/stores/settings";
 
 export default function StopDetail() {
   const db = useDb();
-  const params = useParams<{ id: string }>();
+  const params = useParams({ from: "/stop/$id" });
   const lang = settings.lang;
   const { position } = useGeolocation();
 
-  const stopId = () => decodeURIComponent(params.id);
+  const stopId = () => params().id;
   const stop = () => db().stopList[stopId()];
 
   /** Every operator's id for this kerb, so nothing is missed. */
@@ -38,16 +39,7 @@ export default function StopDetail() {
     uniqBy(routesAtCluster(db(), memberIds()), (at) => `${at.route.route}/${at.route.dest.en}`),
   );
 
-  const etas = createAsyncMemo(async () => {
-    etaTick();
-    const list = routes();
-    if (list.length === 0) return new Map<string, never[]>();
-    try {
-      return await fetchStopEtas(db(), stopId(), list);
-    } catch {
-      return new Map<string, never[]>();
-    }
-  });
+  const etas = useStopEtas(stopId, routes);
 
   const ordered = createMemo(() => {
     const map = etas();
@@ -65,11 +57,16 @@ export default function StopDetail() {
     return here && s ? distanceM(here, s.location) : null;
   };
 
+  /** The department's camera in sight of this kerb, where there is one. */
+  const camera = () => {
+    const s = stop();
+    return s ? nearestCamera(s.location) : null;
+  };
+  const [cameraOpen, setCameraOpen] = createSignal(false);
+
   return (
     <Page>
-      <Trail />
-
-      <Show when={stop()} fallback={<EmptyState title={t("noResults", lang())} />}>
+      <Show when={stop()} fallback={<NotFound kind="stop" />}>
         {(entry) => (
           <>
             {/* The name in the language being read, and the pole code beside
@@ -98,7 +95,30 @@ export default function StopDetail() {
                   {routes().length} {lang() === "zh" ? "條路線" : "routes"}
                 </span>
               </Chip>
+              {/* A chip that does something, so it presses like one of the
+                  app's buttons rather than reading like another fact. */}
+              <Show when={camera()}>
+                <button
+                  type="button"
+                  onClick={() => setCameraOpen(true)}
+                  class="app-press inline-flex h-[1.6rem] w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground"
+                >
+                  <CameraIcon size={12} />
+                  {t("trafficCamera", lang())}
+                </button>
+              </Show>
             </div>
+
+            <Show when={camera()}>
+              {(near) => (
+                <CameraSheet
+                  open={cameraOpen()}
+                  onClose={() => setCameraOpen(false)}
+                  near={near()}
+                  lang={lang()}
+                />
+              )}
+            </Show>
 
             <Section>
               <SectionLabel
@@ -115,25 +135,23 @@ export default function StopDetail() {
                 when={ordered().length > 0}
                 fallback={<EmptyState title={t("noService", lang())} />}
               >
-                <Card>
+                {/* Every line calling at this kerb, soonest first. A wide
+                    window wraps them into columns: forty routes stretched one
+                    per full-width row is a list you have to scroll to read. */}
+                <RowCard>
                   <For each={ordered()}>
-                    {(row, index) => (
-                      <>
-                        <Show when={index() > 0}>
-                          <Hairline />
-                        </Show>
-                        <RouteLine
-                          route={row.at.route}
-                          seq={row.at.seq}
-                          lang={lang()}
-                          etas={row.etas}
-                          plateSize="md"
-                          countdownSize="lg"
-                        />
-                      </>
+                    {(row) => (
+                      <RouteLine
+                        route={row.at.route}
+                        seq={row.at.seq}
+                        lang={lang()}
+                        etas={row.etas}
+                        plateSize="md"
+                        countdownSize="lg"
+                      />
                     )}
                   </For>
-                </Card>
+                </RowCard>
               </Show>
             </Section>
           </>

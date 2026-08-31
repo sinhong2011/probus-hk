@@ -164,3 +164,15 @@ export function lineRank(code: string): number {
 export function lineName(code: string): Bilingual {
   return LINE_NAMES[code] ?? { zh: code, en: code };
 }
+
+/**
+ * The light rail's id for a stop, in one spelling.
+ *
+ * The route database gives the same platform as "LR60" in one route's stop
+ * list and "LR060" in another's, and both resolve in `stopList`. Anything that
+ * compares stop ids across routes - the map, which folds the two into one
+ * station - has to compare them in one form.
+ */
+export function lightRailStopId(id: string): string {
+  return id.replace(/^LR0+(?=\d)/, "LR");
+}

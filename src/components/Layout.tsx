@@ -1,32 +1,26 @@
-import { Show, createEffect } from "solid-js";
+import { Show, createEffect, createSignal, onCleanup } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
 /**
  * The shape every screen shares.
  *
- * One column, one gutter, one rhythm between blocks. Screens differ in what
- * they put inside that column, never in where the column sits - moving between
- * tabs should not shift the title, the edges or the spacing under them.
+ * One gutter, one rhythm between blocks, and one width: the body of every
+ * screen takes all the room the window gives it. Screens used to pick their own
+ * cap - 42rem here, 68rem there - so moving between tabs slid the whole page
+ * sideways and left a desktop window mostly empty; the body now fills, and it
+ * is the *contents* that decide what to do with the space.
  *
- * The rule for extra width is that it should carry *more of the list*, never
- * stretch a single row across the window: a route number and its arrival time
- * have to stay close enough to read as one thing. So a wide window either packs
- * cards into columns or splits into two panes; it never widens a row.
+ * The rule for that extra width is that it should carry *more of the list*,
+ * never stretch a single row across the window: a route number and its arrival
+ * time have to stay close enough to read as one thing. So a wide screen packs
+ * cards into columns, splits rows into a grid, or splits into two panes.
  */
 
-/** Gutter and column widths, in one place so nothing drifts. */
+/** The one gutter, in one place so nothing drifts. */
 const GUTTER = "px-3.5 lg:px-8";
-/*
- * One row width across the whole app: `content` matches the list column inside
- * a split screen exactly, so a bookmark row, a search result and a stop row are
- * all the same width no matter which screen you are on.
- */
-const WIDTH = { content: "42rem", wide: "68rem" } as const;
 
 export function Page(props: {
   children: JSX.Element;
-  /** Set on screens whose content genuinely fills more than one column. */
-  wide?: boolean;
   /**
    * A control that stays within thumb reach at the bottom of a phone screen.
    * A wide window has room to put it beside the content instead, so it is the
@@ -37,8 +31,18 @@ export function Page(props: {
    * On a wide screen, hold the page to the window and let a pane inside it do
    * the scrolling. Without this the map and the route header scroll away with
    * the stop list, which on a desktop is the one thing that should stay put.
+   *
+   * `"always"` holds the page to the window on a phone as well, ending it
+   * above the tab bar: for a screen whose list is the thing worth scrolling
+   * at every width, with the rest kept in view over it.
    */
-  fill?: boolean;
+  fill?: boolean | "always";
+  /**
+   * On a wide screen, start level with the sidebar's top rather than at the
+   * page's own top padding: for a screen that is one panel filling the
+   * window - the map - whose edges should line up with the sidebar's.
+   */
+  flush?: boolean;
   class?: string;
 }) {
   /*
@@ -47,41 +51,75 @@ export function Page(props: {
    * scrolls feels broken. The root is pinned for as long as such a page is up.
    */
   createEffect(
-    () => Boolean(props.fill),
+    () => props.fill ?? false,
     (fill) => {
       if (!fill) return;
-      document.documentElement.classList.add("mb-fill");
+      const pinned = fill === "always" ? ["app-fill", "app-fill-always"] : ["app-fill"];
+      document.documentElement.classList.add(...pinned);
       // Returned rather than `onCleanup`: the callback has no owner in Solid 2,
       // so a registered cleanup never ran and the root stayed pinned on every
       // screen visited after this one.
-      return () => document.documentElement.classList.remove("mb-fill");
+      return () => document.documentElement.classList.remove(...pinned);
     },
   );
+
+  /* How tall the dock is right now - it changes when the keypad hides for
+     the system keyboard - so the spacer under the page can match it. */
+  const [dockHeight, setDockHeight] = createSignal(0, { ownedWrite: true });
+  const watchDock = (el: HTMLElement) => {
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setDockHeight(el.offsetHeight));
+    observer.observe(el);
+    onCleanup(() => observer.disconnect());
+  };
 
   return (
     <div
       class={[
-        "mb-safe-top mb-scroll flex min-h-dvh flex-col",
+        "pt-safe-top app-scroll flex min-h-dvh flex-col",
         { "lg:h-dvh lg:min-h-0 lg:overflow-hidden": Boolean(props.fill) },
+        { "h-dvh min-h-0 overflow-hidden": props.fill === "always" },
       ]}
     >
       <div
         class={[
-          `mx-auto flex w-full grow flex-col gap-6 pt-4 lg:gap-8 lg:pt-8 ${GUTTER} ${props.class ?? ""}`,
-          { "lg:min-h-0": Boolean(props.fill) },
+          `flex w-full grow flex-col gap-6 pt-4 lg:gap-8 ${GUTTER} ${props.class ?? ""}`,
+          props.flush ? "lg:pt-3" : "lg:pt-8",
+          /* A filled page ends where the sidebar ends: the sidebar floats
+             `inset-y-3` from the window, and a pane that ran on to the very
+             edge made the two look cut to different lengths. */
+          { "lg:min-h-0 lg:pb-3": Boolean(props.fill) },
+          /* Held to the window on a phone too, the page ends above the tab
+             bar instead of scrolling a spacer past it. */
+          { "min-h-0 pb-[calc(var(--tabbar-height)+0.5rem)]": props.fill === "always" },
         ]}
-        style={{ "max-width": props.wide ? WIDTH.wide : WIDTH.content }}
       >
         {props.children}
       </div>
 
+      {/*
+       * Pinned to the screen, above the tab bar, whatever the page under it is
+       * doing. It was sticky, which only pins once the page is taller than the
+       * window: a short page left the keypad sitting under the last card
+       * instead of under the thumb. The spacer below grows to the dock's
+       * measured height so the page's last row can still scroll clear of it.
+       */}
       <Show when={props.dock}>
-        <div class="sticky bottom-[var(--tabbar-height)] z-20 lg:hidden">{props.dock}</div>
+        <div ref={watchDock} class="fixed inset-x-0 bottom-[var(--tabbar-height)] z-20 lg:hidden">
+          {props.dock}
+        </div>
+        <div class="shrink-0 lg:hidden" style={{ height: `${dockHeight()}px` }} />
       </Show>
 
       {/* Keeps the last row clear of the tab bar. A filled page has no page
           scroll to run past, so the spacer would only steal height. */}
-      <div class={["h-28 shrink-0", { "lg:hidden": Boolean(props.fill) }]} />
+      <div
+        class={[
+          "h-28 shrink-0",
+          { "lg:hidden": Boolean(props.fill) },
+          { hidden: props.fill === "always" },
+        ]}
+      />
     </div>
   );
 }
@@ -109,11 +147,106 @@ export function Bleed(props: { children: JSX.Element; class?: string }) {
 /**
  * Cards of uneven height, packed into columns. CSS columns rather than a grid
  * so a tall stop card does not leave a hole beside a short one.
+ *
+ * The column count follows the window rather than a fixed page width, because
+ * the page no longer has one: every step up in width buys another column of
+ * cards instead of another inch on each card.
  */
 export function CardColumns(props: { children: JSX.Element; class?: string }) {
   return (
     <div
-      class={`flex flex-col gap-2.5 lg:block lg:columns-2 lg:gap-4 2xl:columns-3 ${props.class ?? ""}`}
+      class={`flex flex-col gap-2.5 lg:block lg:columns-2 lg:gap-4 2xl:columns-3 min-[110rem]:columns-4 ${props.class ?? ""}`}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+/**
+ * A list of rows that keeps its rows readable on a wide screen by wrapping
+ * them into columns instead of stretching each one across the window.
+ *
+ * In one column it is the card the rest of the app draws, hairline and all -
+ * the rule inset from the left so the list reads as one block with a seam
+ * rather than as a stack of slabs. In two it cannot be: a rule inset on the
+ * left of the right-hand column would point at nothing, so the grid's own gaps
+ * carry the separator colour instead and it runs both ways. Children are plain
+ * rows either way - no `Hairline` between them.
+ */
+export function RowCard(props: {
+  children: JSX.Element;
+  /** Hold the list to one column, e.g. while its rows are being dragged. */
+  single?: boolean;
+  class?: string;
+}) {
+  return (
+    <div
+      class={[
+        "grid overflow-hidden rounded-xl border border-border bg-card shadow-card",
+        "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:left-3.5 [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
+        props.single
+          ? ""
+          : [
+              "lg:grid-cols-2 lg:gap-px lg:bg-border lg:[&>*]:bg-card lg:[&>*+*]:before:hidden",
+              "min-[110rem]:grid-cols-3",
+              /* An odd number of rows leaves the last cell of the grid empty,
+                 and an empty cell is a hole of the separator colour in the
+                 corner of the card. The last row widens to close it. Bounded
+                 below the three-column width: both span rules land in the
+                 same layer, so an unbounded two-column span would win the
+                 ordering there and punch two holes instead. */
+              "lg:max-[110rem]:[&>*:last-child:nth-child(odd)]:col-span-2",
+              "min-[110rem]:[&>*:last-child:nth-child(3n+1)]:col-span-3",
+              "min-[110rem]:[&>*:last-child:nth-child(3n+2)]:col-span-2",
+              "min-[110rem]:[&>*:last-child:nth-child(3n)]:col-span-1",
+            ].join(" "),
+        props.class ?? "",
+      ]}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+/**
+ * Cards of even weight, laid out left to right. A grid rather than columns
+ * where reading order matters more than packing - a ranked list stays ranked
+ * across the row, which is how a reader scans it.
+ *
+ * The cards in a row share a height. They hold live arrivals, so a card is
+ * taller the moment a third bus is due, and a row of cards jostling half a line
+ * up and down as the countdowns tick was the grid redrawing itself every
+ * refresh; matched, the row is a shelf and only the numbers move.
+ */
+export function CardGrid(props: {
+  children: JSX.Element;
+  /** Hold the cards to one column, e.g. while they are being dragged. */
+  single?: boolean;
+  /**
+   * Let the window decide the column count instead of two fixed steps.
+   *
+   * For a grid of compact cards: two fixed columns stretched each card to
+   * half a desktop window, which put a hand's width of nothing between a
+   * route's name and its arrival time. Sized from a minimum card width, the
+   * same window carries three or four readable cards instead.
+   */
+  dense?: boolean;
+  /** The grid element itself, for a screen that wires behaviour onto it. */
+  ref?: (el: HTMLDivElement) => void;
+  class?: string;
+}) {
+  return (
+    <div
+      ref={props.ref}
+      class={[
+        "grid gap-2.5 lg:gap-4",
+        props.single
+          ? ""
+          : props.dense
+            ? "lg:grid-cols-[repeat(auto-fill,minmax(21rem,1fr))]"
+            : "lg:grid-cols-2 min-[110rem]:grid-cols-3",
+        props.class ?? "",
+      ]}
     >
       {props.children}
     </div>
@@ -147,36 +280,82 @@ export function SplitPage(props: {
    *
    * A long list inside a card looks wrong when the pane scrolls: the card's own
    * top and bottom edges slide out of the window with it. Set this and the card
-   * can fill the pane and scroll its rows inside its own frame.
+   * can fill the pane and scroll its rows inside its own frame - on a phone as
+   * well, where the aside stacks above it and the list takes whatever height is
+   * left under it. Held to the window like that, every pixel between blocks is
+   * taken from the list, so the blocks sit closer than on a scrolling page.
    */
   mainFills?: boolean;
+  /**
+   * Give the surplus width to the aside rather than to the list.
+   *
+   * For a screen whose aside is a map: a map is the one thing here that is
+   * worth more the bigger it is, while its list is a numbered trail of stops
+   * that cannot wrap into columns and reads worse the wider each row gets.
+   */
+  wideAside?: boolean;
 }) {
   return (
-    <Page wide dock={props.dock} fill>
-      {/* The list column is capped: a row whose route number and arrival time
-          sit half a window apart is two things, not one. Surplus width goes to
-          the margins instead. */}
+    <Page dock={props.dock} fill={props.mainFills ? "always" : true}>
+      {/* Both panes together fill the window - the list used to be capped at
+          42rem as well, which parked the pair of them in the middle with the
+          rest of the screen empty. Which pane takes the surplus is the screen's
+          call: the list, unless its aside is a map. */}
       {/*
        * `grid-rows-[minmax(0,1fr)]` is what makes the panes scroll: without it
        * the row is sized to the tallest child, so a full height on either half
        * is a full height of something already taller than the window.
        */}
-      <div class="grid gap-6 lg:min-h-0 lg:grow lg:grid-cols-[minmax(0,22rem)_minmax(0,42rem)] lg:grid-rows-[minmax(0,1fr)] lg:justify-center lg:gap-10">
+      {/*
+       * On a phone a filling list is the second row, and the aside above it is
+       * given no more than it needs. The list keeps a floor rather than the
+       * aside keeping its full height: on a short screen the aside scrolls
+       * inside its row, which beats a list of one visible stop.
+       */}
+      <div
+        class={[
+          /* One phone gap for both modes: the search screen flips between
+             them as a query comes and goes, and unequal gaps nudged its
+             field and tabs twelve pixels on the first keystroke. */
+          props.mainFills
+            ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-10"
+            : "grid gap-3 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
+          /*
+           * The list's cap is what actually hands the map its width: the map
+           * takes whatever the list leaves. At 46rem the list swallowed a
+           * 1440px window whole and the map sat at its 22rem floor - the
+           * opposite of what this mode is for. 36rem still fits a row's name
+           * and its numbers side by side; everything past that is map.
+           */
+          props.wideAside
+            ? "lg:grid-cols-[minmax(26.4rem,1fr)_minmax(0,36rem)]"
+            : "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]",
+        ]}
+      >
         {/*
          * `[&>*]:shrink-0` is load-bearing: a flex column shrinks its children
          * to fit, and a card that clips its own overflow to keep its rounded
          * corners then swallows the list inside it instead of letting the pane
          * scroll.
          */}
-        <div class="mb-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0">
+        <div
+          class={
+            props.mainFills
+              ? "app-scroll flex min-h-0 flex-col gap-3 overflow-y-auto [&>*]:shrink-0 lg:h-full lg:gap-6"
+              : "app-scroll flex flex-col gap-3 lg:h-full lg:min-h-0 lg:gap-6 lg:overflow-y-auto lg:[&>*]:shrink-0"
+          }
+        >
           {props.aside}
         </div>
         {/* The half that scrolls. On a phone there is only one column, so the
-            page scrolls as usual. */}
+            page scrolls as usual - unless the list fills, in which case this
+            row is the height it has and the card inside it does the scrolling. */}
         <div
           class={[
-            "mb-scroll flex min-w-0 flex-col gap-6 pb-2 lg:h-full lg:min-h-0 lg:gap-8",
-            props.mainFills ? "lg:overflow-hidden" : "lg:overflow-y-auto lg:[&>*]:shrink-0",
+            "app-scroll flex min-w-0 flex-col lg:h-full lg:min-h-0",
+            props.mainFills
+              ? "min-h-0 gap-3 overflow-hidden lg:gap-8"
+              : "gap-3 pb-2 lg:gap-8 lg:overflow-y-auto lg:pb-0 lg:[&>*]:shrink-0",
           ]}
         >
           {props.children}

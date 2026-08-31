@@ -1,4 +1,4 @@
-import { useLocation } from "@solidjs/router";
+import { useLinkProps, useLocation } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 import { CATEGORIES } from "~/data/categories";
@@ -6,6 +6,7 @@ import { useDb } from "~/data/context";
 import { routeAt } from "~/data/db";
 import { lineName } from "~/data/rail";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { pathLink } from "~/lib/links";
 import { settings } from "~/stores/settings";
 import { trail, type Crumb } from "~/stores/trail";
 import type { RouteDb } from "~/data/types";
@@ -21,6 +22,12 @@ import type { RouteDb } from "~/data/types";
  * on a cold open.
  */
 export function Breadcrumb(props: { crumbs: Crumb[] }) {
+  const location = useLocation();
+  /* A crumb for the screen you are on - the last one, where a trail carries
+     it - is the place, not a way back to it: said in the foreground and
+     without the press. */
+  const here = (crumb: Crumb) => crumb.href === location().pathname;
+
   return (
     <nav aria-label="breadcrumb" class="flex min-w-0 items-center gap-1">
       <For each={props.crumbs}>
@@ -33,8 +40,15 @@ export function Breadcrumb(props: { crumbs: Crumb[] }) {
             </Show>
 
             <a
-              href={crumb.href}
-              class="mb-press flex h-8 min-w-0 shrink items-center gap-1 rounded-full bg-secondary pl-2 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground motion-safe:mb-rise"
+              {...useLinkProps(pathLink(crumb.href))}
+              aria-current={here(crumb) ? "page" : undefined}
+              class={[
+                "flex h-8 min-w-0 shrink items-center gap-1 rounded-full bg-secondary pl-2 pr-3 text-[0.81rem] font-bold transition-colors duration-state motion-safe:app-rise",
+                {
+                  "text-foreground": here(crumb),
+                  "app-press text-muted-foreground active:text-foreground": !here(crumb),
+                },
+              ]}
             >
               <Show when={index() === 0}>
                 <span class="shrink-0">
@@ -87,7 +101,7 @@ export function Trail(props: { extra?: Crumb[] }) {
   const lang = settings.lang;
 
   const crumbs = createMemo<Crumb[]>(() => {
-    const walked = trail.ancestors(location.pathname).flatMap((path) => {
+    const walked = trail.ancestors(location().pathname).flatMap((path) => {
       const label = labelFor(db(), lang(), path);
       return label ? [{ href: path, label }] : [];
     });

@@ -60,7 +60,15 @@ export function centerInView(el: Element, behavior: ScrollBehavior = "smooth") {
 export function centerWhileItSettles(el: Element, settleMs = 1200) {
   centerInView(el);
 
-  const observer = new ResizeObserver(() => centerInView(el));
+  /*
+   * The corrections are instant where the first move was smooth. Each one
+   * lands as a row finishes changing shape - arrivals filling in, the panel
+   * opening - and re-gliding for every one restarted the glide two or three
+   * times in a second, which on a phone read as the list stuttering. The
+   * first move is the one that says "you were taken here"; the corrections
+   * are bookkeeping, and bookkeeping should not animate.
+   */
+  const observer = new ResizeObserver(() => centerInView(el, "auto"));
   const stop = () => {
     observer.disconnect();
     clearTimeout(timer);

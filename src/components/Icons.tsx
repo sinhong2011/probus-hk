@@ -1,5 +1,16 @@
 import type { JSX } from "@solidjs/web";
 import IconAlarmClock from "~icons/lineicons/alarm-clock";
+import IconBolt from "~icons/lineicons/bolt";
+import IconBridge from "~icons/lineicons/bridge";
+import IconBusSmall from "~icons/lineicons/bus-1";
+import IconCamera from "~icons/lineicons/camera";
+import IconIsland from "~icons/lineicons/island";
+import IconLink from "~icons/lineicons/link";
+import IconMountains from "~icons/lineicons/mountains-2";
+import IconPlane from "~icons/lineicons/plane";
+import IconStamp from "~icons/lineicons/stamp";
+import IconTrainAlt from "~icons/lineicons/train-alt";
+import IconUsers from "~icons/lineicons/users";
 import IconArrowBothDirectionVertical from "~icons/lineicons/arrow-both-direction-vertical-1";
 import IconBookmark from "~icons/lineicons/bookmark";
 import IconBus from "~icons/lineicons/bus";
@@ -8,24 +19,30 @@ import IconChevronRight from "~icons/lineicons/chevron-right";
 import IconCloudDownload from "~icons/lineicons/cloud-download";
 import IconCheck from "~icons/lineicons/checkmark";
 import IconCog from "~icons/lineicons/cog";
-import IconEraser from "~icons/lineicons/eraser";
 import IconExpand from "~icons/lineicons/expand-square-4";
 import IconFlag from "~icons/lineicons/flag-1";
 import IconFunnel from "~icons/lineicons/funnel-1";
 import IconGithub from "~icons/lineicons/github";
+import IconGridAlt from "~icons/lineicons/grid-alt";
 import IconLayers from "~icons/lineicons/layers-1";
 import IconLayout from "~icons/lineicons/layout-9";
+import IconMap from "~icons/lineicons/map";
 import IconMapMarker from "~icons/lineicons/map-marker";
 import IconMegaphone from "~icons/lineicons/megaphone-1";
 import IconMenu from "~icons/lineicons/menu";
 import IconMonitor from "~icons/lineicons/monitor";
 import IconNight from "~icons/lineicons/night";
 import IconMinus from "~icons/lineicons/minus";
+import IconPin from "~icons/lineicons/pin";
 import IconPlus from "~icons/lineicons/plus";
 import IconReload from "~icons/lineicons/reload";
 import IconRoute from "~icons/lineicons/route-1";
 import IconSearch from "~icons/lineicons/search-alt";
+import IconStarFat from "~icons/lineicons/star-fat";
+import IconStarFill from "~icons/lineicons/star-fill";
 import IconInformation from "~icons/lineicons/information";
+import IconClipboard from "~icons/lineicons/clipboard";
+import IconWarning from "~icons/lineicons/warning";
 import IconSortAmount from "~icons/lineicons/sort-amount-asc";
 import IconSun from "~icons/lineicons/sun";
 import IconTag from "~icons/lineicons/tag";
@@ -65,10 +82,59 @@ function wrap(Component: IconComponent) {
   };
 }
 
+/**
+ * A phone's dial: nine keys and the zero under them.
+ *
+ * It used to be Lineicons' `grid-alt`, four rounded squares - which is the
+ * apps-grid every launcher on earth uses, and on the one button whose whole
+ * job is "bring the keypad back" it said "show me a grid of something". Ten
+ * dots in the shape of a dial says which keypad without a word, so it is drawn
+ * here rather than borrowed.
+ */
+export function DialpadIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  /* Three rows of three and the zero under them, squared off so the glyph
+     fills the same box every other icon in the set does. */
+  const dots = [
+    [5.4, 4.4],
+    [12, 4.4],
+    [18.6, 4.4],
+    [5.4, 10.2],
+    [12, 10.2],
+    [18.6, 10.2],
+    [5.4, 16],
+    [12, 16],
+    [18.6, 16],
+    [12, 21.8],
+  ] as const;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      {dots.map(([cx, cy]) => (
+        <circle cx={cx} cy={cy} r="2.05" />
+      ))}
+    </svg>
+  );
+}
+/** A grid of everything - the whole catalogue, rather than the few on show. */
+export const GridIcon = wrap(IconGridAlt as IconComponent);
 export const PinIcon = wrap(IconMapMarker as IconComponent);
+export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
 export const BookmarkIcon = wrap(IconBookmark as IconComponent);
+export const StarIcon = wrap(IconStarFat as IconComponent);
+export const StarFillIcon = wrap(IconStarFill as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
+/** The rest of the navigation, behind one tab on a phone. */
+export const MoreIcon = wrap(IconMenu as IconComponent);
 export const ChevronLeftIcon = wrap(IconChevronLeft as IconComponent);
 export const ChevronRightIcon = wrap(IconChevronRight as IconComponent);
 export const RefreshIcon = wrap(IconReload as IconComponent);
@@ -111,10 +177,73 @@ export function ExchangeIcon(props: IconProps): JSX.Element {
 export const WalkIcon = wrap(IconTimer as IconComponent);
 export const GripIcon = wrap(IconMenu as IconComponent);
 export const MinusIcon = wrap(IconMinus as IconComponent);
+/** A thumbtack. `PinIcon` is the map marker; this is the one that holds a row at the top. */
+export const ThumbtackIcon = wrap(IconPin as IconComponent);
 export const PlusIcon = wrap(IconPlus as IconComponent);
 export const CloseIcon = wrap(IconXmark as IconComponent);
 export const ExpandIcon = wrap(IconExpand as IconComponent);
-export const BackspaceIcon = wrap(IconEraser as IconComponent);
+/**
+ * A clock wound back: what was opened before.
+ *
+ * Lineicons has no history glyph - its nearest is the refresh ring, which
+ * already means "fetch this again" three screens away - so it is drawn here at
+ * the weight the set is drawn at. The arc is open at the bottom left and the
+ * arrow closes it, which is the shape every history control has had since the
+ * VCR.
+ */
+export function HistoryIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <path d="M4.4 13.2a7.8 7.8 0 1 0 1.6-5.6" />
+      <path d="M4 4.2v3.9h3.9" />
+      <path d="M12 7.8v4.4l3.2 1.9" />
+    </svg>
+  );
+}
+
+/**
+ * The keyboard's own delete key - a tag pointing back at the last character
+ * with a cross inside it. An eraser was reading as "wipe everything", which
+ * is the clear key's job, and Lineicons has no backspace, so it is drawn here
+ * at the weight the set is drawn at.
+ */
+export function BackspaceIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <path d="M9.2 5.5h9.3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9.2a1.5 1.5 0 0 1-1.1-.5L3.7 13a1.5 1.5 0 0 1 0-2l4.4-5a1.5 1.5 0 0 1 1.1-.5Z" />
+      <path d="m11.5 9.5 5 5" />
+      <path d="m16.5 9.5-5 5" />
+    </svg>
+  );
+}
 export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
 export const BusIcon = wrap(IconBus as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
@@ -122,6 +251,27 @@ export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);
 export const TrainIcon = wrap(IconTrain as IconComponent);
 export const FerryIcon = wrap(IconShip as IconComponent);
 export const TrashIcon = wrap(IconTrash as IconComponent);
+
+/*
+ * The route categories' glyphs. One each, and each one about the *journey*
+ * rather than the vehicle where it can be - a bridge for a cross-harbour
+ * route, a customs stamp for a boundary crossing, a camera for the
+ * sightseeing runs. See `CategoryIcon`.
+ */
+export const PlaneIcon = wrap(IconPlane as IconComponent);
+export const StampIcon = wrap(IconStamp as IconComponent);
+export const BridgeIcon = wrap(IconBridge as IconComponent);
+export const CameraIcon = wrap(IconCamera as IconComponent);
+/** The high-speed train, told from the local one by a different carriage. */
+export const TrainAltIcon = wrap(IconTrainAlt as IconComponent);
+export const BoltIcon = wrap(IconBolt as IconComponent);
+/** A crowd - which is what the peak hour is. */
+export const UsersIcon = wrap(IconUsers as IconComponent);
+export const LinkIcon = wrap(IconLink as IconComponent);
+export const IslandIcon = wrap(IconIsland as IconComponent);
+export const MountainIcon = wrap(IconMountains as IconComponent);
+/** The smaller bus, for the green minibus. */
+export const MinibusIcon = wrap(IconBusSmall as IconComponent);
 /** An alert the rider armed: a clock, because every alert is about a moment. */
 export const AlarmIcon = wrap(IconAlarmClock as IconComponent);
 export const CheckIcon = wrap(IconCheck as IconComponent);
@@ -138,6 +288,10 @@ export const ShareIcon = wrap(IconShare as IconComponent);
 export const FlagIcon = wrap(IconFlag as IconComponent);
 /** What else there is to know: the stop's own page, and everything at it. */
 export const InfoIcon = wrap(IconInformation as IconComponent);
+/** The app has hit an error of its own - not a network one. */
+export const WarningIcon = wrap(IconWarning as IconComponent);
+/** Copy the text beside it. */
+export const ClipboardIcon = wrap(IconClipboard as IconComponent);
 /** The repository the app is built from, on the one row that links to it. */
 export const GithubIcon = wrap(IconGithub as IconComponent);
 /**
@@ -174,3 +328,30 @@ export function ExternalIcon(props: IconProps): JSX.Element {
 export const SystemIcon = wrap(IconMonitor as IconComponent);
 export const SunIcon = wrap(IconSun as IconComponent);
 export const MoonIcon = wrap(IconNight as IconComponent);
+
+/**
+ * A search range: the circle around you, with you at the middle of it.
+ * Drawn here because Lineicons has rulers and crosshairs but nothing that
+ * reads as "this far around me" at twelve pixels.
+ */
+export function RadiusIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <circle cx="12" cy="12" r="8.25" stroke-dasharray="3.1 3.36" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

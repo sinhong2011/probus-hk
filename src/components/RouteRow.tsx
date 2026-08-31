@@ -1,15 +1,18 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
+import { useDb } from "~/data/context";
+import { isSpecialService } from "~/data/db";
+import { lastRunGone } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
 import { concessionFare, fareAt } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
+import { now } from "~/stores/clock";
+import { SpecialTag } from "./Chrome";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
-
-export function routeHref(key: string): string {
-  return `/route/${encodeURIComponent(key)}`;
-}
 
 interface LineProps {
   route: KeyedRoute;
@@ -44,20 +47,42 @@ function subtitleFor(props: LineProps): string {
 
 /** Presentational row - takes arrivals it is given, so a stop can batch them. */
 export function RouteLine(props: LineProps) {
+  const db = useDb();
+  /* Whether an empty answer here means "wait" or "that was the last one".
+     Read through the clock so the row turns over on the minute the last bus
+     passes rather than on a reload. */
+  const over = () => {
+    now();
+    return lastRunGone(db(), props.route);
+  };
+
   return (
-    <a href={routeHref(props.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
+    <a
+      {...useLinkProps(routeLink(props.route.key))}
+      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+    >
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 
       <div class="flex min-w-0 grow flex-col gap-0.5">
-        <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-          {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
+        <span class="flex min-w-0 items-center gap-1.5">
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+            {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
+          </span>
+          <Show when={isSpecialService(props.route)}>
+            <SpecialTag lang={props.lang} />
+          </Show>
         </span>
         <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
           {subtitleFor(props)}
         </span>
       </div>
 
-      <EtaCountdown etas={props.etas} lang={props.lang} size={props.countdownSize ?? "sm"} />
+      <EtaCountdown
+        etas={props.etas}
+        lang={props.lang}
+        size={props.countdownSize ?? "sm"}
+        over={over()}
+      />
     </a>
   );
 }

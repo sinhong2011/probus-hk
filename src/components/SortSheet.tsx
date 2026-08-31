@@ -56,15 +56,17 @@ export function SortSheet<T extends string>(props: {
                 class={[
                   // Full rows, and a thumb-sized one: this is a sheet the hand
                   // reaches into, not a strip of segments read at a glance.
-                  "mb-press flex min-h-[3.1rem] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors duration-state",
-                  { "bg-primary-muted": on(), "bg-transparent": !on() },
+                  // No `transition-colors`: the radio role already carries the
+                  // state transition, and a utility one would override it.
+                  "app-press flex min-h-[3.1rem] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left",
+                  { "bg-secondary": on(), "bg-transparent": !on() },
                 ]}
               >
                 <span class="flex min-w-0 grow flex-col gap-0.5">
                   <span
                     class={[
-                      "truncate text-[0.88rem] font-bold",
-                      { "text-primary": on(), "text-foreground": !on() },
+                      "truncate text-[0.88rem] text-foreground",
+                      { "font-bold": on(), "font-semibold": !on() },
                     ]}
                   >
                     {option.label}
@@ -76,7 +78,7 @@ export function SortSheet<T extends string>(props: {
 
                 {/* The tick, not a colour: which one is on has to survive being
                     read at a glance in sunlight. */}
-                <span class={["shrink-0 text-primary", { invisible: !on() }]}>
+                <span class={["shrink-0 text-foreground", { invisible: !on() }]}>
                   <CheckIcon size={15} />
                 </span>
               </button>

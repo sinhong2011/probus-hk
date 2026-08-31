@@ -1,8 +1,18 @@
-import { useParams, useSearchParams } from "@solidjs/router";
-import { For, Show, createEffect, createMemo, createSignal, lazy } from "solid-js";
-import { Card, Chip, EmptyState, Reveal, SectionLabel, StopCode } from "~/components/Chrome";
-import { Trail } from "~/components/Breadcrumb";
+import { useLinkProps, useNavigate, useParams, useRouter, useSearch } from "@tanstack/solid-router";
+import { For, Show, createEffect, createMemo, createSignal, lazy, onCleanup } from "solid-js";
+import {
+  Card,
+  Chip,
+  EmptyState,
+  FareTag,
+  Reveal,
+  SectionLabel,
+  SpecialTag,
+  StopCode,
+} from "~/components/Chrome";
+import { Alert } from "~/components/Alert";
 import { AlertSheet } from "~/components/AlertSheet";
+import { CameraSheet } from "~/components/CameraSheet";
 import { GroupSheet } from "~/components/GroupSheet";
 import { Modal } from "~/components/Modal";
 import { RollingNumber } from "~/components/RollingNumber";
@@ -12,37 +22,43 @@ import {
   AlarmIcon,
   BookmarkIcon,
   BusIcon,
-  ChevronRightIcon,
+  CameraIcon,
   CloseIcon,
   ExchangeIcon,
   FlagIcon,
   InfoIcon,
   MegaphoneIcon,
   ShareIcon,
-  PinIcon,
-  WalkIcon,
+  StarFillIcon,
+  StarIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
-import { routeHref } from "~/components/RouteRow";
+import { NotFound } from "~/routes/NotFound";
+import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { useInView } from "~/lib/inView";
-import { reverseRoute, routeAt, routeStops } from "~/data/db";
-import { rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
+import { nearestCamera, type NearbyCamera } from "~/data/cameras";
+import { isSpecialService, reverseRoute, routeAt, routeStops } from "~/data/db";
+import { lineName, lineRank, stationLines } from "~/data/rail";
+import { railFare } from "~/data/railFares";
+import { lastRunGone, rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
-import { hasRouteFeed, useVehicles } from "~/data/useVehicles";
+import { useVehicles } from "~/data/useVehicles";
+import { progressOf } from "~/data/vehicles";
 import {
   clockTime,
   concessionFare,
   countdown,
   fareAt,
   formatFare,
+  isLastRun,
   serviceNotice,
 } from "~/lib/format";
 import { now } from "~/stores/clock";
-import { distanceM, walkMinutes } from "~/lib/geo";
+import { distanceM } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { operatorLabel } from "~/lib/operators";
+import { operatorLabel, plateStyle } from "~/lib/operators";
 import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
@@ -59,7 +75,7 @@ import { settings } from "~/stores/settings";
 const LAST_CALL_MINUTES = 60;
 
 /** Everything a bookmark needs except the answer the group sheet collects. */
-type PendingSave = Omit<SavedItem, "id" | "group">;
+type PendingSave = Omit<SavedItem, "id" | "group" | "order">;
 
 // MapLibre is ~800 kB; keeping it in its own chunk means the rest of the
 // route page paints without waiting for it, and it stays cached across deploys.
@@ -100,26 +116,9 @@ function daysLabel(flags: string, lang: Lang): string {
  */
 function Timetable(props: { db: RouteDb; route: KeyedRoute; lang: Lang }) {
   const groups = createMemo(() => routeTimetable(props.db, props.route));
-  const span = createMemo(() => serviceSpan(props.db, props.route));
 
   return (
     <div class="flex flex-col gap-3">
-      {/* The two ends first: most visits to a timetable are one of these two
-          questions, and neither should need reading a table to answer. */}
-      <Show when={span()}>
-        {(hours) => (
-          <div class="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
-            <span class="tnum text-[0.81rem] font-bold text-foreground">
-              {t("firstBus", props.lang)} {hours().first}
-            </span>
-            <span class="text-faint-foreground">·</span>
-            <span class="tnum text-[0.81rem] font-bold text-foreground">
-              {t("lastBus", props.lang)} {hours().last}
-            </span>
-          </div>
-        )}
-      </Show>
-
       <Show
         when={groups().length > 0}
         fallback={
@@ -192,7 +191,14 @@ function RideBand(props: {
             stopIdByCo: stopIdsFor(props.route, props.boardSeq),
           }
         : null,
-    1,
+    /*
+     * Three, not one. A feed keeps reporting a bus for a while after it has
+     * left, and with one arrival asked for that bus was the whole answer: the
+     * band added the ride to a departure already behind it and, since that
+     * time is a minute or so ago, read as "now plus the ride" - the wait for
+     * the bus that is actually coming had been left out.
+     */
+    3,
   );
 
   /*
@@ -213,12 +219,19 @@ function RideBand(props: {
     },
   );
 
-  /** When the bus that is coming would put you at the other end. */
+  /**
+   * When the bus that is coming would put you at the other end.
+   *
+   * The bus that is coming, not the first one the feed lists: departed buses
+   * are dropped the way the countdown drops them, on the same clock, so the
+   * estimate rolls on to the next bus the moment the one before it has gone.
+   */
   const arriveAt = createMemo(() => {
     const ride = shownRide();
-    const next = etas()?.[0]?.at.getTime();
-    if (!ride || next === undefined) return null;
-    return new Date(next + ride.minutes * 60_000);
+    const at = now();
+    const next = etas()?.find((eta) => countdown(eta, at).kind !== "gone");
+    if (!ride || !next) return null;
+    return new Date(next.at.getTime() + ride.minutes * 60_000);
   });
 
   const armed = () =>
@@ -249,7 +262,10 @@ function RideBand(props: {
   };
 
   return (
-    <Card class="border-primary-border">
+    /* Not a `Card`: the band floats over the stop list, which is itself a
+       card, so the same surface vanished into it - this is a step above, with
+       the shadow a floating thing owes the rows it covers. */
+    <div class="overflow-hidden rounded-xl bg-secondary shadow-xl">
       <div class="flex items-center gap-2.5 px-3.5 py-2.5">
         {/* The flag sits in its own disc rather than loose against the text:
             a lone glyph beside a line of type read as a form field, which is
@@ -290,7 +306,7 @@ function RideBand(props: {
           aria-label={t("clearTrip", props.lang)}
           title={t("clearTrip", props.lang)}
           onClick={props.onClear}
-          class="mb-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground"
         >
           <CloseIcon size={12} />
         </button>
@@ -308,14 +324,14 @@ function RideBand(props: {
               </Chip>
               <Show when={ride().fare}>
                 {(fare) => (
-                  <Chip class="shrink-0">
+                  <Chip tone="card" class="shrink-0">
                     <span class="tnum">{fare()}</span>
                   </Chip>
                 )}
               </Show>
               <Show when={arriveAt()}>
                 {(at) => (
-                  <Chip class="shrink-0">
+                  <Chip tone="card" class="shrink-0">
                     <span class="tnum">
                       {t("arriveAbout", props.lang)} {clockTime(at())}
                     </span>
@@ -330,10 +346,10 @@ function RideBand(props: {
                 aria-pressed={armed() ? "true" : "false"}
                 onClick={remind}
                 class={[
-                  "mb-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
+                  "app-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
                   {
                     "bg-primary text-primary-foreground": armed(),
-                    "bg-secondary text-muted-foreground": !armed(),
+                    "bg-card text-muted-foreground": !armed(),
                   },
                 ]}
               >
@@ -346,7 +362,7 @@ function RideBand(props: {
           )}
         </Show>
       </Reveal>
-    </Card>
+    </div>
   );
 }
 
@@ -361,13 +377,15 @@ function awayLabel(away: number, lang: Lang): string {
 }
 
 /**
- * The two departures after the one the row is counting down, stacked under a
- * label that says what they are.
+ * The two departures after the one the row is counting down, stacked under
+ * it.
  *
  * A column, not a row: three arrivals are one series, and a series reads down -
  * the eye goes 28, 37 without being led, and the clock times line up into a
  * second column so the pair reads as a small timetable. Nothing here needs a
- * container; the label and the alignment do the work a border was doing.
+ * container or a label; sitting directly under the countdown, in its accent,
+ * already says what they are, and the word that used to head them was one
+ * more thing to read on the way to the numbers.
  *
  * Each carries the clock time it lands at. That is the point of the second
  * number: "45 分鐘" is something you have to add to a watch before it means
@@ -385,11 +403,7 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
 
   return (
     <Show when={rest().length > 0}>
-      <div class={`flex items-baseline gap-2.5 ${props.class ?? ""}`}>
-        <span class="shrink-0 text-[0.69rem] font-bold uppercase tracking-[0.06em] text-faint-foreground">
-          {t("thenArrivals", props.lang)}
-        </span>
-
+      <div class={`flex items-baseline ${props.class ?? ""}`}>
         <div class="flex min-w-0 flex-col gap-[3px]">
           {/* Keyed by position: the tick rebuilds these objects every second,
               and a value-keyed list would remount the digits with it. */}
@@ -408,12 +422,17 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
                 // A frame apart, so the pair reads as arriving in order rather
                 // than as one block appearing.
                 style={{ "animation-delay": `${index * 45}ms` }}
-                class="mb-pop flex items-baseline gap-1.5"
+                class="app-pop flex items-baseline gap-1.5"
               >
                 {/* Right-aligned, so a tilde or a second digit pushes the
                     number out to the left and the units stay in line. */}
                 <span class="flex min-w-[2.9rem] items-baseline justify-end gap-[3px]">
-                  <span class="tnum text-[0.94rem] font-bold leading-none tracking-[-0.03em] text-muted-foreground">
+                  {/* The same accent as the countdown above them: these are
+                      the same answer for the two buses after it, and in grey
+                      they read as a footnote to the row rather than as the
+                      rest of it. Weaker, because the first one is still the
+                      one the rider is deciding on. */}
+                  <span class="tnum text-[0.94rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
                     <Show when={row().state.scheduled}>
                       <span class="opacity-60">~</span>
                     </Show>
@@ -456,6 +475,33 @@ function otherLanguage(text: Bilingual, lang: Lang): string | undefined {
   return line && line !== pick(text, lang).trim() ? line : undefined;
 }
 
+/**
+ * A notice as a string two rows can compare, so a run of stops wearing the
+ * same one is recognised as one notice rather than the same notice N times.
+ */
+function noticeKey(text: Bilingual | undefined): string | undefined {
+  return text ? `${text.zh.trim()}\n${text.en.trim()}` : undefined;
+}
+
+/**
+ * "牛頭角道, 花園大廈喜鵲樓外" as its street and its landmark. Only the first
+ * comma splits; a name with none is all landmark.
+ */
+function splitStopName(name: string): { head: string | null; tail: string } {
+  const at = name.search(/[,，]/);
+  if (at <= 0) return { head: null, tail: name };
+  const head = name.slice(0, at).trim();
+  const tail = name.slice(at + 1).trim();
+  return tail ? { head, tail } : { head: null, tail: name };
+}
+
+/** A bus on the rail below a stop: where it is along the way to the next. */
+interface RailBus {
+  id: string;
+  /** 0 is this stop, 1 is the next. */
+  fraction: number;
+}
+
 function StopRow(props: {
   route: KeyedRoute;
   seq: number;
@@ -472,6 +518,8 @@ function StopRow(props: {
   /** Hands the page a bookmark to make, once it has asked where it belongs. */
   onGroup: (entry: PendingSave) => void;
   onShare: () => void;
+  /** Hands the page a traffic camera near this stop, to open in a sheet. */
+  onCamera: (near: NearbyCamera) => void;
   /** Hands the page the operator's notice for this stop, to open in full. */
   onNotice: (notice: Bilingual) => void;
   /** The ride being planned: this stop's part in it, if it has one. */
@@ -490,11 +538,50 @@ function StopRow(props: {
   /** Outside the ride being planned. */
   dimmed: boolean;
   /**
+   * The day's last bus has already gone past this stop.
+   *
+   * Read from the timetable rather than from the empty answer: a stop with
+   * nothing coming says "暫無班次", which is what a rider sees at four in the
+   * morning and at four in the afternoon alike. One of those two is a wait;
+   * the other is a taxi.
+   */
+  dayOver: boolean;
+  /**
    * How many stops short of this one the next bus still is, or `null` when
    * nothing live is coming. Counted in stops rather than metres because that
    * is the unit a rider standing at a kerb can check for themselves.
    */
   busAway: number | null;
+  /**
+   * Tells the page what the operator says about this stop, so the page can
+   * see where one notice covers a run of stops. Rows only know their own
+   * arrivals; the run is the page's to notice.
+   */
+  onNoticeChange: (key: string | undefined) => void;
+  /**
+   * Hands the row's arrivals to the page, which lays them over the route
+   * feed to place buses the feed alone cannot see - a joint route's other
+   * operator answers per stop only, and its buses were on every row and
+   * nowhere on the map.
+   */
+  onEtasChange: (etas: Eta[] | undefined) => void;
+  /** The stop before carries the same notice: the rail above is part of it. */
+  noticeAbove: boolean;
+  /** The stop after carries the same notice: the rail below is part of it. */
+  noticeBelow: boolean;
+  /** Buses on their way from this stop to the next. */
+  buses: RailBus[];
+  /**
+   * The other lines through this station, in the network map's order. Empty
+   * on a bus route, and at a station with nothing to change to.
+   */
+  interchanges: string[];
+  /**
+   * The station the ride boards at, once a rail ride has one and this stop
+   * is down the line from it - the two ends a rail fare is priced between.
+   * A bus fare belongs to one stop; a rail fare belongs to a pair.
+   */
+  fareFrom: string | null;
 }) {
   /*
    * Arrivals are the reason the list exists, so every row asks for them - but
@@ -503,11 +590,31 @@ function StopRow(props: {
    * trade worth making.
    */
   const [watchRow, visible] = useInView();
-  const etas = useEta(() =>
-    visible() || props.open
-      ? { route: props.route, seq: props.seq, stopIdByCo: stopIdsFor(props.route, props.seq) }
-      : null,
+  const etas = useEta(
+    () =>
+      visible() || props.open
+        ? { route: props.route, seq: props.seq, stopIdByCo: stopIdsFor(props.route, props.seq) }
+        : null,
+    3,
+    { keepLast: true },
   );
+
+  /*
+   * What the row actually shows.
+   *
+   * A stop the last bus has already left behind keeps whatever the operator
+   * still reports - a live answer is evidence - but drops the timetable's own
+   * projections. Those are an estimate of a bus that has gone: route 104 takes
+   * 75 minutes spread over 33 stops, so at ten to one the estimate still had
+   * the 23:50 departure four minutes from a stop the feed had watched it pass.
+   * "4 分鐘" under a stop whose last bus went ten minutes ago is worse than
+   * saying nothing, and what the row says instead is 尾班車已過.
+   */
+  const shown = () => {
+    const list = etas();
+    if (!list || !props.dayOver) return list;
+    return list.filter((eta) => eta.source !== "scheduled");
+  };
 
   const pinned = () => saved.has(props.route.key, props.stopId);
   /* What the flag would say if it still said anything: the four states the one
@@ -532,6 +639,9 @@ function StopRow(props: {
         : props.canAlight
           ? t("alightHere", props.lang)
           : t("boardHere", props.lang);
+  /** Whether the ride being planned owns the rail above and below the dot. */
+  const primaryAbove = () => props.isNearest || props.role === "riding" || props.role === "alight";
+  const primaryBelow = () => props.role === "board" || props.role === "riding";
   const alerted = () =>
     alerts.has("arrival", props.route.key, props.stopId) ||
     alerts.has("destination", props.route.key, props.stopId);
@@ -547,9 +657,60 @@ function StopRow(props: {
    * be read and something to open.
    */
   const notice = () => serviceNotice(etas(), now());
+  // Braces, not an arrow body: Solid reads an effect's return value as its
+  // cleanup, and a store setter returns the store.
+  createEffect(
+    () => noticeKey(notice()),
+    (key) => {
+      props.onNoticeChange(key);
+    },
+  );
+  onCleanup(() => props.onNoticeChange(undefined));
+  createEffect(
+    () => etas(),
+    (list) => {
+      props.onEtasChange(list);
+    },
+  );
+  onCleanup(() => props.onEtasChange(undefined));
+  const nameParts = () => splitStopName(stripStopCode(pick(props.stop.name, props.lang)));
   const fare = () => fareAt(props.route.fares, props.seq);
   const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
+
+  /* Asked only for the open row, which is what makes the camera index load
+     lazily: a page of forty closed rows never fetches it at all. */
+  const camera = () => (props.open ? nearestCamera(props.stop.location) : null);
+  const db = useDb();
+  /*
+   * Where the next train is going. The line's terminus is on the plate at the
+   * top of the page, but a train is not a line: at the end of the day and on
+   * a branch it turns short, and a rider bound for 寶琳 wants to know that the
+   * one coming is for 康城 before they are on it. Said on the open row, where
+   * the rider is reading this station's trains; set in the warning colour
+   * when it is not the terminus, because that is the case it exists for.
+   */
+  const nextDest = createMemo(() => {
+    if (!props.open || props.route.co[0] !== "mtr") return null;
+    const code = etas()?.find((eta) => eta.dest)?.dest;
+    const name = code ? db().stopList[code]?.name : undefined;
+    if (!name) return null;
+    const terminus = props.route.dest;
+    const short = name.zh !== terminus.zh && name.en.toLowerCase() !== terminus.en.toLowerCase();
+    return { name, short };
+  });
   const fareChanged = () => fare() !== null && fare() !== fareAt(props.route.fares, props.seq - 1);
+  /*
+   * What riding from the boarding station to this one costs. Asked only on
+   * the rows where the rider is deciding about this station - open, chosen as
+   * the end, or offered as one - because the table is a quarter of a megabyte
+   * fetched on the first ask, and forty rows asking at once is one fetch but
+   * forty answers appearing together.
+   */
+  const rideFare = createMemo(() =>
+    props.fareFrom && (props.open || props.picking || props.role === "alight")
+      ? railFare(props.fareFrom, props.stopId)
+      : null,
+  );
 
   return (
     <div
@@ -577,13 +738,13 @@ function StopRow(props: {
        * button is neither valid nor reachable - this way the row still opens
        * from anywhere on it, and the one thing that opens something else can.
        */}
-      <div class="relative flex w-full items-start px-3.5 py-2.5 text-left">
+      <div class="relative flex w-full items-start px-3.5 py-2 text-left">
         <button
           type="button"
           onClick={() => (props.picking ? props.onAlight() : props.onToggle())}
           aria-expanded={props.picking ? undefined : props.open ? "true" : "false"}
           aria-label={`${props.seq}. ${stripStopCode(pick(props.stop.name, props.lang))}`}
-          class="mb-tap absolute inset-0"
+          class="app-tap absolute inset-0"
         />
 
         {/*
@@ -596,23 +757,26 @@ function StopRow(props: {
          * a fare line or opened, and a rail whose dots wander away from the
          * names beside them is unreadable as a sequence.
          */}
-        <div class="pointer-events-none relative -my-2.5 mr-3 flex w-3 shrink-0 flex-col items-center self-stretch">
+        <div class="pointer-events-none relative -my-2 mr-2 flex w-3 shrink-0 flex-col items-center self-stretch">
+          {/*
+           * The rail says what is happening between two stops. The ride
+           * being planned paints it the accent colour; a stretch the operator
+           * has flagged - a diversion, a road blocked - paints it the warning
+           * colour, so eleven stops under one notice read as one block on the
+           * line rather than eleven badges saying the same words. The ride
+           * wins where both apply: it is the thing the rider chose.
+           */}
           <div
             class={[
               "w-0.5 shrink-0 transition-colors duration-state",
-              props.isNearest ? "h-[14px]" : "h-4",
+              props.isNearest ? "h-[15px]" : "h-4",
               {
                 "bg-transparent": props.seq === 1,
                 // The rail above a stop belongs to the ride only once it has
                 // been boarded, so the boarding stop's own approach stays grey.
-                "bg-primary":
-                  props.seq !== 1 &&
-                  (props.isNearest || props.role === "riding" || props.role === "alight"),
-                "bg-border":
-                  props.seq !== 1 &&
-                  !props.isNearest &&
-                  props.role !== "riding" &&
-                  props.role !== "alight",
+                "bg-primary": props.seq !== 1 && primaryAbove(),
+                "bg-warning": props.seq !== 1 && !primaryAbove() && props.noticeAbove,
+                "bg-border": props.seq !== 1 && !primaryAbove() && !props.noticeAbove,
               },
             ]}
           />
@@ -623,64 +787,126 @@ function StopRow(props: {
             class={[
               "shrink-0 rounded-full transition-colors duration-state",
               {
+                // The halo is what makes the stop you are standing at the
+                // loudest mark on the rail, so the dot inside it does not
+                // have to be the biggest one as well.
+                "size-2.5 bg-primary": props.isNearest,
                 "size-3 bg-primary":
-                  props.isNearest || props.role === "board" || props.role === "alight",
+                  !props.isNearest && (props.role === "board" || props.role === "alight"),
                 "size-2 bg-primary": !props.isNearest && props.role === "riding",
-                "size-2 border-2 border-faint-foreground bg-background":
-                  !props.isNearest && props.role === null,
+                "size-2 border-2 bg-background": !props.isNearest && props.role === null,
+                // A flagged stop's own marker joins the flagged stretch, so the
+                // first stop of a run - whose approach is still grey - is
+                // marked too.
+                "border-warning": !props.isNearest && props.role === null && notice() !== undefined,
+                "border-faint-foreground":
+                  !props.isNearest && props.role === null && notice() === undefined,
               },
             ]}
             style={
               props.isNearest
                 ? {
                     "box-shadow":
-                      "0 0 0 3px var(--card), 0 0 0 7px color-mix(in srgb, var(--primary) 22%, transparent)",
+                      "0 0 0 2.5px var(--card), 0 0 0 5.5px color-mix(in srgb, var(--primary) 22%, transparent)",
                   }
                 : undefined
             }
           />
           <div
             class={[
-              "w-0.5 grow transition-colors duration-state",
+              "relative w-0.5 grow transition-colors duration-state",
               {
                 "bg-transparent": props.seq >= props.total,
-                "bg-primary":
-                  props.seq < props.total && (props.role === "board" || props.role === "riding"),
-                "bg-border":
-                  props.seq < props.total && props.role !== "board" && props.role !== "riding",
+                "bg-primary": props.seq < props.total && primaryBelow(),
+                "bg-warning": props.seq < props.total && !primaryBelow() && props.noticeBelow,
+                "bg-border": props.seq < props.total && !primaryBelow() && !props.noticeBelow,
               },
             ]}
-          />
+          >
+            {/*
+             * The buses on their way to the next stop, on the line between the
+             * two. A countdown that jumps from fourteen minutes at one stop to
+             * one at the next looks like a mistake until the bus sitting
+             * between them is drawn; this is that bus. It sits at its share
+             * of the way there, and the position glides with the clock the
+             * way the countdown ticks - one movement, one meaning.
+             *
+             * The lower segment is this stop's share of the gap; the next
+             * row's fixed segment above its dot is the rest, and the offset
+             * counts it so a bus about to arrive sits on the next stop.
+             *
+             * An opened row stretches its line, and the bus keeps its share
+             * of it: the line is the road between the two stops however tall
+             * the card, and a bus a minute from the next stop pinned near the
+             * top of an open card read as a different fact from the same bus
+             * hugging the dot once the card closed.
+             */}
+            <For each={props.buses}>
+              {(bus) => (
+                <span
+                  aria-hidden="true"
+                  data-rail-bus={bus.id}
+                  class="absolute left-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
+                  style={{
+                    top: `calc(${bus.fraction * 100}% + ${bus.fraction * 16}px)`,
+                    "box-shadow": "0 0 0 2px var(--card)",
+                  }}
+                >
+                  <BusIcon size={10} />
+                </span>
+              )}
+            </For>
+          </div>
         </div>
 
         <div class="pointer-events-none relative flex min-w-0 grow flex-col gap-0.5">
           <div class="flex min-w-0 items-center gap-1.5">
             {/*
-             * The stop's place in the route, printed on the title rather than
-             * in a column of its own. A fixed-width column spent 20px of a
-             * phone's width on every row to line up numbers nobody reads down
-             * the page; as a prefix the number costs only the characters it
-             * has, and it is where the eye already is - on the name.
+             * The stop's place in the route, as a prefix on the name - where
+             * the eye already is, and set as close to it as the two words of
+             * one phrase.
+             *
+             * No column reserved for the longest number on the route: held
+             * open, the numbers under ten either began with a digit of blank
+             * or left one between themselves and the name, and both read as
+             * the row starting late. The names stepping right by a digit at
+             * stop ten is the smaller cost, and the rail beside them is
+             * already the straight edge the eye follows down the page.
              */}
             <span
               class={[
-                "tnum shrink-0 text-[0.94rem] font-semibold tracking-[-0.01em]",
+                "tnum shrink-0 text-[0.85rem] font-semibold tracking-[-0.01em]",
                 { "text-primary": props.isNearest, "text-faint-foreground": !props.isNearest },
               ]}
             >
               {props.seq}.
             </span>
 
+            {/*
+             * The name may run to two lines, because the end of it is the
+             * part that matters: "牛頭角道, 近牛頭角下邨貴..." lost the one
+             * word that told this stop from the next. And the operator's
+             * "street, landmark" form repeats the street down a whole run of
+             * stops, so the street is set quieter and the landmark carries
+             * the weight - the part that changes is the part that is bold.
+             */}
             <span
               class={[
-                "truncate text-[0.94rem] tracking-[-0.01em]",
+                "line-clamp-2 min-w-0 break-words text-[0.85rem] tracking-[-0.01em]",
                 {
-                  "font-bold text-foreground": !props.passed,
-                  "font-semibold text-subtle-foreground": props.passed,
+                  // Where you are standing takes the accent, name and number
+                  // both: the pin and the halo mark the row, and the name is
+                  // what the eye lands on once the row is found.
+                  "font-bold text-primary": props.isNearest,
+                  "font-bold text-foreground": !props.isNearest && !props.passed,
+                  "font-semibold text-subtle-foreground": !props.isNearest && props.passed,
                 },
               ]}
             >
-              {stripStopCode(pick(props.stop.name, props.lang))}
+              <Show when={nameParts().head} fallback={nameParts().tail}>
+                <span class="font-semibold text-subtle-foreground">{nameParts().head}, </span>
+                {nameParts().tail}
+              </Show>
             </span>
 
             {/* The code on the pole, which is what tells two stops of the same
@@ -694,17 +920,30 @@ function StopRow(props: {
              * here it keeps the operator's words, wears the app's warning
              * colour, and opens in full on a tap.
              */}
+            {/*
+             * Said in words once, at the first stop of the run. Down the rest
+             * of it the amber rail carries the meaning and the chip shrinks to
+             * its mark - still there, still opens the notice in full, so a
+             * rider who scrolled straight to stop twenty is not left reading
+             * a colour with no words behind it.
+             */}
             <Show when={notice()}>
               {(text) => (
                 <button
                   type="button"
                   onClick={() => props.onNotice(text())}
                   aria-label={`${t("serviceNotice", props.lang)}: ${pick(text(), props.lang)}`}
-                  class="mb-press pointer-events-auto flex max-w-[40%] shrink-0 items-center gap-1 rounded-full bg-warning/12 px-1.5 py-px text-[0.69rem] font-bold leading-[1.4] text-warning"
+                  data-notice={props.noticeAbove ? "continued" : "start"}
+                  class={[
+                    "app-press pointer-events-auto flex shrink-0 items-center gap-1 rounded-full bg-warning/12 py-px text-[0.69rem] font-bold leading-[1.4] text-warning",
+                    props.noticeAbove ? "px-1" : "max-w-[40%] px-1.5",
+                  ]}
                 >
                   {/* The mark survives the truncation the words may not. */}
                   <MegaphoneIcon size={10} />
-                  <span class="truncate">{pick(text(), props.lang)}</span>
+                  <Show when={!props.noticeAbove}>
+                    <span class="truncate">{pick(text(), props.lang)}</span>
+                  </Show>
                 </button>
               )}
             </Show>
@@ -712,20 +951,19 @@ function StopRow(props: {
             {/* Which end of the ride this is, in words. A filled dot on the
                 rail is a mark; only the word says what the mark means. */}
             <Show when={props.role === "board" || props.role === "alight"}>
-              <span class="mb-pop shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[0.69rem] font-bold text-primary-foreground">
+              <span class="app-pop shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[0.69rem] font-bold text-primary-foreground">
                 {props.role === "board"
                   ? t("boardLabel", props.lang)
                   : t("alightLabel", props.lang)}
               </span>
             </Show>
 
-            {/* Beside the name, where the eye already is. A pin says it in the
-                space a phrase would have taken from the stop's own name. */}
+            {/* Where the rider is standing is said by the halo on the rail and
+                by the number going the accent colour - a pin beside the name
+                as well was the third copy of it, and the one taking room from
+                the name itself. It is still said for a screen reader. */}
             <Show when={props.isNearest}>
-              <span class="shrink-0 text-primary" title={t("youAreHere", props.lang)}>
-                <PinIcon size={13} />
-                <span class="sr-only">{t("youAreHere", props.lang)}</span>
-              </span>
+              <span class="sr-only">{t("youAreHere", props.lang)}</span>
             </Show>
 
             {/* An armed reminder is a promise the app made; it says so on the
@@ -740,15 +978,107 @@ function StopRow(props: {
 
           {/* Rail carries no per-stop fare in this dataset, and an open row
               was printing the empty value as "車費 null". */}
+          {/* The amounts wear a tag, so the two numbers on the line are the
+              two things on it that can be read at a glance; the words that
+              name them are the quieter half. */}
           <Show when={fare() !== null && (fareChanged() || props.open)}>
-            <span class="tnum truncate text-[0.75rem] font-semibold text-subtle-foreground">
-              {[
-                `${t("fareFull", props.lang)} ${fare()}`,
-                concession() ? `${t("fareOctopus", props.lang)} ${concession()}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+            {/* Set off from the name rather than tucked under it: the tags
+                give the line a shape of its own, and at the list's own
+                line-spacing it read as a second line of the stop's name. */}
+            <span class="mt-2 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground">
+              <span class="shrink-0">{t("fareFull", props.lang)}</span>
+              <FareTag>{fare()}</FareTag>
+              <Show when={concession()}>
+                {(amount) => (
+                  <>
+                    <span class="shrink-0">·</span>
+                    <span class="truncate">{t("fareOctopus", props.lang)}</span>
+                    <FareTag>{amount()}</FareTag>
+                  </>
+                )}
+              </Show>
             </span>
+          </Show>
+
+          {/*
+           * Where a rider can change lines, as the colours they know the lines
+           * by - the way the network map and the line screen say it. On every
+           * row rather than only the open one: an interchange is the fact
+           * about a station a rider scans a line for, and it is what tells
+           * 旺角 from 太子 when both are two minutes away.
+           */}
+          {/* The open row has the room and the attention to say the line's
+              name; down the list the code carries it in the space the name
+              column can spare. */}
+          <Show when={props.interchanges.length > 0}>
+            <span
+              data-rail-interchange
+              class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground"
+            >
+              <span class="shrink-0">{t("changeHere", props.lang)}</span>
+              <For each={props.interchanges}>
+                {(code) => (
+                  <span
+                    class="flex h-[1.05rem] shrink-0 items-center rounded px-1 text-[0.69rem] font-extrabold tracking-[0.01em]"
+                    style={{
+                      background: plateStyle(["mtr"], code).background,
+                      color: plateStyle(["mtr"], code).color,
+                    }}
+                  >
+                    {props.open ? pick(lineName(code), props.lang) : code}
+                  </span>
+                )}
+              </For>
+            </span>
+          </Show>
+
+          <Show when={nextDest()}>
+            {(next) => (
+              <span
+                data-rail-next-dest={next().short ? "short" : "terminus"}
+                class={[
+                  "mt-1.5 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold",
+                  next().short ? "text-warning" : "text-subtle-foreground",
+                ]}
+              >
+                <BusIcon size={11} />
+                <span class="truncate">
+                  {t("towards", props.lang)} {stripStopCode(pick(next().name, props.lang))}
+                </span>
+              </span>
+            )}
+          </Show>
+
+          {/* The rail fare, in the same shape as the bus one above - two
+              amounts wearing tags - but priced from the station the rider
+              boards at, because that is the only way a rail fare exists. */}
+          <Show when={rideFare()}>
+            {(f) => (
+              <span
+                data-rail-stop-fare
+                class="mt-2 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground"
+              >
+                <Show when={f().octopus}>
+                  {(amount) => (
+                    <>
+                      <span class="shrink-0">{t("fareOctopusAdult", props.lang)}</span>
+                      <FareTag>{amount()}</FareTag>
+                    </>
+                  )}
+                </Show>
+                <Show when={f().single}>
+                  {(amount) => (
+                    <>
+                      <Show when={f().octopus}>
+                        <span class="shrink-0">·</span>
+                      </Show>
+                      <span class="truncate">{t("fareSingleTicket", props.lang)}</span>
+                      <FareTag>{amount()}</FareTag>
+                    </>
+                  )}
+                </Show>
+              </span>
+            )}
           </Show>
         </div>
 
@@ -765,16 +1095,28 @@ function StopRow(props: {
         <Show
           when={props.picking}
           fallback={
-            <div class="pointer-events-none relative flex shrink-0">
+            /* No chevron beside the countdown: forty of them down the page
+               were forty marks saying the same thing about a row that already
+               opens from anywhere on it, and each one took its width from the
+               stop's name. The row still reports its state to a screen reader
+               through `aria-expanded` on the button covering it. */
+            <div class="pointer-events-none relative flex shrink-0 items-start">
+              {/* One size smaller down the list than in the open row: the
+                  list is for scanning forty of these, and the stop a rider
+                  opened is the one whose number they are reading. */}
               <EtaCountdown
-                etas={etas()}
+                etas={shown()}
                 lang={props.lang}
-                size="md"
+                size={props.open ? "md" : "sm"}
                 limit={1}
                 clock={props.open}
+                over={props.dayOver}
                 /* Said in full beside the name, a tap away; a second copy
                    here would be the same sentence cut to six characters. */
                 notices={false}
+                /* Rows tick on the same second; this runs the roll down the
+                   list a frame apart per row, cycling every screenful. */
+                stagger={(props.seq % 10) * 28}
               />
             </div>
           }
@@ -784,7 +1126,7 @@ function StopRow(props: {
               rows all changing at once. Capped, or the far end of a long route
               would still be arriving after the rider has chosen. */}
           <span
-            class="mb-pop pointer-events-none relative flex h-8 shrink-0 items-center gap-1.5 self-center rounded-lg border border-primary-border bg-primary-muted px-2.5 text-[0.81rem] font-bold text-primary"
+            class="app-pop pointer-events-none relative flex h-8 shrink-0 items-center gap-1.5 self-center rounded-lg bg-primary-muted px-2.5 text-[0.81rem] font-bold text-primary"
             style={{ "animation-delay": `${Math.min(props.pickOrder * 22, 220)}ms` }}
           >
             <FlagIcon size={13} />
@@ -800,7 +1142,17 @@ function StopRow(props: {
             board button and picking up again at the next stop. */}
         <div class="relative">
           <Show when={props.seq < props.total}>
-            <span aria-hidden="true" class="absolute inset-y-0 left-[1.1875rem] w-0.5 bg-border" />
+            <span
+              aria-hidden="true"
+              class={[
+                "absolute inset-y-0 left-[1.1875rem] w-0.5",
+                {
+                  "bg-primary": primaryBelow(),
+                  "bg-warning": !primaryBelow() && props.noticeBelow,
+                  "bg-border": !primaryBelow() && !props.noticeBelow,
+                },
+              ]}
+            />
           </Show>
 
           {/*
@@ -812,7 +1164,13 @@ function StopRow(props: {
            * one minute on the clock is a bus stuck in traffic.
            */}
           <Show when={props.busAway !== null}>
-            <div class="mb-pop flex items-center gap-1.5 px-3.5 pb-1.5 pl-[2.375rem] text-[0.75rem] font-semibold text-primary">
+            {/* No pop on the way in: the count changes as the bus moves, and
+                a line that flinches every time it is re-stated draws the eye
+                back to a number that has barely changed. */}
+            {/* In the row's own grey, not the accent: the accent is for where
+                the rider is, and a bus three stops out is a fact about the
+                road, not a thing to be drawn to. */}
+            <div class="flex items-center gap-1.5 px-3.5 pb-1.5 pl-[2.125rem] text-[0.75rem] font-semibold text-muted-foreground">
               <BusIcon size={12} />
               <span>{awayLabel(props.busAway as number, props.lang)}</span>
             </div>
@@ -820,7 +1178,7 @@ function StopRow(props: {
 
           {/* The later departures, on their own line now that the actions have
               moved down to sit with the button they belong beside. */}
-          <LaterArrivals class="px-3.5 pb-2 pl-[2.375rem]" etas={etas() ?? []} lang={props.lang} />
+          <LaterArrivals class="px-3.5 pb-2 pl-[2.125rem]" etas={etas() ?? []} lang={props.lang} />
 
           {/*
            * One row of everything there is to do with this stop, gathered at
@@ -844,7 +1202,7 @@ function StopRow(props: {
            * alarm and a made bookmark go the app's own accent colour, the same
            * colour they take beside the stop's name.
            */}
-          <div class="flex items-center justify-end gap-0.5 pb-3 pl-[2.375rem] pr-1.5">
+          <div class="flex items-center justify-end gap-0.5 pb-3 pl-[2.125rem] pr-1.5">
             <button
               type="button"
               onClick={props.canAlight ? props.onAlight : props.onBoard}
@@ -852,7 +1210,7 @@ function StopRow(props: {
               title={boardLabel()}
               aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
               class={[
-                "mb-press mr-auto flex h-7 min-w-0 items-center gap-1 rounded-lg px-2 text-[0.81rem] font-bold transition-colors duration-state",
+                "app-press mr-auto flex h-6 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[0.75rem] font-bold transition-colors duration-state lg:h-7 lg:px-2 lg:text-[0.81rem]",
                 {
                   "bg-primary text-primary-foreground hover:bg-primary/90":
                     props.role === "board" || props.role === "alight",
@@ -861,7 +1219,7 @@ function StopRow(props: {
                 },
               ]}
             >
-              <FlagIcon size={14} />
+              <FlagIcon size={12} />
               <span class="truncate">{flagText()}</span>
             </button>
 
@@ -890,7 +1248,7 @@ function StopRow(props: {
                 });
               }}
               class={[
-                "mb-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
+                "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
                   "text-primary": pinned(),
                   "text-subtle-foreground hover:text-foreground": !pinned(),
@@ -909,7 +1267,7 @@ function StopRow(props: {
               aria-pressed={alerted() ? "true" : "false"}
               onClick={props.onAlert}
               class={[
-                "mb-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
+                "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
                   "text-primary": alerted(),
                   "text-subtle-foreground hover:text-foreground": !alerted(),
@@ -924,16 +1282,33 @@ function StopRow(props: {
               aria-label={t("share", props.lang)}
               title={t("share", props.lang)}
               onClick={props.onShare}
-              class="mb-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
             >
               <ShareIcon size={16} />
             </button>
 
+            {/* Only where the department has a camera within sight of the
+                kerb: a button that opens somebody else's junction would teach
+                riders not to press it. */}
+            <Show when={camera()}>
+              {(near) => (
+                <button
+                  type="button"
+                  aria-label={t("trafficCamera", props.lang)}
+                  title={t("trafficCamera", props.lang)}
+                  onClick={() => props.onCamera(near())}
+                  class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+                >
+                  <CameraIcon size={16} />
+                </button>
+              )}
+            </Show>
+
             <a
-              href={`/stop/${encodeURIComponent(props.stopId)}`}
+              {...useLinkProps(stopLink(props.stopId))}
               aria-label={t("openStop", props.lang)}
               title={t("openStop", props.lang)}
-              class="mb-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
             >
               {/* Not a chevron: the other three icons do something to this
                   stop, and this one is what else there is to know about it. */}
@@ -948,13 +1323,29 @@ function StopRow(props: {
 
 export default function RouteDetail() {
   const db = useDb();
-  const params = useParams<{ key: string }>();
+  const router = useRouter();
+  const params = useParams({ from: "/route/$key" });
   /** `?stop=19` - a shared link naming the stop the sender was standing at. */
-  const [query] = useSearchParams<{ stop?: string }>();
+  const search = useSearch({ from: "/route/$key" });
+  const navigate = useNavigate();
+
+  /*
+   * The opened-out map is a place the rider is in, so it lives in the URL:
+   * opening it out is a step the back button undoes, and a reload or a shared
+   * link lands in it. Putting it back replaces rather than pushes, so leaving
+   * is one step and not two.
+   */
+  const setMapOpen = (open: boolean) =>
+    navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, map: open ? true : undefined }),
+      replace: !open,
+    });
   const lang = settings.lang;
   const { position } = useGeolocation();
 
-  const route = createMemo(() => routeAt(db(), decodeURIComponent(params.key)));
+  const route = createMemo(() => routeAt(db(), params().key));
   /*
    * When the route's day ends. Read through the clock so the warning arrives on
    * its own: a rider who opened the page at half past ten should not have to
@@ -965,6 +1356,7 @@ export default function RouteDetail() {
     const r = route();
     return r ? serviceSpan(db(), r) : null;
   });
+
   const stops = createMemo(() => {
     const r = route();
     return r ? routeStops(db(), r) : [];
@@ -974,8 +1366,50 @@ export default function RouteDetail() {
     return r ? reverseRoute(db(), r) : undefined;
   });
 
-  const [openSeq, setOpenSeq] = createSignal<number | null>(null);
-  const [showInfo, setShowInfo] = createSignal(false);
+  /*
+   * The stop the rider picked, told apart from the stop they are standing
+   * near. The two used to share one slot, which dressed the app's guess up
+   * as the rider's choice: the map ringed the nearest stop as if it had been
+   * tapped, and the URL could not say whether anyone had chosen anything.
+   * Only a pick is ever the map's ring or the URL's `stop`; "closed" is a
+   * pick too - the rider shutting the row the app opened for them.
+   */
+  const [pickedSeq, setPickedSeq] = createSignal<number | "closed" | null>(null);
+  /** The open row: the rider's pick, or failing that the stop they stand at. */
+  const openSeq = (): number | null => {
+    const picked = pickedSeq();
+    if (picked === "closed") return null;
+    if (picked !== null) return picked;
+    return nearestIndex() >= 0 ? nearestIndex() + 1 : null;
+  };
+  /*
+   * A pick, made anywhere - a row, the map, a link - lands in the URL, so a
+   * reload keeps it and it can be sent to someone. Replaced, not pushed:
+   * reading down a route stop by stop should not wind up a page of history
+   * per stop on the way back out.
+   */
+  const pickStop = (seq: number | "closed" | null) => {
+    setPickedSeq(seq);
+    void navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, stop: typeof seq === "number" ? seq : undefined }),
+      replace: true,
+    });
+  };
+  /*
+   * The timetable is a dialog over the whole of a phone's screen, so it lives
+   * in the URL the way the opened-out map does: back closes it, a reload comes
+   * back to it, and a link to "the 606 timetable" is a link.
+   */
+  const showInfo = () => search().info === true;
+  const setShowInfo = (open: boolean) =>
+    navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, info: open ? true : undefined }),
+      replace: !open,
+    });
   /*
    * One sheet for the whole page rather than one per row: a forty-stop route
    * would otherwise carry forty mounted dialogs. The target is set a frame
@@ -985,6 +1419,11 @@ export default function RouteDetail() {
     null,
   );
   const [alertOpen, setAlertOpen] = createSignal(false);
+
+  /* The camera outlives its row the way the alert sheet does: the sheet is
+     the page's, so closing the row underneath does not tear it down. */
+  const [cameraNear, setCameraNear] = createSignal<NearbyCamera | null>(null);
+  const [cameraOpen, setCameraOpen] = createSignal(false);
   /**
    * The operator notice a row asked to have opened, and the stop it is about.
    * It outlives its own dialog, like the alert sheet above: a target cleared on
@@ -1018,7 +1457,9 @@ export default function RouteDetail() {
     const r = route();
     if (!r) return;
 
-    const url = `${window.location.origin}${routeHref(r.key)}?stop=${seq}`;
+    // Built through the router so the share link is spelled exactly the way
+    // the app would navigate to it, encoding and all.
+    const url = `${window.location.origin}${router.buildLocation(routeLink(r.key, seq)).href}`;
     const title = `${r.route} ${t("towards", lang())} ${pick(r.dest, lang())} · ${name}`;
 
     if (navigator.share) {
@@ -1131,12 +1572,120 @@ export default function RouteDetail() {
     return bestDistance <= 1000 ? best : -1;
   });
 
-  const nearestDistance = createMemo(() => {
-    const here = position();
-    const index = nearestIndex();
-    const entry = index >= 0 ? stops()[index] : undefined;
-    return here && entry ? distanceM(here, entry.stop.location) : null;
+  /** Any bookmark kept on this route, whichever stop it was kept at. */
+  const routeSaved = createMemo(() => {
+    const key = route()?.key;
+    return key !== undefined && saved.items().some((item) => item.routeKey === key);
   });
+
+  /**
+   * Star the route. Not a new kind of keeping: it saves the route at the
+   * stop you are nearest - its first stop when there is no position - so the
+   * Saved screen's groups, live ranking and alerts all apply unchanged.
+   * Un-starring removes every bookmark kept on this route.
+   */
+  const toggleStar = () => {
+    const r = route();
+    if (!r) return;
+    if (routeSaved()) {
+      for (const item of saved.items().filter((i) => i.routeKey === r.key)) {
+        saved.remove(item.id);
+      }
+      return;
+    }
+    const index = nearestIndex() >= 0 ? nearestIndex() : 0;
+    const entry = stops()[index];
+    if (!entry) return;
+    askGroup({ routeKey: r.key, co: r.co[0] ?? "kmb", stopId: entry.id, seq: index + 1 });
+  };
+
+  // A different route is a different list; nothing a row said carries over.
+  createEffect(
+    () => route()?.key,
+    () => {
+      setNoticeKeys(new Map());
+    },
+  );
+
+  /**
+   * What each row says the operator says about it, by stop. Rows fetch their
+   * own arrivals, so the page only learns of a notice once the row carrying
+   * it has been on screen; the run grows as the rider scrolls into it.
+   */
+  const [noticeKeys, setNoticeKeys] = createSignal(new Map<number, string>(), {
+    equals: false,
+    ownedWrite: true,
+  });
+  const noteNotice = (seq: number, key: string | undefined) => {
+    setNoticeKeys((map) => {
+      if (map.get(seq) === key) return map;
+      if (key === undefined) map.delete(seq);
+      else map.set(seq, key);
+      return map;
+    });
+  };
+
+  /**
+   * What each row's poll answered, by stop - every operator merged, which is
+   * more than the route feed knows on a joint route. Grown the same way as
+   * the notices above: a row reports while it is on screen, and the map's
+   * buses reach as far as the rows a rider has actually seen.
+   */
+  const [rowEtas, setRowEtas] = createSignal(new Map<number, Eta[]>(), {
+    equals: false,
+    ownedWrite: true,
+  });
+  const noteEtas = (seq: number, etas: Eta[] | undefined) => {
+    setRowEtas((map) => {
+      if (etas === undefined) map.delete(seq);
+      else map.set(seq, etas);
+      return map;
+    });
+  };
+  /**
+   * The furthest stop an operator still reports the last run at.
+   *
+   * The timetable spreads a route's journey time evenly over its stops, which
+   * at one in the morning is slower than the road really is: the estimate had
+   * the last bus back at stop 23 while the feed was reporting it a minute from
+   * stop 30. A live answer is evidence and beats the estimate, so where the
+   * operator says the last one is here, every stop behind it is done.
+   *
+   * Zero when no row has heard of it - the ordinary case, all day long.
+   */
+  const lastRunSeq = createMemo(() => {
+    let furthest = 0;
+    for (const [seq, list] of rowEtas()) {
+      if (seq <= furthest) continue;
+      const live = list.some(
+        (eta) => eta.source !== "scheduled" && eta.remark && isLastRun(eta.remark),
+      );
+      if (live) furthest = seq;
+    }
+    return furthest;
+  });
+
+  /**
+   * Whether the day's last bus has already gone past a given stop - the
+   * difference between 暫無班次 and 尾班車已過, which are the same silence and
+   * different news. The timetable answers it (see `lastRunGone`), and a live
+   * sighting of the last run further up the line overrules it.
+   *
+   * `now()` is read so the row turns over on the clock rather than on a
+   * reload: the moment the last one passes is exactly when this changes.
+   */
+  const dayOver = (seq: number) => {
+    now();
+    const r = route();
+    if (!r) return false;
+    return seq < lastRunSeq() || lastRunGone(db(), r);
+  };
+
+  /** Whether two neighbouring stops are under the same notice. */
+  const sameNotice = (a: number, b: number) => {
+    const key = noticeKeys().get(a);
+    return key !== undefined && key === noticeKeys().get(b);
+  };
 
   /**
    * How many stops short of `seq` the nearest bus behind it still is.
@@ -1181,11 +1730,6 @@ export default function RouteDetail() {
   }, 3);
 
   /** The open stop, as the sheet under an opened-out map needs it. */
-  const focusStop = createMemo(() => {
-    const seq = focusSeq();
-    const entry = seq === null ? undefined : stops()[seq - 1];
-    return entry && seq !== null ? { seq, entry } : null;
-  });
 
   /**
    * Where the buses are. Nobody publishes that, so it is worked backwards out
@@ -1198,17 +1742,68 @@ export default function RouteDetail() {
 
     const seq = focusSeq();
     const etas = focusEtas();
+    /*
+     * The rows' answers, plus the focus stop's own - the one stop the page
+     * polls even when its row is off screen, which matters when the rider's
+     * stop is the only one anything is known about.
+     */
+    const atStops = new Map(rowEtas());
+    if (seq !== null && etas && etas.length > 0 && !atStops.has(seq)) atStops.set(seq, etas);
     return {
       route: r,
       stops: list.map((entry) => entry.stop.location),
-      /*
-       * Only where the operator will not describe a whole route: one stop's
-       * arrivals place the buses approaching that stop and nothing else, which
-       * is worth having when it is all there is and misleading when it is not.
-       */
-      atStop: !hasRouteFeed(r) && seq !== null && etas && etas.length > 0 ? { seq, etas } : null,
+      atStops,
     };
   });
+
+  /**
+   * The buses between each stop and the next, and how far along - one map per
+   * clock tick rather than a filter per row. Written as row props, so every
+   * row's `buses` re-evaluated on every tick; on the many routes with nothing
+   * live that was forty fresh empty arrays a second, each waking its row's
+   * scope to diff nothing against nothing. Rows without a bus now share one
+   * frozen empty array and stay asleep until a bus actually reaches them.
+   *
+   * Declared after `vehicles`, which it closes over: a memo's first run is
+   * not always deferred - created inside a navigation's transition it runs at
+   * once - and above the declaration that run was a ReferenceError only a
+   * client-side navigation could hit.
+   */
+  const busesBySeq = createMemo(() => {
+    const list = vehicles()?.vehicles;
+    if (!list || list.length === 0) return null;
+    const at = now();
+    const by = new Map<number, RailBus[]>();
+    for (const bus of list) {
+      const seq = bus.nextSeq - 1;
+      const entry = { id: bus.id, fraction: progressOf(bus, at) - seq };
+      const bucket = by.get(seq);
+      if (bucket) bucket.push(entry);
+      else by.set(seq, [entry]);
+    }
+    return by;
+  });
+  const NO_BUSES: RailBus[] = [];
+  const busesAfter = (seq: number): RailBus[] => busesBySeq()?.get(seq) ?? NO_BUSES;
+
+  /** Which lines call at each station, for a rail route; nothing for a bus. */
+  const interchangeIndex = createMemo(() => (route()?.co[0] === "mtr" ? stationLines(db()) : null));
+  const interchangesAt = (stopId: string): string[] => {
+    const r = route();
+    const index = interchangeIndex();
+    if (!r || !index) return [];
+    return (index.get(stopId) ?? [])
+      .filter((code) => code !== r.route)
+      .sort((a, b) => lineRank(a) - lineRank(b));
+  };
+
+  /** The station a rail ride boards at, for a stop down the line from it. */
+  const fareFromFor = (seq: number): string | null => {
+    const r = route();
+    const on = boardSeq();
+    if (!r || r.co[0] !== "mtr" || on === null || seq <= on) return null;
+    return stops()[on - 1]?.id ?? null;
+  };
 
   /** The ride, once both ends are known: how long, how much, and by when. */
   const ride = createMemo(() => {
@@ -1234,7 +1829,13 @@ export default function RouteDetail() {
       board: board.stop,
       alight: alight.stop,
       minutes: live ? Math.round(live(on, off) / 60) : rideMinutes(r, on, off),
-      fare: formatFare(fareAt(r.fares, on) ?? undefined),
+      // The railway prices a pair of stations, not a boarding stop, so its
+      // fare comes from its own table - Octopus, which is what the bus fare
+      // beside it is too.
+      fare:
+        r.co[0] === "mtr"
+          ? (railFare(board.id, alight.id)?.octopus ?? null)
+          : formatFare(fareAt(r.fares, on) ?? undefined),
     };
   });
 
@@ -1244,19 +1845,22 @@ export default function RouteDetail() {
    * still where it opened: once a rider has scrolled, moving the list under
    * them is worse than leaving them to find it.
    *
-   * And only until the rider opens a stop themselves. The first position fix
-   * can land a second or two after the page does, and closing the row someone
-   * has just tapped to open is the worst possible moment to be helpful.
+   * And only until the rider picks a stop themselves. The first position fix
+   * can land a second or two after the page does, and scrolling away from the
+   * row someone has just tapped is the worst possible moment to be helpful.
+   * The row itself opens on its own - the open row is derived from the pick
+   * and the position - so all that is left to do here is the scroll.
    */
   let jumped = false;
-  let chosen = false;
+  /* The list's own scroller: the page is held to the window, so this is the
+     only thing a rider can have scrolled. */
+  let listPane!: HTMLDivElement;
 
   createEffect(
     () => nearestIndex(),
     (index) => {
-      if (index < 0 || chosen) return;
-      setOpenSeq(index + 1);
-      if (jumped || window.scrollY > 24) return;
+      if (index < 0 || pickedSeq() !== null) return;
+      if (jumped || (listPane?.scrollTop ?? 0) > 24) return;
       jumped = true;
       requestAnimationFrame(() => {
         const row = document.querySelector(`[data-stop-seq="${index + 1}"]`);
@@ -1280,8 +1884,7 @@ export default function RouteDetail() {
    * all, so that section opens too.
    */
   const openStop = (seq: number) => {
-    chosen = true;
-    setOpenSeq(seq);
+    pickStop(seq);
     requestAnimationFrame(() => {
       const row = document.querySelector(`[data-stop-seq="${seq}"]`);
       if (row) centerWhileItSettles(row);
@@ -1293,27 +1896,93 @@ export default function RouteDetail() {
    * beats the one the rider happens to be standing near.
    */
   createEffect(
-    () => Number(query.stop),
+    () => search().stop ?? Number.NaN,
     (seq) => {
       if (!Number.isInteger(seq) || seq < 1 || seq > stops().length) return;
-      chosen = true;
+      // The screen's own write comes back through here; nothing new to do.
+      if (seq === pickedSeq()) return;
       openStop(seq);
     },
   );
 
+  /**
+   * The rows, as a component rather than inline: the list is drawn in the card
+   * on the page and again in the sheet over an opened-out map, and the second
+   * copy is built only while that map is open.
+   */
+  const StopList = () => (
+    <Show when={route()}>
+      {(r) => (
+        <>
+          <For each={stops()}>
+            {(entry, index) => {
+              const seq = () => index() + 1;
+              return (
+                <StopRow
+                  route={r()}
+                  seq={seq()}
+                  stopId={entry.id}
+                  stop={entry.stop}
+                  lang={lang()}
+                  passed={nearestIndex() >= 0 && index() < nearestIndex()}
+                  isNearest={index() === nearestIndex()}
+                  busAway={openSeq() === seq() ? stopsAway(seq()) : null}
+                  onNoticeChange={(key) => noteNotice(seq(), key)}
+                  onEtasChange={(list) => noteEtas(seq(), list)}
+                  noticeAbove={sameNotice(seq() - 1, seq())}
+                  noticeBelow={sameNotice(seq(), seq() + 1)}
+                  buses={busesAfter(seq())}
+                  interchanges={interchangesAt(entry.id)}
+                  fareFrom={fareFromFor(seq())}
+                  total={stops().length}
+                  open={openSeq() === seq()}
+                  onToggle={() => pickStop(openSeq() === seq() ? "closed" : seq())}
+                  onAlert={() =>
+                    askAlert(seq(), entry.id, stripStopCode(pick(entry.stop.name, lang())))
+                  }
+                  onGroup={askGroup}
+                  onShare={() => shareStop(seq(), stripStopCode(pick(entry.stop.name, lang())))}
+                  onCamera={(near) => {
+                    setCameraNear(near);
+                    setCameraOpen(true);
+                  }}
+                  onNotice={(text) =>
+                    showNotice(stripStopCode(pick(entry.stop.name, lang())), text)
+                  }
+                  role={roleOf(seq())}
+                  onBoard={() => setBoard(seq())}
+                  onAlight={() => setAlight(seq())}
+                  canAlight={boardSeq() !== null && seq() > (boardSeq() as number)}
+                  picking={picking() && seq() > (boardSeq() as number)}
+                  pickOrder={seq() - (boardSeq() ?? 0) - 1}
+                  /* While the question is open, the stops behind the bus
+                 cannot answer it - they are context, not choices. */
+                  dimmed={
+                    (ride() !== null && roleOf(seq()) === null) ||
+                    (picking() && seq() < (boardSeq() as number))
+                  }
+                  dayOver={dayOver(seq())}
+                />
+              );
+            }}
+          </For>
+        </>
+      )}
+    </Show>
+  );
+
   return (
-    <Show when={route()} fallback={<EmptyState title={t("noResults", lang())} />}>
+    <Show when={route()} fallback={<NotFound kind="route" />}>
       {(r) => (
         <SplitPage
           mainFills
+          /* The map is the half worth widening: the stop list is a trail that
+             reads down, and every pixel added to a stop row only pushes its
+             arrival further from its name. */
+          wideAside
           aside={
             <>
-              {/* A real top bar rather than a button floated over the map: the map
-              may collapse if it cannot render, and nothing should be left
-              hanging over the content when it does. */}
-              <Trail />
-
-              <header class="-mt-3 -mb-2 flex items-center gap-3">
+              <header class="flex items-center gap-3 lg:-mb-2">
                 {/* The plate and the destination are what the page is, not a
                     control: making the whole row a button meant every stray tap
                     near the title opened a timetable nobody asked for. The two
@@ -1321,8 +1990,16 @@ export default function RouteDetail() {
                 <RoutePlate route={r().route} co={r().co} size="md" />
 
                 <div class="flex min-w-0 grow flex-col gap-0.5">
-                  <span class="truncate text-[1rem] font-bold tracking-[-0.02em] text-foreground">
-                    {t("towards", lang())} {pick(r().dest, lang())}
+                  <span class="flex min-w-0 items-center gap-1.5">
+                    <span class="truncate text-[1rem] font-bold tracking-[-0.02em] text-foreground">
+                      {t("towards", lang())} {pick(r().dest, lang())}
+                    </span>
+                    {/* The tag a special row wears in a list, kept on when the
+                        row is opened - or the page it lands on looks like the
+                        main service it is not. */}
+                    <Show when={isSpecialService(r())}>
+                      <SpecialTag lang={lang()} />
+                    </Show>
                   </span>
                   <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
                     {operatorLabel(r().co, lang())} · {pick(r().orig, lang())}
@@ -1339,16 +2016,32 @@ export default function RouteDetail() {
                  */}
                 <button
                   type="button"
-                  onClick={() => setShowInfo((v) => !v)}
+                  onClick={() => setShowInfo(!showInfo())}
                   /* Not `aria-expanded`: the timetable opens as a dialog over
                      the page, not as a section of the header - and the stop
                      rows below are the things that expand. */
                   aria-haspopup="dialog"
                   aria-label={t("routeInfo", lang())}
                   title={t("timetable", lang())}
-                  class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                  class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
                 >
                   <AlarmIcon size={16} />
+                </button>
+
+                {/* The route, kept: one tap from the place its name is. */}
+                <button
+                  type="button"
+                  onClick={toggleStar}
+                  aria-label={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
+                  title={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
+                  class={[
+                    "app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary",
+                    routeSaved() ? "text-primary" : "text-muted-foreground",
+                  ]}
+                >
+                  <Show when={routeSaved()} fallback={<StarIcon size={15} />}>
+                    <StarFillIcon size={15} />
+                  </Show>
                 </button>
 
                 {/* The other direction is a property of the route, so it sits
@@ -1357,10 +2050,10 @@ export default function RouteDetail() {
                 <Show when={reverse()}>
                   {(other) => (
                     <a
-                      href={routeHref(other().key)}
+                      {...useLinkProps(routeLink(other().key))}
                       aria-label={t("reverse", lang())}
                       title={t("reverse", lang())}
-                      class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                      class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
                     >
                       <ExchangeIcon size={15} />
                     </a>
@@ -1374,6 +2067,29 @@ export default function RouteDetail() {
                 title={`${r().route} · ${t("timetable", lang())}`}
                 lang={lang()}
               >
+                {/* The figures that sat under the map: the span, and what
+                    the ride costs and takes. Opening the timetable is asking
+                    "when does it run" - this is the rest of that answer. */}
+                <div class="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                  <Show when={span()}>
+                    {(hours) => (
+                      <span class="tnum text-[0.81rem] font-bold text-foreground">
+                        {t("firstBus", lang())} {hours().first} · {t("lastBus", lang())}{" "}
+                        {hours().last}
+                      </span>
+                    )}
+                  </Show>
+                  <span class="tnum ml-auto flex shrink-0 items-baseline gap-1.5 text-[0.81rem] font-bold text-foreground">
+                    {[formatFare(r().fares?.[0]), `${stops().length} ${t("stops", lang())}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    <Show when={r().jt}>
+                      <span class="text-[0.75rem] font-medium text-subtle-foreground">
+                        {t("aboutMinutes", lang())} {r().jt} {t("minute", lang())}
+                      </span>
+                    </Show>
+                  </span>
+                </div>
                 <Timetable db={db()} route={r()} lang={lang()} />
               </Modal>
 
@@ -1429,6 +2145,17 @@ export default function RouteDetail() {
                 )}
               </Show>
 
+              <Show when={cameraNear()}>
+                {(near) => (
+                  <CameraSheet
+                    open={cameraOpen()}
+                    onClose={() => setCameraOpen(false)}
+                    near={near()}
+                    lang={lang()}
+                  />
+                )}
+              </Show>
+
               <Show when={pending()}>
                 {(entry) => (
                   <GroupSheet
@@ -1443,150 +2170,39 @@ export default function RouteDetail() {
                 )}
               </Show>
 
-              <Card class="flex flex-col">
+              {/* On a wide screen the card takes whatever the column has left
+                  below the header, and the map takes whatever the card has
+                  left above its figures: a map is worth exactly as much as
+                  you can see of it, and a fixed 30rem left the bottom third
+                  of a tall window empty. The floor is for short windows,
+                  where the column scrolls rather than squashing the map. */}
+              <Card class="flex flex-col lg:min-h-[24rem] lg:flex-1">
                 <RouteMap
                   route={r()}
                   stops={stops()}
                   stopNames={stops().map((entry) => stripStopCode(pick(entry.stop.name, lang())))}
                   nearestIndex={nearestIndex() >= 0 ? nearestIndex() : undefined}
-                  selectedIndex={openSeq() !== null ? (openSeq() as number) - 1 : undefined}
+                  selectedIndex={
+                    typeof pickedSeq() === "number" ? (pickedSeq() as number) - 1 : undefined
+                  }
                   onSelectStop={(index) => openStop(index + 1)}
+                  expanded={search().map === true}
+                  onExpandedChange={setMapOpen}
                   feed={vehicles()}
                   me={position()}
-                  heightClass="h-[17rem] lg:h-[30rem]"
+                  walkTarget={
+                    nearestIndex() >= 0 ? (stops()[nearestIndex()]?.stop.location ?? null) : null
+                  }
+                  /* Shorter on a phone: the map is a preview with an expand button, and
+                     the stop list under it is what the rider is here to read - at 17rem
+                     the map took two stops' worth of a small screen to say what it says
+                     at 14 (12 lost too much of the route's shape). Wide screens keep
+                     filling the column. */
+                  heightClass="h-[14rem] lg:h-auto lg:min-h-0 lg:flex-1"
                   lang={lang()}
                   unavailableLabel={t("mapUnavailable", lang())}
-                  sheet={() => (
-                    <Show
-                      when={focusStop()}
-                      fallback={
-                        <p class="px-4 py-3 text-center text-[0.81rem] font-semibold text-subtle-foreground">
-                          {t("mapTapStop", lang())}
-                        </p>
-                      }
-                    >
-                      {(target) => (
-                        <div class="flex flex-col gap-1.5 px-4 pb-1 pt-2">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="tnum shrink-0 text-[0.81rem] font-bold text-subtle-foreground">
-                              {target().seq}
-                            </span>
-                            <span class="truncate text-[1rem] font-bold">
-                              {stripStopCode(pick(target().entry.stop.name, lang()))}
-                            </span>
-                            <StopCode name={target().entry.stop.name} lang={lang()} />
-                          </div>
-
-                          {/* The same line the open row carries, because the
-                              question does not change when the map grows. */}
-                          <Show when={stopsAway(target().seq) !== null}>
-                            <div class="flex items-center gap-1.5 text-[0.75rem] font-semibold text-primary">
-                              <BusIcon size={12} />
-                              <span>{awayLabel(stopsAway(target().seq) as number, lang())}</span>
-                            </div>
-                          </Show>
-
-                          <div class="flex items-end justify-between gap-4">
-                            <EtaCountdown etas={focusEtas()} lang={lang()} size="lg" limit={1} />
-                            {/* Only the bottom padding: the block's own baseline
-                                alignment is what keeps the label on the first
-                                arrival, and an `items-end` here dropped it to
-                                the last line instead. */}
-                            <LaterArrivals class="pb-0.5" etas={focusEtas() ?? []} lang={lang()} />
-                          </div>
-                        </div>
-                      )}
-                    </Show>
-                  )}
+                  list={() => <StopList />}
                 />
-
-                {/*
-                 * What the ride costs, how long it takes, and when the route
-                 * stops running - one strip under the map rather than three
-                 * stacked rows, because the map is what this card is for and
-                 * these are the figures you check on the way past.
-                 *
-                 * The service span is the half that changes: a quiet line all
-                 * day, and a warning in the last hour, because that is the only
-                 * hour in which it changes what a rider does.
-                 */}
-                <div class="flex min-h-11 items-center gap-2.5 border-t border-border px-3.5 py-2">
-                  <Show when={span()}>
-                    {(hours) => (
-                      <Show
-                        when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}
-                        fallback={
-                          <span class="tnum min-w-0 truncate text-[0.81rem] font-semibold text-subtle-foreground">
-                            {t("firstBus", lang())} {hours().first} · {t("lastBus", lang())}{" "}
-                            {hours().last}
-                          </span>
-                        }
-                      >
-                        <Chip tone="warn" class="min-w-0">
-                          <AlarmIcon size={12} />
-                          {/* Three ways a service day can be against you: it has
-                              not started, it is about to end, or it ended while
-                              you were on your way to the stop. */}
-                          <span class="tnum truncate">
-                            <Show
-                              when={hours().untilFirst <= 0}
-                              fallback={`${t("notRunning", lang())} · ${t("firstBus", lang())} ${hours().first}`}
-                            >
-                              {t("lastBus", lang())} {hours().last} ·{" "}
-                              <Show
-                                when={hours().untilLast >= 0}
-                                fallback={t("alreadyLeft", lang())}
-                              >
-                                {Math.round(hours().untilLast)} {t("minute", lang())}
-                              </Show>
-                            </Show>
-                          </span>
-                        </Chip>
-                      </Show>
-                    )}
-                  </Show>
-
-                  <span class="tnum ml-auto flex shrink-0 items-baseline gap-1.5 text-[0.81rem] font-bold text-foreground">
-                    {[formatFare(r().fares?.[0]), `${stops().length} ${t("stops", lang())}`]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    {/* The journey time is the softest of the three: it is an
-                        estimate, and it never decides anything on its own. */}
-                    <Show when={r().jt}>
-                      <span class="text-[0.75rem] font-medium text-subtle-foreground">
-                        {t("aboutMinutes", lang())} {r().jt} {t("minute", lang())}
-                      </span>
-                    </Show>
-                  </span>
-                </div>
-
-                {/*
-                 * "You are here" answered nothing on its own - here is a whole
-                 * route. It names the stop it means, and takes you to it.
-                 */}
-                <Show when={nearestDistance() !== null && stops()[nearestIndex()]}>
-                  {(entry) => (
-                    <button
-                      type="button"
-                      onClick={() => openStop(nearestIndex() + 1)}
-                      class="mb-tap flex w-full items-center gap-2 border-t border-border px-3.5 py-3 text-left"
-                    >
-                      <Chip tone="accent">
-                        <WalkIcon size={12} />
-                        <span class="tnum truncate">
-                          {t("nearestStop", lang())} ·{" "}
-                          {stripStopCode(pick(entry().stop.name, lang()))}
-                          {" · "}
-                          {t("walk", lang())} {walkMinutes(nearestDistance() as number)}{" "}
-                          {t("minute", lang())}
-                        </span>
-                      </Chip>
-                      <span class="ml-auto shrink-0 text-faint-foreground">
-                        <ChevronRightIcon size={14} />
-                      </span>
-                    </button>
-                  )}
-                </Show>
               </Card>
             </>
           }
@@ -1597,57 +2213,69 @@ export default function RouteDetail() {
            * you are standing anyway.
            */}
 
-          {/* The card is the frame; the rows move inside it. */}
-          <Card class="lg:relative lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
-            <div class="mb-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-              <For each={stops()}>
-                {(entry, index) => {
-                  const seq = () => index() + 1;
-                  return (
-                    <StopRow
-                      route={r()}
-                      seq={seq()}
-                      stopId={entry.id}
-                      stop={entry.stop}
-                      lang={lang()}
-                      passed={nearestIndex() >= 0 && index() < nearestIndex()}
-                      isNearest={index() === nearestIndex()}
-                      busAway={openSeq() === seq() ? stopsAway(seq()) : null}
-                      total={stops().length}
-                      open={openSeq() === seq()}
-                      onToggle={() => {
-                        chosen = true;
-                        setOpenSeq((v) => (v === seq() ? null : seq()));
-                      }}
-                      onAlert={() =>
-                        askAlert(seq(), entry.id, stripStopCode(pick(entry.stop.name, lang())))
+          {/*
+           * The hour in which the service day is against you - not started,
+           * about to end, or already over. The figures it used to sit beside
+           * - fare, stops, journey time, the span itself - live in the
+           * timetable dialog now, and this is the one of them worth
+           * interrupting for, so it left the map's card with them and became
+           * a row of its own directly above the list it applies to. Inside
+           * the card it was a strip under a map, read after the map and
+           * below the fold on a phone; the list is what a rider is here to
+           * read, and "there is no bus yet" belongs at the top of it.
+           */}
+          <Show when={span()}>
+            {(hours) => (
+              <Show when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}>
+                <Alert lang={lang()} tone="warn" icon={<AlarmIcon size={13} />} class="shrink-0">
+                  <span class="tnum font-semibold">
+                    <Show
+                      when={hours().untilFirst <= 0}
+                      fallback={
+                        <>
+                          {t("notRunning", lang())} · {t("firstBus", lang())} {hours().first}
+                          {/* And how long that is, once it is close enough to
+                              be worth waiting out - the same hour the last-bus
+                              warning uses. The other half of this note has
+                              always counted down to the last departure; this
+                              half stated a clock time and left the rider to do
+                              the subtraction at four in the morning. Past the
+                              hour the time alone is the honest answer: "312
+                              分鐘" is not a wait, it is a night's sleep. */}
+                          <Show when={hours().untilFirst <= LAST_CALL_MINUTES}>
+                            {" · "}
+                            {Math.round(hours().untilFirst)} {t("minute", lang())}
+                          </Show>
+                        </>
                       }
-                      onGroup={askGroup}
-                      onShare={() => shareStop(seq(), stripStopCode(pick(entry.stop.name, lang())))}
-                      onNotice={(text) =>
-                        showNotice(stripStopCode(pick(entry.stop.name, lang())), text)
-                      }
-                      role={roleOf(seq())}
-                      onBoard={() => setBoard(seq())}
-                      onAlight={() => setAlight(seq())}
-                      canAlight={boardSeq() !== null && seq() > (boardSeq() as number)}
-                      picking={picking() && seq() > (boardSeq() as number)}
-                      pickOrder={seq() - (boardSeq() ?? 0) - 1}
-                      /* While the question is open, the stops behind the bus
-                         cannot answer it - they are context, not choices. */
-                      dimmed={
-                        (ride() !== null && roleOf(seq()) === null) ||
-                        (picking() && seq() < (boardSeq() as number))
-                      }
-                    />
-                  );
-                }}
-              </For>
+                    >
+                      {t("lastBus", lang())} {hours().last} ·{" "}
+                      <Show when={hours().untilLast >= 0} fallback={t("alreadyLeft", lang())}>
+                        {Math.round(hours().untilLast)} {t("minute", lang())}
+                      </Show>
+                    </Show>
+                  </span>
+                </Alert>
+              </Show>
+            )}
+          </Show>
 
-              {/* On a wide screen the card is the scroller, so this is where
-                  the list has to leave room for the band floating over it. */}
+          {/* Said once, before the list, and closed for good with one tap:
+              the rider who has learned the gesture should not be told again. */}
+          <Alert id="route.tap-for-eta" lang={lang()} class="shrink-0">
+            {t("tapForEta", lang())}
+          </Alert>
+
+          {/* The card is the frame; the rows move inside it, at every width. */}
+          {/* The card is the frame; the rows move inside it, at every width. */}
+          <Card class="relative flex min-h-0 flex-1 flex-col">
+            <div ref={listPane} class="app-scroll min-h-0 flex-1">
+              <StopList />
+
+              {/* The card is the scroller, so this is where the list has to
+                  leave room for the band floating over its foot. */}
               <Show when={boardSeq() !== null}>
-                <div class="hidden h-28 lg:block" />
+                <div class="h-20 lg:h-28" />
               </Show>
             </div>
 
@@ -1656,14 +2284,13 @@ export default function RouteDetail() {
                 /*
                  * A ride is planned by scrolling a list, so the ride cannot
                  * scroll away with it: the band floats over the foot of the
-                 * list at every width. On a phone that is above the tab bar,
-                 * where the thumb is; on a wide screen it is the foot of the
-                 * list pane, which is the same place measured against the same
-                 * list.
+                 * list, which is the foot of this card at every width - on a
+                 * phone the card ends just above the tab bar, where the thumb
+                 * is.
                  */
-                <div class="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-height)+0.5rem)] z-30 px-3.5 lg:absolute lg:inset-x-3 lg:bottom-3 lg:px-0">
+                <div class="pointer-events-none absolute inset-x-3 bottom-3 z-30">
                   <div
-                    class="mb-dock pointer-events-auto mx-auto w-full max-w-[42rem]"
+                    class="app-dock pointer-events-auto mx-auto w-full max-w-[42rem]"
                     data-open={bandOpen() ? "true" : "false"}
                   >
                     <RideBand
@@ -1685,16 +2312,6 @@ export default function RouteDetail() {
               )}
             </Show>
           </Card>
-
-          <p class="-mt-2 shrink-0 text-center text-[0.75rem] font-medium text-faint-foreground">
-            {t("tapForEta", lang())}
-          </p>
-
-          {/* The pinned band floats over the foot of the list, so the list has
-              to end above it rather than under it. */}
-          <Show when={boardSeq() !== null}>
-            <div class="h-20 shrink-0 lg:hidden" />
-          </Show>
         </SplitPage>
       )}
     </Show>

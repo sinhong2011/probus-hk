@@ -1,5 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
-import type { LatLng } from "~/lib/geo";
+import { distanceM, type LatLng } from "~/lib/geo";
 
 export type GeoStatus = "idle" | "locating" | "ready" | "denied" | "unavailable";
 
@@ -20,6 +20,9 @@ const [position, setPosition] = createSignal<LatLng | null>(null, { ownedWrite: 
 const [status, setStatus] = createSignal<GeoStatus>("idle", { ownedWrite: true });
 const [accuracy, setAccuracy] = createSignal<number | null>(null, { ownedWrite: true });
 const [reason, setReason] = createSignal<GeoReason | null>(null, { ownedWrite: true });
+
+/** Movement below this is GPS jitter, not a rider walking. */
+const MIN_MOVE_M = 15;
 
 let watchId: number | null = null;
 let watchers = 0;
@@ -57,7 +60,16 @@ function start(again = false) {
 
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
-      setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      /*
+       * A phone held in a hand reports a slightly different position every
+       * few seconds without anyone moving. Everything watching this signal -
+       * the nearby clusters, the nearest stop on a route - recomputes per
+       * write, so a wobble smaller than the width of a bus is not news. The
+       * first fix always lands; after that, only actually going somewhere.
+       */
+      const previous = position();
+      if (!previous || distanceM(previous, next) >= MIN_MOVE_M) setPosition(next);
       setAccuracy(pos.coords.accuracy);
       setStatus("ready");
       setReason(null);

@@ -39,6 +39,18 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
 
+  /* The sheet's own ground. A drawer floats over the cards, so in the dark it
+     sits one step lighter than them; in the light a card is already white and
+     the sheet simply shares it. */
+  --drawer: oklch(1 0 0);
+  /* What a raised card wears on that ground - the secondary tone is only one
+     small step from the drawer, and a group that nearly matches its sheet
+     reads as no group at all. Resolved through `--raised`, which the
+     `.bg-drawer` scope re-points here; everywhere else raised stays
+     secondary. */
+  --drawer-raised: oklch(0.967 0.001 286.375);
+  --raised: var(--secondary);
+
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
 
@@ -62,6 +74,21 @@
 
   --warning: oklch(0.58 0.15 62);
   --destructive: oklch(0.577 0.245 27.325);
+
+  /*
+   * The group-tag palette: eight hues a bookmark group can wear, spread
+   * around the wheel so neighbours never read as each other, and each
+   * re-lit for dark mode below. `--group-indigo` deliberately matches the
+   * accent - it is the same indigo, just available as a choice.
+   */
+  --group-red: oklch(0.55 0.2 25);
+  --group-orange: oklch(0.6 0.16 55);
+  --group-amber: oklch(0.62 0.14 90);
+  --group-green: oklch(0.56 0.15 150);
+  --group-teal: oklch(0.56 0.11 200);
+  --group-blue: oklch(0.55 0.16 245);
+  --group-indigo: oklch(0.52 0.19 277);
+  --group-purple: oklch(0.56 0.2 310);
 
   --border: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
@@ -104,6 +131,9 @@
     --card: oklch(0.192 0.002 286);
     --card-foreground: oklch(0.985 0 0);
 
+    --drawer: oklch(0.225 0.003 286);
+    --drawer-raised: oklch(0.285 0.004 286);
+
     --secondary: oklch(0.248 0.003 286);
     --secondary-foreground: oklch(0.985 0 0);
 
@@ -119,6 +149,15 @@
 
     --warning: oklch(0.79 0.15 70);
     --destructive: oklch(0.704 0.191 22.216);
+
+    --group-red: oklch(0.72 0.17 25);
+    --group-orange: oklch(0.78 0.14 60);
+    --group-amber: oklch(0.82 0.13 90);
+    --group-green: oklch(0.76 0.14 150);
+    --group-teal: oklch(0.78 0.11 200);
+    --group-blue: oklch(0.74 0.13 245);
+    --group-indigo: oklch(0.68 0.16 277);
+    --group-purple: oklch(0.74 0.16 310);
 
     --border: oklch(1 0 0 / 7%);
     --ring: oklch(0.552 0.016 285.938);
@@ -137,6 +176,9 @@
   --card: oklch(0.192 0.002 286);
   --card-foreground: oklch(0.985 0 0);
 
+  --drawer: oklch(0.225 0.003 286);
+  --drawer-raised: oklch(0.285 0.004 286);
+
   --secondary: oklch(0.248 0.003 286);
   --secondary-foreground: oklch(0.985 0 0);
 
@@ -153,6 +195,15 @@
   --warning: oklch(0.79 0.15 70);
   --destructive: oklch(0.704 0.191 22.216);
 
+  --group-red: oklch(0.72 0.17 25);
+  --group-orange: oklch(0.78 0.14 60);
+  --group-amber: oklch(0.82 0.13 90);
+  --group-green: oklch(0.76 0.14 150);
+  --group-teal: oklch(0.78 0.11 200);
+  --group-blue: oklch(0.74 0.13 245);
+  --group-indigo: oklch(0.68 0.16 277);
+  --group-purple: oklch(0.74 0.16 310);
+
   --border: oklch(1 0 0 / 7%);
   --ring: oklch(0.552 0.016 285.938);
   --map: oklch(0.205 0.002 286);
@@ -165,6 +216,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-drawer: var(--drawer);
+  --color-raised: var(--raised);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -239,6 +292,30 @@
   --shadow-card: var(--shadow-card);
 }
 
+/*
+ * Safe-area insets as spacing tokens, so they are reached through real
+ * utilities - `pt-safe-top`, `pb-safe-bottom`, and every variant of them -
+ * rather than a hand-written class. Tailwind ships no safe-area support of its
+ * own (its `*-safe` utilities are CSS overflow-safe alignment, a different
+ * thing), but a named `--spacing-*` key is all a utility needs to exist.
+ */
+@theme {
+  --spacing-safe-top: env(safe-area-inset-top, 0px);
+  --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * iOS home-screen apps only. With `apple-mobile-web-app-status-bar-style` set
+ * to black-translucent the web view is drawn under the status bar, and on a
+ * phone without a notch the inset reports 0 while the clock still sits over
+ * the page - hence the floor. No other platform draws over us, so nowhere else
+ * pays for a 44px band across the top of every screen. The flag is set from
+ * `main.tsx`, off `navigator.standalone`, which exists on iOS alone.
+ */
+:root[data-ios-standalone] {
+  --spacing-safe-top: max(2.75rem, env(safe-area-inset-top));
+}
+
 /* Operator brand colours are absolute, never themed. */
 @theme {
   --color-op-kmb: #d71920;
@@ -248,7 +325,7 @@
   --color-op-gmb: #00843d;
   --color-op-mtr: #a32638;
   --color-op-ael: #00888a;
-  --color-op-lightrail: #7baf3c;
+  --color-op-lightrail: #d3a809;
   --color-op-lrtfeeder: #b4472e;
   --color-op-ferry: #1d6fa3;
 }
@@ -293,6 +370,51 @@
   }
 }
 
+/*
+ * The search-range slider. The filled share of the track is handed in as
+ * `--fill` by the component, because only it knows where the thumb is; the
+ * two pseudo-element worlds (WebKit and Gecko) each get the same drawing.
+ */
+.app-range {
+  appearance: none;
+  height: 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+.app-range:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 9999px;
+}
+.app-range::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--primary) var(--fill), var(--secondary) var(--fill));
+}
+.app-range::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: -0.4375rem;
+  height: 1.125rem;
+  width: 1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+.app-range::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--primary) var(--fill), var(--secondary) var(--fill));
+}
+.app-range::-moz-range-thumb {
+  height: 1.125rem;
+  width: 1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -303,7 +425,7 @@
   }
 }
 
-@keyframes mb-pulse {
+@keyframes app-pulse {
   0%,
   100% {
     opacity: 1;
@@ -313,7 +435,7 @@
   }
 }
 
-@keyframes mb-rise {
+@keyframes app-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -324,7 +446,7 @@
   }
 }
 
-@keyframes mb-page-in {
+@keyframes app-page-in {
   from {
     opacity: 0;
     transform: translateY(5px);
@@ -335,7 +457,7 @@
   }
 }
 
-@keyframes mb-page-wait {
+@keyframes app-page-wait {
   from {
     transform: translateX(-100%);
   }
@@ -354,7 +476,13 @@
  * space a countdown was using. It springs in so the row reads as having gained
  * something, rather than as having been redrawn behind the rider's back.
  */
-@keyframes mb-pop {
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes app-pop {
   from {
     opacity: 0;
     transform: translateY(2px) scale(0.86);
@@ -365,7 +493,7 @@
   }
 }
 
-@keyframes mb-shimmer {
+@keyframes app-shimmer {
   from {
     background-position: 200% 0;
   }
@@ -374,7 +502,7 @@
   }
 }
 
-@keyframes mb-flash {
+@keyframes app-flash {
   from {
     background: color-mix(in srgb, var(--primary) 16%, transparent);
   }
@@ -385,8 +513,8 @@
 
 @layer components {
   /* Staggered list entrance, capped so a long list does not crawl in. */
-  .mb-rise {
-    animation: mb-rise 320ms var(--ease-out) both;
+  .app-rise {
+    animation: app-rise 320ms var(--ease-out) both;
   }
 
   /*
@@ -394,7 +522,7 @@
    * row from 0fr to 1fr, so the child measures itself - no height has to be
    * known in advance, and unlike a `Show` the leaving state still plays.
    */
-  .mb-reveal {
+  .app-reveal {
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
@@ -410,11 +538,11 @@
       opacity var(--duration-reveal) var(--ease-out),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-reveal > * {
+  .app-reveal > * {
     min-height: 0;
     overflow: hidden;
   }
-  .mb-reveal[data-open="true"] {
+  .app-reveal[data-open="true"] {
     grid-template-rows: 1fr;
     opacity: 1;
     visibility: visible;
@@ -429,8 +557,16 @@
    * a transform or an opacity that stays applied would make this element the
    * containing block for every fixed child under it.
    */
-  .mb-page-in {
-    animation: mb-page-in var(--duration-reveal) var(--ease-out);
+  .app-page-in {
+    animation: app-page-in var(--duration-reveal) var(--ease-out);
+  }
+
+  /*
+   * A control that is working rather than waiting to be pressed. One turn a
+   * second: fast enough to read as busy, slow enough not to nag.
+   */
+  .app-spin {
+    animation: app-spin 1s linear infinite;
   }
 
   /*
@@ -438,23 +574,23 @@
    * a second of nothing happening. This creeps across the top rather than
    * claiming to know a percentage it cannot know.
    */
-  .mb-page-wait {
-    animation: mb-page-wait 2.4s var(--ease-out) both;
+  .app-page-wait {
+    animation: app-page-wait 2.4s var(--ease-out) both;
   }
 
   /*
-   * A modal, animating both ways. Same trick as `mb-reveal`: `visibility` flips
+   * A modal, animating both ways. Same trick as `app-reveal`: `visibility` flips
    * only once the fade has finished, so the closed dialog stops existing for
    * hit-testing instead of sitting invisibly over the page.
    */
-  .mb-modal {
+  .app-modal {
     opacity: 0;
     visibility: hidden;
     transition:
       opacity var(--duration-reveal) var(--ease-out),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-modal[data-open="true"] {
+  .app-modal[data-open="true"] {
     opacity: 1;
     visibility: visible;
     transition:
@@ -467,11 +603,11 @@
    * phone, where it is a bottom sheet, and a small settle on a wide screen,
    * where it is a centred dialog.
    */
-  .mb-sheet {
+  .app-sheet {
     transform: translateY(100%);
     transition: transform var(--duration-reveal) var(--ease-spring);
   }
-  .mb-modal[data-open="true"] .mb-sheet {
+  .app-modal[data-open="true"] .app-sheet {
     transform: none;
   }
 
@@ -483,7 +619,7 @@
    * jumping. `visibility` flips only after the fall, so a band on its way out
    * cannot take a tap meant for the row behind it.
    */
-  .mb-dock {
+  .app-dock {
     opacity: 0;
     visibility: hidden;
     transform: translateY(0.9rem) scale(0.98);
@@ -492,7 +628,7 @@
       transform var(--duration-reveal) var(--ease-spring),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-dock[data-open="true"] {
+  .app-dock[data-open="true"] {
     opacity: 1;
     visibility: visible;
     transform: none;
@@ -502,11 +638,11 @@
       visibility 0s linear 0s;
   }
 
-  .mb-pop {
-    animation: mb-pop var(--duration-reveal) var(--ease-spring) both;
+  .app-pop {
+    animation: app-pop var(--duration-reveal) var(--ease-spring) both;
   }
   @media (min-width: 40rem) {
-    .mb-sheet {
+    .app-sheet {
       transform: translateY(10px) scale(0.97);
     }
   }
@@ -517,34 +653,42 @@
    * that wipe and show through it, so it is turned off for the length of the
    * swap - and only then, so any other view transition keeps its default.
    */
-  :root.mb-theme-swap::view-transition-old(root),
-  :root.mb-theme-swap::view-transition-new(root) {
+  :root.app-theme-swap::view-transition-old(root),
+  :root.app-theme-swap::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;
   }
-  :root.mb-theme-swap::view-transition-old(root) {
+  :root.app-theme-swap::view-transition-old(root) {
     /* The old theme stays put while the new one is drawn over it. */
     z-index: 0;
   }
-  :root.mb-theme-swap::view-transition-new(root) {
+  :root.app-theme-swap::view-transition-new(root) {
     z-index: 1;
   }
 
   /* Set while a screen holds itself to the window; see `Page`'s `fill`. */
   @media (min-width: 64rem) {
-    html.mb-fill,
-    html.mb-fill body {
+    html.app-fill,
+    html.app-fill body {
       height: 100%;
       overflow: hidden;
     }
   }
 
+  /* The same at every width, for a screen that holds itself to a phone's
+     window too; see `Page`'s `fill="always"`. */
+  html.app-fill-always,
+  html.app-fill-always body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   /*
    * Set while something owns the whole window - the route map opened out. At
-   * every width, unlike `mb-fill`: a phone is where a map is opened out most.
+   * every width, unlike `app-fill`: a phone is where a map is opened out most.
    */
-  html.mb-locked,
-  html.mb-locked body {
+  html.app-locked,
+  html.app-locked body {
     height: 100%;
     overflow: hidden;
   }
@@ -554,7 +698,7 @@
    * times take a moment to arrive, and the alternative was showing "no service"
    * at a stop that has plenty - a loading state that lies.
    */
-  .mb-shimmer {
+  .app-shimmer {
     background-image: linear-gradient(
       90deg,
       var(--secondary) 0%,
@@ -562,56 +706,368 @@
       var(--secondary) 100%
     );
     background-size: 200% 100%;
-    animation: mb-shimmer 1.3s linear infinite;
+    animation: app-shimmer 1.3s linear infinite;
   }
 
   /*
    * Two kinds of tap feedback, because a scale is not always safe.
    *
-   * `mb-press` shrinks a discrete object - a button, a chip, a card - which is
+   * `app-press` shrinks a discrete object - a button, a chip, a card - which is
    * the clearest acknowledgement there is.
    *
-   * `mb-tap` is for a row inside a continuous structure. Scaling one of those
+   * `app-tap` is for a row inside a continuous structure. Scaling one of those
    * drags whatever it contains out of alignment with its neighbours: the stop
    * rows carry the route's timeline rail, and pressing one visibly broke the
    * line. A row tints instead, and nothing moves.
    */
-  .mb-press {
+  .app-press {
     transition: transform var(--duration-press) var(--ease-out);
   }
-  .mb-press:active {
+  .app-press:active {
     transform: scale(0.985);
   }
 
-  .mb-tap {
+  /*
+   * The two halves of a drag, worn as SortableJS's classes: `app-lift` is
+   * the floating preview that rides the pointer - raised, tilted, shadowed -
+   * and `app-drag-ghost` is the slot it left behind.
+   */
+  .app-lift {
+    scale: 1.03;
+    rotate: -0.5deg;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+    /* The preview is a clone of the card, `app-press` transition and all -
+       and that transition eased every positional update, so the preview
+       trailed the finger by a beat. It must ride 1:1. */
+    transition: none;
+    /* Its own layer: it rides the pointer every frame, and repainting the
+       card each tick is exactly the stutter this exists to avoid. */
+    will-change: transform;
+    opacity: 1 !important;
+  }
+  /* The pickup is felt, not instant: the preview grows into the hand. */
+  @media (prefers-reduced-motion: no-preference) {
+    .app-lift {
+      animation: app-liftin 160ms var(--ease-out);
+    }
+  }
+  @keyframes app-liftin {
+    from {
+      scale: 1;
+      rotate: 0deg;
+      box-shadow: 0 0 0 rgb(0 0 0 / 0);
+    }
+  }
+
+  /* The slot the dragged card left behind, kept faint under the preview. */
+  .app-drag-ghost {
+    opacity: 0.35;
+    transition: opacity 150ms var(--ease-out);
+  }
+
+  .app-tap {
     transition: background-color var(--duration-press) var(--ease-out);
   }
-  .mb-tap:active {
+  .app-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
   /*
-   * The floor is for a phone in standalone mode, where the status bar is drawn
-   * over the page. A desktop window has nothing above the viewport, so the same
-   * padding there is just an empty band across the top of every screen.
+   * Liquid-glass surface for controls floating over imagery - the map's
+   * buttons and its status note. Mostly the picture behind it, bent: a heavy
+   * blur with a saturation lift so the colours underneath pool instead of
+   * greying out, and a breath of the card tint for contrast. The rim-light
+   * inset is its edge - see `.app-glass` below - rather than the drawn
+   * hairline every other surface in the app now carries.
    */
-  .mb-safe-top {
-    padding-top: max(2.75rem, env(safe-area-inset-top));
+  /*
+   * Liquid glass is the app's button surface, declared once against the
+   * elements rather than rewritten on every call site: any button or link
+   * that fills itself with the secondary or primary surface renders as glass
+   * instead of a flat fill. The element selector outranks the utility it
+   * overrides, and a control that must stay flat can always say so inline.
+   *
+   * Every one of them is drawn to its edge. A hairline is what separates a
+   * control from the surface behind it once the shadow is gone - `--shadow-
+   * card` is `none` in the dark - and it is the same edge the cards, the
+   * fields, the drawer and the sidebar carry, so a button reads as part of
+   * the same set of surfaces rather than as a floating tint.
+   */
+  button.bg-secondary,
+  a.bg-secondary {
+    background: linear-gradient(
+      color-mix(in srgb, var(--secondary) 55%, transparent),
+      color-mix(in srgb, var(--secondary) 38%, transparent)
+    );
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    backdrop-filter: blur(14px) saturate(1.6);
   }
-  @media (min-width: 64rem) {
-    .mb-safe-top {
-      padding-top: env(safe-area-inset-top, 0px);
+  button.bg-primary,
+  a.bg-primary {
+    background: linear-gradient(
+      color-mix(in srgb, var(--primary) 72%, transparent),
+      color-mix(in srgb, var(--primary) 58%, transparent)
+    );
+    /* The same neutral hairline every other surface wears. It used to take a
+       tint of its own fill, which drew a second, brighter edge around an
+       already-loud shape - the button read as two rectangles, and the accent
+       colour appeared twice in one control. One edge colour across the app
+       means a button is a button whatever it is filled with. */
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    backdrop-filter: blur(14px) saturate(1.6);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+  /* A control cut from the card surface - a category tile, a saved card, a
+     planner endpoint - takes the same hairline the `Card` component does. */
+  button.bg-card,
+  a.bg-card {
+    border: 1px solid var(--border);
+  }
+
+  /*
+   * The chosen state, declared AFTER the glass and outside any layer: it used
+   * to live in the utilities layer, where the unlayered glass rules above
+   * always beat it - a pressed "all" chip rendered exactly like an open one,
+   * and the choice was invisible.
+   *
+   * A toggle and a radio do not answer the same way. A toggle is a claim the
+   * rider makes against the list - "only these" - and any number of them may
+   * be off, so being on is news: it pools `--primary-muted` under `--primary`
+   * ink and reads as accent across the room.
+   *
+   * A radio is a row in a set where exactly one is always on. The accent
+   * there shouts a fact the group states by construction, and a sheet of
+   * options wearing it under an accent commit button leaves the button
+   * nothing to mean. So a chosen radio takes the neutral ground the segmented
+   * switch's pill already takes - `--secondary` under plain `--foreground`,
+   * behind the same `--border` hairline every surface wears - and lets its
+   * weight and its tick say which one. The tick is the part that survives
+   * sunlight anyway.
+   *
+   * Opaque, and flat. Both of the washes this went through - 12%, then a 22%
+   * gradient with a rim light and a glow - were translucent tint laid over
+   * whatever happened to be behind, which is how they came out muddy: the
+   * tone shifted with the surface under it and the glow smeared the edge the
+   * hairline had just drawn. These are designed tones, the same ones in both
+   * themes' token blocks, and they need nothing on top. The blur goes with
+   * the translucency - there is nothing to see through now.
+   */
+  button[aria-pressed="true"] {
+    background: var(--primary-muted);
+    color: var(--primary);
+    /* The ground and the ink carry the accent; the edge stays neutral, as it
+       does on every other button. A tinted rim around a tinted fill only
+       thickens the shape. */
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  button[role="radio"][aria-checked="true"] {
+    background: var(--secondary);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  /*
+   * Choosing is a change of state, so it moves. The transition is declared
+   * on the role rather than on the chosen rule, because a property only
+   * animates when the state being left declares it too - set only on the
+   * `true` rule, a chip would fade in and snap out. `background-image`
+   * carries the gradient: both states are a two-stop linear gradient of the
+   * same shape, so they interpolate; where a call site gives the open state
+   * a flat fill instead, that one property lands at once and the rest still
+   * travel.
+   */
+  button[aria-pressed],
+  button[role="radio"] {
+    transition:
+      background-color var(--duration-state) var(--ease-out),
+      background-image var(--duration-state) var(--ease-out),
+      border-color var(--duration-state) var(--ease-out),
+      box-shadow var(--duration-state) var(--ease-out),
+      color var(--duration-state) var(--ease-out);
+  }
+
+  /*
+   * The edge a radio is about to grow, held open while it is not wearing one.
+   * A chosen radio takes a 1px hairline; an open row on a sheet has no surface
+   * and so had none, and `border-width` is not on the list above - it cannot
+   * be, an animated width is a reflow per frame. So choosing tightened the
+   * content box by 2px in a single frame and the label and the tick jumped
+   * inward while the colour was still easing in. Reserving the width in
+   * `transparent` leaves `border-color` the only thing that changes, which is
+   * the one thing that does travel. Call sites that draw their own edge - the
+   * dashed "no group" chip - state it in utilities and still win.
+   */
+  button[role="radio"] {
+    border: 1px solid transparent;
+  }
+
+  /*
+   * A toggle that reads as a bare icon rather than a choice chip - the
+   * bookmark and the alarm on a stop row - opts out of the chosen tint, and
+   * of the edge with it: there is no surface there to draw an edge around.
+   * Its own colour keeps carrying the state.
+   */
+  button[aria-pressed].app-bare {
+    background: none;
+    border-width: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /*
+   * A choice that rides on a sliding pill paints nothing of its own. The pill
+   * behind it is the state - it travels to the chosen one, which is this
+   * design's whole gesture for "this one" - and a fill on the button as well
+   * would show as a second shape sliding out from under the first. The marker
+   * is `data-pill-active`, which is the attribute `SlidingPill` already reads
+   * to find its target, so the opt-out and the fact are the same thing.
+   *
+   * Spelled out against the checked and pressed states as well, and not only
+   * as the bare attribute: those rules carry two attributes to this one's one,
+   * so on the bare selector alone the opt-out lost the cascade and the chosen
+   * segment painted its own fill and hairline over the pill - a second shape
+   * sliding out from under the first, which is the exact thing this prevents.
+   * Matching the plain attribute too keeps the unchosen segments bare.
+   */
+  button[data-pill-active],
+  button[data-pill-active][aria-checked="true"],
+  button[data-pill-active][aria-pressed="true"] {
+    background: none;
+    border-width: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /*
+   * A dense pad of controls - the route-number dial - draws its edge once,
+   * around the pad, and not around each of its keys: twenty-five hairlines
+   * in a grid read as graph paper rather than as a set of keys, and the pad
+   * is one instrument, not twenty-five surfaces. Here rather than as a
+   * `border-0` at the call site because the surface rules above are
+   * unlayered and would win against the utility.
+   */
+  .app-seamless button,
+  .app-seamless a {
+    border-width: 0;
+  }
+
+  /* Inside a drawer, a raised card steps up from the drawer's own ground
+     rather than by the page's secondary tone - see `--drawer-raised`. */
+  .bg-drawer {
+    --raised: var(--drawer-raised);
+  }
+
+  .app-glass {
+    /*
+     * Opaque enough to read on whatever it floats over, and cut from the same
+     * cloth as the tab pill: the secondary tone at near-full strength, so a
+     * map control reads as the same family of chrome as the segmented tabs -
+     * and a clear step lighter than the basemap under it. The faint gradient
+     * and the blur are what still let the map move underneath it. The top
+     * inset is the rim light that cuts a glass control out of its background
+     * - a caught edge, not a border - which is how the same buttons stay
+     * legible on iOS.
+     */
+    background: linear-gradient(
+      color-mix(in srgb, var(--secondary) 94%, transparent),
+      color-mix(in srgb, var(--secondary) 86%, transparent)
+    );
+    -webkit-backdrop-filter: blur(18px) saturate(1.7);
+    backdrop-filter: blur(18px) saturate(1.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      0 4px 14px rgb(0 0 0 / 0.25);
+  }
+
+  /*
+   * The app's one tooltip (src/lib/tooltip.ts): a mouse resting on a
+   * labelled icon is told the icon's aria-label. An inverted pill - the
+   * darkest surface in the light theme, the lightest in the dark one -
+   * because a tooltip is the interface annotating itself and has to read
+   * over anything it lands on, glass included. The script owns left/top;
+   * the transform is only the motion, a small settle toward the control it
+   * names, from whichever side it appears on.
+   */
+  .app-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 60;
+    max-width: 17rem;
+    pointer-events: none;
+    border-radius: var(--radius);
+    background: var(--foreground);
+    color: var(--background);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.18);
+    opacity: 0;
+    visibility: hidden;
+  }
+  .app-tip[data-side="top"] {
+    transform: translateY(3px);
+  }
+  .app-tip[data-side="bottom"] {
+    transform: translateY(-3px);
+  }
+  .app-tip[data-show] {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Visibility waits out the fade on the way down; the shown state omits
+       it so appearing is immediate. */
+    .app-tip {
+      transition:
+        opacity var(--duration-press) var(--ease-out),
+        transform var(--duration-press) var(--ease-out),
+        visibility 0s linear var(--duration-press);
+    }
+    .app-tip[data-show] {
+      transition:
+        opacity var(--duration-state) var(--ease-out),
+        transform var(--duration-state) var(--ease-out);
     }
   }
-  .mb-safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  /* Hides the scrollbar without disabling scrolling. */
-  .mb-scroll {
-    overflow-y: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .mb-scroll::-webkit-scrollbar {
+}
+
+/*
+ * Choice controls carry their state as a tint: an open choice is whatever
+ * surface its call site gave it - usually glass - and a chosen one fills.
+ * A pressed toggle fills with accent, a chosen radio with the neutral
+ * raised tone. Every control has an edge, so the edge cannot be the thing
+ * that says "chosen"; it changes colour with the tint instead of appearing
+ * out of nothing. Declared against the roles rather than per call site, so
+ * every aria-pressed chip and every radio in the app answers the same way.
+ *
+ * In the utilities layer, not components: a call site that also says
+ * `bg-primary` must lose to the role, and utilities outrank components
+ * whatever their selectors say. Here the attribute selector's specificity
+ * settles it, and the chosen chip stops rendering as a solid fill wearing
+ * the choice tint and the glass glow at once.
+ */
+
+/* Hides the scrollbar without disabling scrolling. An @utility rather than a
+   plain class so it can take responsive variants - the route page scrolls its
+   list inside the card only on a wide screen. */
+@utility app-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
     display: none;
   }
 }
@@ -629,5 +1085,123 @@
   }
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl {
     margin: 0 0 4px 6px;
+  }
+}
+
+/*
+ * MapLibre's ⓘ, dressed as one of our own corner controls. The glass is
+ * `app-glass`, put on by `addFoldedAttribution`; this is the shape - the
+ * library's white pill flattened to the same circle as the buttons above it -
+ * and the icon re-inked in the foreground through a mask, because it ships as
+ * a black background-image no colour token can reach. Unfolded, the circle
+ * stretches back into a pill for the credit line.
+ *
+ * Outside every layer on purpose: maplibre's stylesheet is unlayered, and an
+ * unlayered declaration beats any layered one however specific - these have
+ * to stand on the same ground to win.
+ */
+:root {
+  /* The app's own "i" glyph (lineicons `information`, the same icon every
+     other info control wears), as a mask so it can wear the foreground -
+     maplibre's stock ⓘ is a filled disc that read a weight class heavier
+     than the stroked icons beside it. */
+  --attrib-icon: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22black%22%20d%3D%22M40.4%2056h-6.1V21.6c0-2.8-2.3-5-5-5h-5.6c-1.2%200-2.3%201-2.3%202.3s1%202.3%202.3%202.3h5.6c.3%200%20.5.2.5.5V56h-6.1c-1.2%200-2.3%201-2.3%202.3s1%202.3%202.3%202.3h16.8c1.2%200%202.3-1%202.3-2.3S41.6%2056%2040.4%2056%22%2F%3E%3Ccircle%20cx%3D%2231.5%22%20cy%3D%228.7%22%20r%3D%223%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E");
+}
+
+/*
+ * A flex row - the round button, then the credit line - so the folded state
+ * is simply the row with its text at zero width, and unfolding is the text
+ * given room: `max-width` glides open and the words fade in behind it. The
+ * ease is a plain deceleration, not the app's spring - a clipped width
+ * cannot overshoot, it can only stop, and a spring here read as a snap with
+ * dead time after it. The cap sits just past the credit line's real width
+ * for the same reason: the animated edge has to be the edge the eye sees.
+ * The height never changes, so the circle becomes a pill without a jump,
+ * and the button never moves under the finger that pressed it.
+ *
+ * A size below the working controls on purpose: the credit is a footnote,
+ * and a footnote the size of a button asks to be pressed.
+ */
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+  display: flex;
+  align-items: center;
+  /* At rest it recedes like every other piece of map chrome; unfolded, the
+     credit is being read and comes back to full strength. */
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+  height: 1.3rem;
+  min-height: 0;
+  margin: 10px;
+  padding: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  background-color: transparent;
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact a {
+  color: inherit;
+}
+/* The library pads the unfolded pill per corner; the flex row above already
+   spaces itself, and the stray padding puffed the circle on opening. Four
+   classes, because the library's corner rule has three. */
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact.maplibregl-compact-show {
+  padding: 0;
+  opacity: 1;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact:hover {
+  opacity: 1;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  position: static;
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  -webkit-mask: var(--attrib-icon) center / 0.6rem 0.6rem no-repeat;
+  mask: var(--attrib-icon) center / 0.6rem 0.6rem no-repeat;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+  display: block;
+  max-width: 0;
+  padding-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    max-width 0.3s cubic-bezier(0.5, 0, 0.75, 1),
+    padding-right 0.3s cubic-bezier(0.5, 0, 0.75, 1),
+    opacity 0.18s ease;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+  max-width: 17rem;
+  padding-right: 0.75rem;
+  opacity: 1;
+  /* An S-curve, not an ease-out: half the width in the first frames reads
+     as a snap with a long tail, and the ask here is an unhurried extend -
+     it gathers, glides, and settles. */
+  transition:
+    max-width 0.45s cubic-bezier(0.65, 0, 0.35, 1),
+    padding-right 0.45s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.3s ease 0.12s;
+}
+@media (min-width: 64rem) {
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+    height: 1.75rem;
+  }
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+    width: 1.75rem;
+    height: 1.75rem;
+    -webkit-mask-size: 0.78rem 0.78rem;
+    mask-size: 0.78rem 0.78rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+    transition: none;
   }
 }

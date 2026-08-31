@@ -1,9 +1,12 @@
 import type { Company } from "~/data/types";
 import { plateStyle } from "~/lib/operators";
 
-export type PlateSize = "sm" | "md" | "lg";
+export type PlateSize = "xs" | "sm" | "md" | "lg";
 
 const SIZES: Record<PlateSize, { min: string; height: string; text: string }> = {
+  /* Four fifths of `sm`: for a dense list, where the plate is a marker in a
+     row rather than the row's subject. */
+  xs: { min: "2.4rem", height: "1.55rem", text: "0.8rem" },
   sm: { min: "3rem", height: "1.9375rem", text: "1rem" },
   md: { min: "3.25rem", height: "2.25rem", text: "1.125rem" },
   lg: { min: "3.75rem", height: "2.625rem", text: "1.5rem" },

@@ -3,14 +3,18 @@ import type { LatLng } from "~/lib/geo";
 import { boundingBox, distanceM } from "~/lib/geo";
 import { operatorRank } from "~/lib/operators";
 import { stopCode, stripStopCode } from "~/lib/i18n";
-import { openDB, type IDBPDatabase } from "idb";
+import { deleteDB, openDB, type IDBPDatabase } from "idb";
 
 const DB_URL = "https://data.hkbus.app/routeFareList.min.json";
 const STORE_KEY = "routeDb";
-// The old name, kept on purpose: renaming the database throws away the
-// cached route data and makes every rider fetch 1.7 MB again.
-const IDB_NAME = "motherbus";
+const IDB_NAME = "probus";
 const IDB_VERSION = 1;
+/*
+ * The app's old name. A rider who installed it then has 1.7 MB of route data
+ * cached under it; on the first run under the new name that copy is moved
+ * across rather than fetched again, and the old database is dropped.
+ */
+const LEGACY_IDB_NAME = "motherbus";
 
 export interface CachedDb {
   db: RouteDb;
@@ -55,23 +59,66 @@ function idb(): Promise<IDBPDatabase<Schema>> {
  * offline. A conditional request revalidates in the background; a 304 costs
  * nothing, and a failure leaves the cached copy in place.
  */
+/**
+ * The database could not be got: nothing cached and the download refused.
+ *
+ * Its own class so the boundary above the app can tell "the data is not
+ * answering" - a network problem, worth waiting out and retrying on its own -
+ * from a bug in the app, which no amount of retrying will fix.
+ */
+export class RouteDbError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "RouteDbError";
+  }
+}
+
 export async function loadRouteDb(): Promise<CachedDb> {
   const cached = await idb()
-    .then((store) => store.get("kv", STORE_KEY))
+    .then(async (store) => (await store.get("kv", STORE_KEY)) ?? adoptLegacy(store))
     .catch(() => undefined);
 
   if (cached) {
     void revalidate(cached).catch(() => {});
     return cached;
   }
-  return download(null);
+  return download(null).catch((error: unknown) => {
+    throw new RouteDbError(error);
+  });
+}
+
+/**
+ * The cached database under the old name, carried into the new one.
+ *
+ * Only when the browser can say the old database exists: opening a name
+ * that does not creates it, and this must not leave an empty one behind.
+ * The copy is put under the new name first and the old one deleted after,
+ * so a failure part-way loses nothing.
+ */
+async function adoptLegacy(store: IDBPDatabase<Schema>): Promise<CachedDb | undefined> {
+  try {
+    const known = await indexedDB.databases?.();
+    if (!known?.some((entry) => entry.name === LEGACY_IDB_NAME)) return undefined;
+    const legacy = await openDB<Schema>(LEGACY_IDB_NAME, IDB_VERSION);
+    const cached = legacy.objectStoreNames.contains("kv")
+      ? await legacy.get("kv", STORE_KEY)
+      : undefined;
+    legacy.close();
+    if (!cached) return undefined;
+    await store.put("kv", cached, STORE_KEY);
+    await deleteDB(LEGACY_IDB_NAME);
+    return cached;
+  } catch {
+    // Anything wrong with the old copy is a reason to download, not to fail.
+    return undefined;
+  }
 }
 
 async function revalidate(cached: CachedDb): Promise<void> {
   // Only worth a round trip once a day; the upstream crawler runs daily.
   if (Date.now() - cached.fetchedAt < 24 * 60 * 60 * 1000) return;
   const fresh = await download(cached.etag);
-  if (fresh.fetchedAt !== cached.fetchedAt) window.dispatchEvent(new Event("motherbus:db-updated"));
+  if (fresh.fetchedAt !== cached.fetchedAt) window.dispatchEvent(new Event("probus:db-updated"));
 }
 
 async function download(etag: string | null): Promise<CachedDb> {
@@ -221,6 +268,29 @@ export function routesAtStop(db: RouteDb, stopId: string): RouteAtStop[] {
   return [...merged.values()];
 }
 
+/**
+ * The order a list of routes reads in: by number as a rider counts them (2
+ * before 10), a shared number by how likely each operator is meant, and the
+ * same route's two directions by where they start.
+ */
+export function compareRoutes(a: KeyedRoute, b: KeyedRoute): number {
+  return (
+    a.route.localeCompare(b.route, "en", { numeric: true }) ||
+    operatorRank(a.co[0] as Company) - operatorRank(b.co[0] as Company) ||
+    a.orig.en.localeCompare(b.orig.en)
+  );
+}
+
+/** Every route there is, in reading order. The list a search narrows. */
+export function allRoutes(db: RouteDb): KeyedRoute[] {
+  const out: KeyedRoute[] = [];
+  for (const key in db.routeList) {
+    const entry = db.routeList[key];
+    if (entry) out.push({ ...entry, key });
+  }
+  return out.sort(compareRoutes);
+}
+
 /** Case-insensitive route-number search, exact matches first. */
 export function searchRoutes(db: RouteDb, query: string, limit = 60): KeyedRoute[] {
   const q = query.trim().toUpperCase();
@@ -236,11 +306,19 @@ export function searchRoutes(db: RouteDb, query: string, limit = 60): KeyedRoute
     else if (route.startsWith(q)) prefix.push({ ...entry, key });
   }
 
-  const byRoute = (a: KeyedRoute, b: KeyedRoute) =>
-    a.route.localeCompare(b.route, "en", { numeric: true }) ||
-    operatorRank(a.co[0] as Company) - operatorRank(b.co[0] as Company) ||
-    a.orig.en.localeCompare(b.orig.en);
-  return [...exact.sort(byRoute), ...prefix.sort(byRoute)].slice(0, limit);
+  return [...exact.sort(compareRoutes), ...prefix.sort(compareRoutes)].slice(0, limit);
+}
+
+/**
+ * Whether an entry is a special pattern of its route rather than the main
+ * service - service type "1" is the timetable's backbone, everything else is
+ * an extra the operator runs at certain hours, often calling at a few stops
+ * the main pattern skips. The database keys each pattern separately, so a
+ * list that shows them all needs this to stop a variant with the same two
+ * ends reading as an exact double of the main row.
+ */
+export function isSpecialService(route: KeyedRoute): boolean {
+  return String(route.serviceType) !== "1";
 }
 
 /** Which characters could still extend `query` into a real route number. */
@@ -260,6 +338,20 @@ export function nextRouteChars(db: RouteDb, query: string): Set<string> {
  */
 export async function refreshRouteDb(): Promise<CachedDb> {
   return download(null);
+}
+
+/**
+ * Drops the cached copy, so the next start downloads the database again.
+ *
+ * The store rather than the whole IndexedDB: the connection is shared and
+ * long-lived, and deleting the database under it would block on this tab's own
+ * open handle. The caller is expected to reload - the app read the database
+ * once at start-up, and every screen is still holding the copy this just
+ * deleted from disk.
+ */
+export async function clearRouteDb(): Promise<void> {
+  const store = await idb();
+  await store.delete("kv", STORE_KEY);
 }
 
 /** Rough size of the cached payload, for display in settings. */
@@ -314,9 +406,23 @@ export interface StopMatch {
  * typing "彌敦道" should surface the major interchange before a quiet kerb of
  * the same name.
  */
+/**
+ * Whether a query is long enough to search names with.
+ *
+ * Two characters of Latin script: one letter is in half the stops in Hong Kong
+ * and answers nothing. One character of Chinese, because one Chinese character
+ * is a word - 白 is 白田, 白石角, 白沙灣, and a rider who has typed it has
+ * already said something specific. A flat minimum of two returned nothing at
+ * all for the single character, which is most of what anyone types on the way
+ * to a Chinese place name.
+ */
+function longEnough(q: string): boolean {
+  return q.length >= (/[\u3400-\u9fff]/.test(q) ? 1 : 2);
+}
+
 export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[] {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
+  if (!longEnough(q)) return [];
 
   const index = stopIndex(db);
   const out: (StopMatch & { rank: number })[] = [];
@@ -369,7 +475,7 @@ export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[]
 /** Routes whose origin or destination contains the query, in either language. */
 export function searchDestinations(db: RouteDb, query: string, limit = 20): KeyedRoute[] {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
+  if (!longEnough(q)) return [];
 
   const seen = new Set<string>();
   const out: KeyedRoute[] = [];

@@ -1,15 +1,14 @@
-import { useLocation } from "@solidjs/router";
+import { useLocation } from "@tanstack/solid-router";
 import { createEffect, createSignal } from "solid-js";
 import type { MessageKey } from "~/lib/i18n";
 
 /** Every path that is a tab, and the label the tab bar gives it. */
 const TABS: Record<string, MessageKey> = {
-  "/": "nearby",
+  "/": "home",
   "/saved": "saved",
   "/search": "search",
   "/rail": "rail",
   "/notices": "notices",
-  "/settings": "settings",
 };
 
 /**
@@ -47,7 +46,7 @@ const [places, setPlaces] = createSignal<string[]>([], { ownedWrite: true });
  */
 export const trail = {
   origin,
-  originLabel: (): MessageKey => TABS[origin()] ?? "nearby",
+  originLabel: (): MessageKey => TABS[origin()] ?? "home",
 
   /** The screens between the tab and `pathname`, in the order you saw them. */
   ancestors: (pathname: string): string[] => {
@@ -71,7 +70,7 @@ export function installTrailEffects() {
   const location = useLocation();
 
   createEffect(
-    () => location.pathname,
+    () => location().pathname,
     (pathname) => {
       // Reaching a tab is arriving somewhere new: the trail behind you is spent.
       if (pathname in TABS) {

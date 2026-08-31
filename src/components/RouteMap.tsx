@@ -2,65 +2,56 @@ import {
   AttributionControl,
   LngLatBounds,
   Map as MlMap,
-  setWorkerUrl,
   type ExpressionSpecification,
-  type GeoJSONSource,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
 import type { JSX } from "@solidjs/web";
-import { Show, createEffect, createMemo, createSignal } from "solid-js";
+import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { Drawer } from "~/components/Drawer";
 import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
+import { whenIdleAfter } from "~/lib/idle";
+import { useInView } from "~/lib/inView";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
+import {
+  TRAFFIC_REFRESH_MS,
+  fetchTrafficSpeeds,
+  segmentsAlong,
+  trafficLevel,
+  trafficShapes,
+} from "~/data/traffic";
 import { measureOf, spreadMetres } from "~/data/placement";
 import type { VehicleFeed } from "~/data/useVehicles";
-import type { KeyedRoute, StopEntry } from "~/data/types";
-import type { LatLng } from "~/lib/geo";
+import type { Company, KeyedRoute, StopEntry } from "~/data/types";
+import { distanceM, walkMinutes, type LatLng } from "~/lib/geo";
 import { measureLine, measureStops, pointAt, sliceLine, stitchLines } from "~/lib/alongLine";
-import { plateStyle } from "~/lib/operators";
+import { kindOf } from "~/lib/operators";
+import {
+  MAP_ACCENT as ACCENT,
+  MAP_STYLES as STYLES,
+  lineColour,
+  prefersDark,
+  upsertSource,
+} from "~/lib/mapKit";
 import { settings } from "~/stores/settings";
 
 /**
- * Keyless CARTO basemaps: no API key, no sign-up, and one style per theme so
- * the map matches the rest of the app instead of glowing white in dark mode.
- * MapLibre renders their required attribution automatically.
+ * Where the sheet over an opened-out map rests, as shares of the panel: low
+ * enough that the route is what the window is for, and pulled up, most of it.
  */
-const STYLES = {
-  dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-  light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-};
+const SHEET_LOW = 0.26;
+const SHEET_TALL = 0.9;
 
-const SRC_LINE = "mb-route";
-const SRC_STOPS = "mb-stops";
-const SRC_ME = "mb-me";
-const SRC_BUS = "mb-buses";
-const SRC_BAND = "mb-bus-band";
-const LYR_HIT = "mb-stop-hit";
-const ACCENT = "#4ed8ce";
-
-/*
- * MapLibre resolves its worker relative to its own module URL, which does not
- * survive bundling. Pointing it at the copy the build emits is what makes tiles
- * load at all - without this the map stays blank and reports no error.
- */
-setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-
-function prefersDark(choice: string): boolean {
-  if (choice === "dark") return true;
-  if (choice === "light") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-/** Reads the plate colour back out so the line matches the operator's brand. */
-function lineColour(route: KeyedRoute): string {
-  const style = plateStyle(route.co, route.route);
-  if (/^#[0-9a-f]{6}$/i.test(style.background)) return style.background;
-  // A joint route has a gradient plate; use the first operator's colour.
-  const first = /#([0-9a-f]{6})/i.exec(style.background);
-  return first ? `#${first[1]}` : "#d71920";
-}
-
+const SRC_LINE = "app-route";
+const SRC_TRAFFIC = "app-traffic";
+const SRC_STOPS = "app-stops";
+const SRC_ME = "app-me";
+const SRC_WALK = "app-walk";
+const SRC_BUS = "app-buses";
+const SRC_BAND = "app-bus-band";
+const LYR_HIT = "app-stop-hit";
+const LYR_LABEL = "app-stop-label";
 function stopFeatures(
   coords: Position[],
   names: string[],
@@ -71,6 +62,8 @@ function stopFeatures(
     type: "FeatureCollection",
     features: coords.map((coordinates, index) => ({
       type: "Feature",
+      // An id, so a hover can be set on the feature without rewriting the source.
+      id: index,
       properties: {
         index,
         // Every stop carries its own sign, because its own name is printed on
@@ -86,16 +79,105 @@ function stopFeatures(
   };
 }
 
-const IMG_STOP = "mb-stop-flag";
+const IMG_STOP = "app-stop-flag";
+
+/** `#rrggbb` at an opacity, for the halo gradients. */
+function withAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1]!, 16)}, ${parseInt(m[2]!, 16)}, ${parseInt(m[3]!, 16)}, ${alpha})`;
+}
+
+/** The sign a stop shows: its own, or the lit one while it is being read. */
+const SELECTED = ["==", ["get", "selected"], 1] as ExpressionSpecification;
+
+/*
+ * Two states a stop moves through rather than flips into: how far it is
+ * pointed at, and how far it is the stop being read, each 0 to 1. MapLibre
+ * transitions a paint property's *value* but not a feature's state, so the
+ * state is driven by hand over a few frames (see `tween`), and every paint
+ * expression below reads the fraction rather than a flag - which is what lets
+ * a ring grow under the pointer instead of appearing.
+ */
+const HOVER = ["number", ["feature-state", "hover"], 0] as ExpressionSpecification;
+const LIT = ["number", ["feature-state", "lit"], 0] as ExpressionSpecification;
+/** Over this many milliseconds, on a curve that arrives rather than stops. */
+const STATE_MS = 220;
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** The name's colour: the route's own as a stop is read or pointed at. */
+const labelColour = (colour: string, dark: boolean): ExpressionSpecification => [
+  "case",
+  SELECTED,
+  colour,
+  ["interpolate", ["linear"], HOVER, 0, dark ? "#b9c0cc" : "#4a5160", 1, colour],
+];
+
+/** A radius by zoom, opened out by a fraction of a state: base + reach * state. */
+const ringRadius = (reach: number, state: ExpressionSpecification): ExpressionSpecification => [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  11,
+  ["+", 5.5, ["*", reach * 0.7, state]],
+  14,
+  ["+", 7.5, ["*", reach, state]],
+  17,
+  ["+", 9.5, ["*", reach * 1.3, state]],
+];
+
+/**
+ * Drives one feature's state from where it is to a target over a few frames.
+ * Keeps its own record of where each one is, because the map will not say,
+ * and a hover that leaves halfway in has to come back from halfway.
+ */
+function stateTween(instance: MlMap) {
+  const at = new Map<string, number>();
+  const frames = new Map<string, number>();
+  return (id: number, key: string, to: number) => {
+    const slot = `${key}:${id}`;
+    const from = at.get(slot) ?? 0;
+    if (from === to) return;
+    const started = performance.now();
+    const pending = frames.get(slot);
+    if (pending !== undefined) cancelAnimationFrame(pending);
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / STATE_MS);
+      const value = from + (to - from) * easeOut(t);
+      at.set(slot, value);
+      try {
+        instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
+      } catch {
+        // The source is not there yet, or has gone; there is nothing to move.
+      }
+      if (t < 1) frames.set(slot, requestAnimationFrame(step));
+      else frames.delete(slot);
+    };
+    frames.set(slot, requestAnimationFrame(step));
+  };
+}
 /**
  * The marker's drawing grid, before `icon-size` scales it: the artwork is laid
- * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement. The label
- * layer needs `height` to know how far above the stop the pole reaches.
+ * out as if in a 54x58 SVG viewBox whose bottom edge is the pavement, with
+ * `headroom` more above it for the rings the lit sign wears - they reach past
+ * the top of the sign's own disc, and a canvas simply drops whatever is drawn
+ * outside it, which cut the top off the open stop's ring. The label layer
+ * needs `height` to know how far above the stop the pole reaches.
  */
-const FLAG = { width: 54, height: 58, ratio: 3 };
+const FLAG = { width: 54, height: 62, headroom: 4, ratio: 3 };
 
 /** The weighted cone the pole stands in, as SVG path data. */
 const FLAG_BASE = "M25.5 47.5h3l3.3 6.6a1.3 1.3 0 0 1-1.16 2.35h-7.28a1.3 1.3 0 0 1-1.16-2.35z";
+/**
+ * The railway's mark: the train the 鐵路 tab wears (lineicons `train-1`, on
+ * its 24-unit grid), so the station on the map and the tab that led to it
+ * carry the same glyph.
+ */
+const RAIL_GLYPH = [
+  "M12 13.313a1.75 1.75 0 1 0 0 3.5a1.75 1.75 0 0 0 0-3.5",
+  "M3.875 5.5a2.25 2.25 0 0 1 2.25-2.25h11.75a2.25 2.25 0 0 1 2.25 2.25v11.75a2.25 2.25 0 0 1-2.25 2.25h-.69l1.22 1.22a.75.75 0 1 1-1.06 1.06l-2.28-2.28h-6.13l-2.28 2.28a.75.75 0 0 1-1.06-1.06l1.22-1.22h-.69a2.25 2.25 0 0 1-2.25-2.25zm14.75 0a.75.75 0 0 0-.75-.75H12.75v5.875h5.875zm-12.5-.75a.75.75 0 0 0-.75.75v5.125h5.875V4.75zm-.75 7.375v5.125c0 .414.336.75.75.75h11.75a.75.75 0 0 0 .75-.75v-5.125z",
+];
 /** The lettering on the sign, in the humanist sans the real boards are set in. */
 const BOARD_FONT = 'system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
 
@@ -230,18 +312,46 @@ function fitText(
  * stop's own coordinate - a dot centred on the point sat half in the road,
  * which is not where the pole is.
  */
-function stopFlagImage(colour: string, surface: string, number: string, name: string) {
-  const { width, height, ratio } = FLAG;
+function stopFlagImage(
+  colour: string,
+  surface: string,
+  number: string,
+  name: string,
+  /** Lit: the sign of the stop being read, ringed in its own colour. */
+  selected = false,
+) {
+  const { width, height, headroom, ratio } = FLAG;
   const canvas = document.createElement("canvas");
   canvas.width = width * ratio;
   canvas.height = height * ratio;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.scale(ratio, ratio);
+  // The artwork is laid out from the top of the sign; the headroom is above it.
+  ctx.translate(0, headroom);
 
   const cx = width / 2;
   const cy = 18;
   const radius = 17;
+
+  /*
+   * The stop being read wears a ring: white against the disc, and a fine one
+   * in its own colour outside that, so it is picked out from forty identical
+   * signs at a glance. The glow under it is the map's, because the map can
+   * animate it and a rasterised sign cannot.
+   */
+  if (selected) {
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 1.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = withAlpha(colour, 0.55);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 3.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   /*
    * The pool of shade at the foot, which is what stops the pole from looking
@@ -352,55 +462,444 @@ function stopFlagImage(colour: string, surface: string, number: string, name: st
 }
 
 /**
+ * The sign a station shows, where the route is a railway.
+ *
+ * A bus pole on an MTR station is the wrong furniture: nobody waits for a
+ * train under a route board and a timetable case. What marks a station on the
+ * street is the railway's own mark on a post, and that is what this is - the
+ * disc in the line's colour, carrying the rail glyph the app's own rail tab
+ * wears, on a plain post with a flat foot. No route board, because a line is
+ * known by its colour and not by a number; and no name in small print, because
+ * the label layer names the station and the disc has the glyph to carry.
+ *
+ * Same grid and same foot as the pole, so it plants on the station's own
+ * coordinate and the label layer's arithmetic holds without knowing which
+ * sign it is standing over.
+ */
+function railSignImage(colour: string, surface: string, selected = false) {
+  const { width, height, headroom, ratio } = FLAG;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.scale(ratio, ratio);
+  ctx.translate(0, headroom);
+
+  const cx = width / 2;
+  const cy = 18;
+  const radius = 17;
+
+  // The station being read wears the same rings the lit pole does.
+  if (selected) {
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 1.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = withAlpha(colour, 0.55);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 3.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  const ground = ctx.createRadialGradient(cx, 56, 0, cx, 56, 7.5);
+  ground.addColorStop(0, "rgba(0, 0, 0, 0.34)");
+  ground.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = ground;
+  ctx.beginPath();
+  ctx.ellipse(cx, 56, 7.5, 2.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // The post and its foot: the same galvanised steel as the pole, without the
+  // cone - a station sign is set into the pavement, not weighted on it.
+  const steel = (from: string, mid: string, to: string) => {
+    const gradient = ctx.createLinearGradient(cx - 6, 0, cx + 6, 0);
+    gradient.addColorStop(0, from);
+    gradient.addColorStop(0.42, mid);
+    gradient.addColorStop(1, to);
+    return gradient;
+  };
+  ctx.fillStyle = steel("#e9edf3", "#b2bac6", "#727a88");
+  roundedRect(ctx, cx - 1.5, 32, 3, 22, 1.5);
+  ctx.fill();
+  ctx.fillStyle = steel("#c6cdd8", "#98a1ae", "#5f6773");
+  roundedRect(ctx, cx - 5, 53, 10, 3, 1.5);
+  ctx.fill();
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = litFace(ctx, colour, cy - radius, cy + radius);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = surface;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius - 1.3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // The mark itself, in the sign's white, sized to sit inside the ring.
+  const glyph = 21;
+  ctx.save();
+  ctx.translate(cx - glyph / 2, cy - glyph / 2);
+  ctx.scale(glyph / 24, glyph / 24);
+  ctx.fillStyle = PAPER;
+  for (const d of RAIL_GLYPH) ctx.fill(new Path2D(d));
+  ctx.restore();
+
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return { width: canvas.width, height: canvas.height, data: new Uint8Array(pixels.data.buffer) };
+}
+
+/**
  * Paints one sign per stop, since each carries its own name, and clears the
- * signs left over from a longer route.
+ * signs left over from a longer route. A railway's stations get the station
+ * sign instead of the pole.
  */
 function paintStopFlags(
   instance: MlMap,
   colour: string,
   surface: string,
+  rail: boolean,
   number: string,
   names: string[],
   painted: number,
 ) {
+  // Two signs per stop: the one it carries, and the one it carries while it is
+  // the stop being read - the same sign, lit.
   names.forEach((name, index) => {
-    const id = `${IMG_STOP}-${index}`;
-    const image = stopFlagImage(colour, surface, number, name);
-    if (!image) return;
-    if (instance.hasImage(id)) instance.updateImage(id, image);
-    else instance.addImage(id, image, { pixelRatio: FLAG.ratio });
+    for (const on of [false, true]) {
+      const id = `${IMG_STOP}-${index}${on ? "-on" : ""}`;
+      const image = rail
+        ? railSignImage(colour, surface, on)
+        : stopFlagImage(colour, surface, number, name, on);
+      if (!image) continue;
+      if (instance.hasImage(id)) instance.updateImage(id, image);
+      else instance.addImage(id, image, { pixelRatio: FLAG.ratio });
+    }
   });
 
   for (let index = names.length; index < painted; index += 1) {
-    const id = `${IMG_STOP}-${index}`;
-    if (instance.hasImage(id)) instance.removeImage(id);
+    for (const id of [`${IMG_STOP}-${index}`, `${IMG_STOP}-${index}-on`]) {
+      if (instance.hasImage(id)) instance.removeImage(id);
+    }
   }
 
   return names.length;
 }
 
-const IMG_BUS = "mb-bus-disc";
-const IMG_NOSE = "mb-bus-nose";
+const IMG_BUS = "app-bus-disc";
+/** The same vehicle facing the other way, for a heading with west in it. */
+const IMG_BUS_WEST = "app-bus-disc-west";
+const IMG_NOSE = "app-bus-nose";
 /** The disc's own pixel grid, and the nose's, before `icon-size` scales them. */
 const BUS = { size: 30, ratio: 3 };
 const NOSE = { width: 30, height: 50, ratio: 3 };
 
+/** What is drawn on the map: the vehicle the route is actually run with. */
+type VehicleKind = "bus" | "minibus" | "rail";
+
+/** The vehicle a route's operators put on it. */
+function vehicleKind(cos: Company[]): VehicleKind {
+  if (cos.some((co) => kindOf(co) === "rail")) return "rail";
+  if (cos.some((co) => kindOf(co) === "minibus")) return "minibus";
+  return "bus";
+}
+
+/** Window glass, lit from above: the one colour the three vehicles share. */
+function glass(ctx: CanvasRenderingContext2D, top: number, bottom: number) {
+  const face = ctx.createLinearGradient(0, top, 0, bottom);
+  face.addColorStop(0, "#e4f2fb");
+  face.addColorStop(1, "#93bddc");
+  return face;
+}
+
+/** A row of windows, each a rounded pane of the same glass. */
+function windows(
+  ctx: CanvasRenderingContext2D,
+  xs: number[],
+  y: number,
+  w: number,
+  h: number,
+  r = 0.55,
+) {
+  ctx.fillStyle = glass(ctx, y, y + h);
+  for (const x of xs) {
+    roundedRect(ctx, x, y, w, h, r);
+    ctx.fill();
+  }
+}
+
+/** A road wheel: black tyre, a lighter hub, seen side on. */
+function wheel(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.fillStyle = "#22262c";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#aab2bc";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 /**
- * The bus itself: a white badge carrying a double-decker, head on.
- *
- * It is the stop pole inverted - white where the pole is coloured, coloured
- * where the pole is white - because a route map is already a chain of red
- * discs, and one more red disc among forty is furniture. The inversion is what
- * makes the moving thing the thing a rider sees first.
- *
- * Two windscreens stacked is the whole of the drawing, and the whole of the
- * point: it is the silhouette of the thing coming down the road, not a generic
- * vehicle pictogram. Everything else - the lit ring, the paper that is not
- * quite white at the bottom, the hairline outside it - is there to give a
- * twenty-pixel disc an edge and a light source, so it sits on the map rather
- * than on top of it.
+ * A body with its own radius at each corner - a cab nose rounds more than a
+ * tail. Added to the current path, so a silhouette can be built from several.
  */
-function busImage(colour: string) {
+function carBody(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  [tl, tr, br, bl]: [number, number, number, number],
+) {
+  ctx.moveTo(x + tl, y);
+  ctx.arcTo(x + w, y, x + w, y + h, tr);
+  ctx.arcTo(x + w, y + h, x, y + h, br);
+  ctx.arcTo(x, y + h, x, y, bl);
+  ctx.arcTo(x, y, x + w, y, tl);
+  ctx.closePath();
+}
+
+/** A wheel's outline, for the silhouette. */
+function wheelPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.moveTo(cx + r, cy);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+}
+
+/** The thin dark edge that makes a drawing read as drawn rather than cut out. */
+function outline(ctx: CanvasRenderingContext2D) {
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.stroke();
+}
+
+/**
+ * One vehicle: its outline as a single path, for the halo and the shadow
+ * under it, and the drawing itself.
+ */
+interface Vehicle {
+  silhouette: (ctx: CanvasRenderingContext2D) => void;
+  paint: (ctx: CanvasRenderingContext2D, colour: string) => void;
+}
+
+const BUS_BODY = { x: 3, y: 6.4, w: 24, h: 14.6, radii: [2, 3.6, 1.4, 1.4] as const };
+const BUS_WHEELS = [
+  [8.6, 21.6],
+  [21.6, 21.6],
+] as const;
+const BUS_WHEEL_R = 2.7;
+
+/**
+ * A double-decker, side on, in the operator's livery: two rows of glass over
+ * a belt line, the door behind the front axle, a headlamp at the nose.
+ */
+const bus: Vehicle = {
+  silhouette(ctx) {
+    const { x, y, w, h, radii } = BUS_BODY;
+    carBody(ctx, x, y, w, h, [...radii]);
+    for (const [cx, cy] of BUS_WHEELS) wheelPath(ctx, cx, cy, BUS_WHEEL_R);
+  },
+  paint(ctx, colour) {
+    const { x, y, w, h, radii } = BUS_BODY;
+    ctx.fillStyle = litFace(ctx, colour, y, y + h);
+    ctx.beginPath();
+    carBody(ctx, x, y, w, h, [...radii]);
+    ctx.fill();
+    outline(ctx);
+
+    // The belt between the decks, a shade lighter than the panels around it.
+    ctx.fillStyle = shade(colour, "light", 0.38);
+    ctx.fillRect(x + 0.8, y + 6.7, w - 1.6, 0.9);
+
+    // Upper deck: a run of panes and the raked windscreen over the driver.
+    windows(ctx, [4.8, 8.6, 12.4, 16.2], y + 1.7, 3.2, 3.9, 0.7);
+    windows(ctx, [20.6], y + 1.7, 4.8, 3.9, 1.2);
+    // Lower deck: two panes, the door, and the driver's windscreen.
+    windows(ctx, [4.8, 8.6], y + 8.6, 3.2, 3.7, 0.7);
+    windows(ctx, [12.6], y + 8.6, 3.1, 5.3, 0.6);
+    windows(ctx, [20.6], y + 8.6, 4.8, 3.7, 1);
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(14.15, y + 9);
+    ctx.lineTo(14.15, y + 13.6);
+    ctx.stroke();
+
+    for (const [cx, cy] of BUS_WHEELS) wheel(ctx, cx, cy, BUS_WHEEL_R);
+
+    ctx.fillStyle = "#ffd66b";
+    ctx.beginPath();
+    ctx.arc(x + w - 1.2, y + h - 2.2, 0.95, 0, Math.PI * 2);
+    ctx.fill();
+  },
+};
+
+const MINIBUS_BODY = { x: 4, y: 9.2, w: 22, h: 11.6, radii: [2.4, 4, 1.6, 1.6] as const };
+const MINIBUS_WHEELS = [
+  [9.2, 21.2],
+  [21, 21.2],
+] as const;
+const MINIBUS_WHEEL_R = 2.5;
+
+/**
+ * A public light bus, side on: the cream coach the real ones are, wearing
+ * the operator's colour as its roof and skirt - which is how a green minibus
+ * is green.
+ */
+const minibus: Vehicle = {
+  silhouette(ctx) {
+    const { x, y, w, h, radii } = MINIBUS_BODY;
+    carBody(ctx, x, y, w, h, [...radii]);
+    for (const [cx, cy] of MINIBUS_WHEELS) wheelPath(ctx, cx, cy, MINIBUS_WHEEL_R);
+  },
+  paint(ctx, colour) {
+    const { x, y, w, h, radii } = MINIBUS_BODY;
+    const cream = ctx.createLinearGradient(0, y, 0, y + h);
+    cream.addColorStop(0, "#fbf8ef");
+    cream.addColorStop(1, "#e3dcc8");
+    ctx.fillStyle = cream;
+    ctx.beginPath();
+    carBody(ctx, x, y, w, h, [...radii]);
+    ctx.fill();
+
+    // Roof and skirt in the operator's colour, cut to the body's own outline.
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = litFace(ctx, colour, y, y + 3);
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillStyle = shade(colour, "dark", 0.08);
+    ctx.fillRect(x, y + h - 1.9, w, 1.9);
+    ctx.restore();
+    ctx.beginPath();
+    carBody(ctx, x, y, w, h, [...radii]);
+    outline(ctx);
+
+    windows(ctx, [5.6, 9.6, 13.6], y + 3.8, 3.4, 4, 0.7);
+    windows(ctx, [18.2], y + 3.5, 6.3, 4.3, 1.5);
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(17.3, y + 3.8);
+    ctx.lineTo(17.3, y + h - 1.9);
+    ctx.stroke();
+
+    for (const [cx, cy] of MINIBUS_WHEELS) wheel(ctx, cx, cy, MINIBUS_WHEEL_R);
+
+    ctx.fillStyle = "#ffd66b";
+    ctx.beginPath();
+    ctx.arc(x + w - 1.2, y + h - 2.9, 0.85, 0, Math.PI * 2);
+    ctx.fill();
+  },
+};
+
+const TRAIN_BODY = { x: 1.5, y: 9.4, w: 27, h: 11.2, radii: [1.6, 5.6, 4.3, 1.6] as const };
+const TRAIN_BOGIES = [
+  [4.8, 5.4],
+  [19.4, 5.4],
+] as const;
+
+/**
+ * A railway car, side on: brushed steel with the line's colour along its
+ * flank, a cab that slopes away at the nose, and bogies riding a rail - the
+ * train the network map draws, not a bus with a different badge.
+ */
+const train: Vehicle = {
+  silhouette(ctx) {
+    const { x, y, w, h, radii } = TRAIN_BODY;
+    carBody(ctx, x, y, w, h, [...radii]);
+    for (const [bx, bw] of TRAIN_BOGIES) ctx.rect(bx, y + h, bw, 2);
+  },
+  paint(ctx, colour) {
+    const { x, y, w, h, radii } = TRAIN_BODY;
+    const steel = ctx.createLinearGradient(0, y, 0, y + h);
+    steel.addColorStop(0, "#f4f6f9");
+    steel.addColorStop(0.55, "#d3d9e2");
+    steel.addColorStop(1, "#aab3bf");
+    ctx.fillStyle = steel;
+    ctx.beginPath();
+    carBody(ctx, x, y, w, h, [...radii]);
+    ctx.fill();
+
+    // The line's colour, from the windows down to the skirt.
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = litFace(ctx, colour, y + 7.2, y + h);
+    ctx.fillRect(x, y + 7.2, w, h - 7.2);
+    ctx.restore();
+    ctx.beginPath();
+    carBody(ctx, x, y, w, h, [...radii]);
+    outline(ctx);
+
+    windows(ctx, [3.4, 7.3, 11.2, 15.1], y + 2.5, 3.2, 3.9, 0.7);
+    // The cab window follows the nose: glass that leans back where the body does.
+    ctx.fillStyle = glass(ctx, y + 2, y + 6.5);
+    ctx.beginPath();
+    ctx.moveTo(19.8, y + 2);
+    ctx.lineTo(23.9, y + 2);
+    ctx.quadraticCurveTo(27.1, y + 2.3, 27.4, y + 6.5);
+    ctx.lineTo(19.8, y + 6.5);
+    ctx.closePath();
+    ctx.fill();
+    // Door lines between the panes.
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
+    ctx.lineWidth = 0.5;
+    for (const dx of [6.75, 14.55]) {
+      ctx.beginPath();
+      ctx.moveTo(dx, y + 1.6);
+      ctx.lineTo(dx, y + h - 0.8);
+      ctx.stroke();
+    }
+    // The headlamp on the cab's nose.
+    ctx.fillStyle = "#ffd66b";
+    ctx.beginPath();
+    ctx.arc(x + w - 1.9, y + h - 2.3, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bogies, and the rail they ride.
+    ctx.fillStyle = "#2b2f36";
+    for (const [bx, bw] of TRAIN_BOGIES) {
+      roundedRect(ctx, bx, y + h, bw, 2, 0.6);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.42)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(1, y + h + 2.8);
+    ctx.lineTo(29, y + h + 2.8);
+    ctx.stroke();
+  },
+};
+
+const VEHICLE: Record<VehicleKind, Vehicle> = { bus, minibus, rail: train };
+
+/**
+ * The vehicle itself, drawn as the thing it is.
+ *
+ * Not a badge with a pictogram on it: a route map is already a chain of
+ * coloured discs, and one more disc among forty is furniture. What moves on
+ * the map is a picture - a double-decker in its livery, a cream minibus under
+ * a green roof, a steel railway car with the line's colour along it - side on,
+ * the way a child draws one, so that the kind of vehicle is read before
+ * anything else is. The heading is the nose in front of it, which turns with
+ * the road while the drawing stays upright.
+ *
+ * A paper halo and a shadow are what let a red bus sit on a red line and a
+ * silver train on a grey map: the halo cuts it out of whatever is under it,
+ * the shadow lifts it off.
+ *
+ * Drawn facing right, and turned on the map to point the way it is going -
+ * see the layer. `west` is the mirror image, for the half of the compass
+ * where turning the right-facing drawing would put the wheels in the air.
+ */
+function busImage(colour: string, kind: VehicleKind, west = false) {
   const { size, ratio } = BUS;
   const canvas = document.createElement("canvas");
   canvas.width = size * ratio;
@@ -408,62 +907,26 @@ function busImage(colour: string) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.scale(ratio, ratio);
+  if (west) {
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+  }
 
-  const centre = size / 2;
-  const radius = centre - 3.4;
-
-  // The disc, lifted off the basemap. Paper at the top, a shade cooler at the
-  // bottom: flat white reads as a hole cut in the map.
-  const face = ctx.createLinearGradient(0, centre - radius, 0, centre + radius);
-  face.addColorStop(0, PAPER);
-  face.addColorStop(1, "#e9edf3");
+  const vehicle = VEHICLE[kind];
 
   ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-  ctx.shadowBlur = 4;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = 3;
   ctx.shadowOffsetY = 1.2;
   ctx.beginPath();
-  ctx.arc(centre, centre, radius, 0, Math.PI * 2);
-  ctx.fillStyle = face;
-  ctx.fill();
+  vehicle.silhouette(ctx);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = PAPER;
+  ctx.stroke();
   ctx.restore();
 
-  // The operator's ring, lit from above like every other coloured face here.
-  ctx.beginPath();
-  ctx.arc(centre, centre, radius - 1.4, 0, Math.PI * 2);
-  ctx.lineWidth = 2.8;
-  ctx.strokeStyle = litFace(ctx, colour, centre - radius, centre + radius);
-  ctx.stroke();
-
-  // And a hairline outside it, which is what keeps a white badge from
-  // dissolving into a pale basemap. Black at low opacity rather than the map's
-  // own colour: on a dark basemap the badge already has all the edge it needs.
-  ctx.beginPath();
-  ctx.arc(centre, centre, radius + 0.3, 0, Math.PI * 2);
-  ctx.lineWidth = 0.9;
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
-  ctx.stroke();
-
-  const bw = 11.5;
-  const bh = 13;
-  const bx = centre - bw / 2;
-  const by = centre - bh / 2;
-
-  ctx.fillStyle = litFace(ctx, colour, by, by + bh);
-  roundedRect(ctx, bx, by, bw, bh, 2.8);
-  ctx.fill();
-
-  // Upper deck, lower deck, and the pair of lights under them.
-  ctx.fillStyle = PAPER;
-  roundedRect(ctx, bx + 1.7, by + 1.9, bw - 3.4, 3.5, 1.1);
-  ctx.fill();
-  roundedRect(ctx, bx + 1.7, by + 6.5, bw - 3.4, 3.1, 1.1);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(bx + 2.9, by + bh - 1.5, 0.95, 0, Math.PI * 2);
-  ctx.arc(bx + bw - 2.9, by + bh - 1.5, 0.95, 0, Math.PI * 2);
-  ctx.fill();
+  vehicle.paint(ctx, colour);
 
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return { width: canvas.width, height: canvas.height, data: new Uint8Array(pixels.data.buffer) };
@@ -506,10 +969,11 @@ function noseImage(colour: string) {
   return { width: canvas.width, height: canvas.height, data: new Uint8Array(pixels.data.buffer) };
 }
 
-/** Adds both bus images, or repaints them when the operator's colour changes. */
-function paintBus(instance: MlMap, colour: string) {
+/** Adds both vehicle images, or repaints them when the livery changes. */
+function paintBus(instance: MlMap, colour: string, kind: VehicleKind) {
   for (const [id, image] of [
-    [IMG_BUS, busImage(colour)],
+    [IMG_BUS, busImage(colour, kind)],
+    [IMG_BUS_WEST, busImage(colour, kind, true)],
     [IMG_NOSE, noseImage(colour)],
   ] as const) {
     if (!image) continue;
@@ -558,12 +1022,6 @@ const labelOffset = () =>
     Number(((FLAG.height * size.plain + LABEL_GAP) / LABEL_SIZE).toFixed(2)),
   ]);
 
-function upsertSource(instance: MlMap, id: string, data: FeatureCollection) {
-  const existing = instance.getSource(id);
-  if (existing) (existing as GeoJSONSource).setData(data);
-  else instance.addSource(id, { type: "geojson", data });
-}
-
 /** What the marker has been showing, so the next poll can be reconciled to it. */
 interface Trail {
   measure: number;
@@ -597,6 +1055,26 @@ function bandColour(dark: boolean): string {
 
 /** Redraw cadence. A bus covers about half a pixel in this at street zoom. */
 const CREEP_MS = 80;
+/*
+ * The creep's cadence while the map is the small card rather than the whole
+ * screen. At preview zoom a bus covers less than a pixel in 80ms, so twelve
+ * full WebGL renders a second were spent drawing the same picture - a cost a
+ * phone pays in scroll frames and battery. Four a second still reads as
+ * steady movement at that size; the opened-out map, where a rider is actually
+ * watching a bus glide, keeps the fine cadence.
+ */
+const CREEP_PREVIEW_MS = 400;
+
+/**
+ * The DPR the map renders at. The whole screen earns the device's own ratio;
+ * the preview card does not: on a 3x phone the card was pushing nine times
+ * the pixels of a 1x canvas through a weak GPU for a thumbnail-sized frame,
+ * and the style's first paint was the longest task on the page. Capped at
+ * 1.5 the card stays crisp enough to read a route shape at arm's length and
+ * costs less than half as much to draw, every draw.
+ */
+const mapPixelRatio = (full: boolean) =>
+  full ? window.devicePixelRatio : Math.min(window.devicePixelRatio, 1.5);
 
 export function RouteMap(props: {
   route: KeyedRoute;
@@ -607,6 +1085,10 @@ export function RouteMap(props: {
   nearestIndex?: number;
   /** Index of the stop the list currently has open; the map follows it. */
   selectedIndex?: number;
+  /** Whether the map fills the window, when the screen keeps that state. */
+  expanded?: boolean;
+  /** Told when the rider opens the map out or puts it back. */
+  onExpandedChange?: (open: boolean) => void;
   /** Picking a stop on the map opens it in the list. */
   onSelectStop?: (index: number) => void;
   /**
@@ -619,28 +1101,64 @@ export function RouteMap(props: {
   me?: LatLng | null;
   /**
    * Tailwind height classes rather than a fixed value, so the map can be taller
-   * where there is room for it - the sticky column on a wide screen has a lot
-   * of it, and a map you cannot see the shape of the route in is decoration.
+   * where there is room for it - and `flex-1` where it should take all of it,
+   * as it does in the column on a wide screen. A map you cannot see the shape
+   * of the route in is decoration.
    */
   heightClass?: string;
+  /**
+   * The nearest stop of this route to the rider, if one is within reach:
+   * the walk to it is drawn on the map - a dotted path with the minutes on
+   * it - rather than said in a row under the frame.
+   */
+  walkTarget?: LatLng | null;
   lang: Lang;
   /** Shown in place of the map when it cannot render. */
   unavailableLabel: string;
   /**
-   * What to say about the open stop while the map owns the whole window.
-   *
-   * A function rather than an element, so nothing is built for a sheet that is
-   * not open - and a slot rather than an `etas` prop, because arrivals belong
-   * to the page that already fetches them, not to a map.
+   * Every stop on the route, for the sheet to show when it is pulled up: the
+   * open stop is the answer to one question, and the list is the way to ask
+   * the next one without leaving the map. Built only when it is on screen.
    */
-  sheet?: () => JSX.Element;
+  list?: () => JSX.Element;
 }) {
   let container!: HTMLDivElement;
+  /*
+   * Whether the map's frame is anywhere near the screen. The bus creep below
+   * redraws the map every 80ms, and it kept doing so with the map scrolled
+   * well off the top - on a phone that was a WebGL render competing with the
+   * stop list for every frame of the scroll. Nothing about an invisible map
+   * is worth a frame; the redraws stop when it leaves and resume when it
+   * comes back, and the next poll repositions everything regardless.
+   */
+  const [watchFrame, frameInView] = useInView();
+
+  /*
+   * When anything on the page last scrolled. On a phone the stop list scrolls
+   * inside its own card with the map still on screen above it, so the frame
+   * gate does nothing there - and a WebGL redraw every 80ms is exactly what a
+   * scrolling list cannot afford to share the thread with. The creep waits
+   * out the scroll (momentum included - iOS keeps firing scroll events
+   * through the glide) and picks up where the buses now are; a pause of half
+   * a second in a crawl measured in minutes is invisible.
+   */
+  let scrolledAt = 0;
+  const noteScroll = () => {
+    scrolledAt = Date.now();
+  };
+  // Capture, because scroll events do not bubble and any pane may be the one
+  // scrolling.
+  document.addEventListener("scroll", noteScroll, { capture: true, passive: true });
+  onCleanup(() => document.removeEventListener("scroll", noteScroll, { capture: true }));
   /** How many stop signs are in the sprite - see `paintStopFlags`. */
   let painted = 0;
   /** How the map has framed itself so far - see the geometry effect. */
   let opened: "none" | "route" | "nearest" = "none";
   const [map, setMap] = createSignal<MlMap | null>(null);
+  /** The state driver, once there is a map to drive. */
+  const [tween, setTween] = createSignal<((id: number, key: string, to: number) => void) | null>(
+    null,
+  );
   const [shape, setShape] = createSignal<Position[][] | null>(null);
   /**
    * WebGL is not available everywhere - locked-down browsers, some embedded
@@ -657,7 +1175,15 @@ export function RouteMap(props: {
    * Safari refuses `requestFullscreen` on anything but a video, and a route map
    * on a phone is exactly the thing a rider wants opened out.
    */
-  const [expanded, setExpanded] = createSignal(false);
+  const [ownExpanded, setOwnExpanded] = createSignal(false);
+  /* Owned by the screen when it says so - the route page keeps it in the URL,
+     so the back button is the way out - and by the map otherwise. */
+  const expanded = () => props.expanded ?? ownExpanded();
+  const setExpanded = (next: boolean | ((open: boolean) => boolean)) => {
+    const open = typeof next === "function" ? next(expanded()) : next;
+    if (props.onExpandedChange) props.onExpandedChange(open);
+    else setOwnExpanded(open);
+  };
 
   const stopPositions = (): Position[] =>
     props.stops.map((s) => [s.stop.location.lng, s.stop.location.lat]);
@@ -680,12 +1206,28 @@ export function RouteMap(props: {
   const markerPositions = createMemo(stopPositions);
 
   /*
+   * The map is built after the page has arrived, not while it is arriving.
+   *
+   * Creating it means a WebGL context, a style, and the first draw - a few
+   * hundred milliseconds of the main thread on a phone - and done during the
+   * page's own entrance it was the entrance stuttering, every time. The rows
+   * are what a rider came for and they paint first; the map fills its frame
+   * once the entrance has played out and the browser has a moment. "Idle"
+   * alone is not enough - it arrives the instant the rows have painted, with
+   * the entrance still running - so the wait is at least the entrance's
+   * length. The deadline is so a page that never goes idle still gets its map.
+   */
+  const [settled, setSettled] = createSignal(false, { ownedWrite: true });
+  onCleanup(whenIdleAfter(() => setSettled(true), 320, 1_000));
+
+  /*
    * Solid 2 splits every effect: the first function does the reactive reads and
    * the second acts on the result untracked, optionally returning a cleanup.
    */
   createEffect(
-    () => prefersDark(settings.theme()),
+    () => (settled() ? prefersDark(settings.theme()) : null),
     (dark) => {
+      if (dark === null) return;
       const instance = new MlMap({
         container,
         style: dark ? STYLES.dark : STYLES.light,
@@ -695,6 +1237,15 @@ export function RouteMap(props: {
         attributionControl: false,
         // The map sits inside a scrolling page, so it must not swallow drags.
         dragRotate: false,
+        /*
+         * No label cross-fade. Every repaint - and the bus creep is a repaint
+         * on a cadence - started a 300ms symbol fade that kept the render
+         * loop hot long after the frame that caused it, which added up to a
+         * map that was never actually idle. Labels popping in is the honest
+         * version of tiles arriving, and it is over in one frame.
+         */
+        fadeDuration: 0,
+        pixelRatio: mapPixelRatio(expanded()),
         /*
          * A map in the middle of a long list will otherwise eat every scroll
          * that starts on top of it. Two fingers pan, and the hint says so in
@@ -710,17 +1261,35 @@ export function RouteMap(props: {
 
       instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
 
-      // Picking a stop on the map is the fast way into a forty-stop list.
-      instance.on("click", LYR_HIT, (event) => {
-        const index = event.features?.[0]?.properties?.index;
-        if (typeof index === "number") props.onSelectStop?.(index);
-      });
-      instance.on("mouseenter", LYR_HIT, () => {
-        instance.getCanvas().style.cursor = "pointer";
-      });
-      instance.on("mouseleave", LYR_HIT, () => {
-        instance.getCanvas().style.cursor = "";
-      });
+      // Picking a stop on the map is the fast way into a forty-stop list. The
+      // name and the flag are the stop as much as the dot under them is - a
+      // tap on either picks it, not only one on the invisible circle.
+      const tween = stateTween(instance);
+      setTween(() => tween);
+      let hovered: number | null = null;
+      const hover = (index: number | null) => {
+        if (hovered === index) return;
+        if (hovered !== null) tween(hovered, "hover", 0);
+        if (index !== null) tween(index, "hover", 1);
+        hovered = index;
+      };
+      for (const layer of [LYR_HIT, LYR_LABEL]) {
+        instance.on("click", layer, (event) => {
+          const index = event.features?.[0]?.properties?.index;
+          if (typeof index === "number") props.onSelectStop?.(index);
+        });
+        instance.on("mousemove", layer, (event) => {
+          const index = event.features?.[0]?.properties?.index;
+          hover(typeof index === "number" ? index : null);
+        });
+        instance.on("mouseenter", layer, () => {
+          instance.getCanvas().style.cursor = "pointer";
+        });
+        instance.on("mouseleave", layer, () => {
+          instance.getCanvas().style.cursor = "";
+          hover(null);
+        });
+      }
 
       instance.on("load", () => {
         // The map is created during layout, so its container may still have
@@ -765,10 +1334,12 @@ export function RouteMap(props: {
       names: stopNames(),
       colour: lineColour(props.route),
       number: props.route.route,
+      // A railway's stations wear the station sign, not the bus pole.
+      rail: props.route.co.some((co) => kindOf(co) === "rail"),
       nearestIndex: props.nearestIndex,
       dark: prefersDark(settings.theme()),
     }),
-    ({ instance, lines, positions, names, colour, number, nearestIndex, dark }) => {
+    ({ instance, lines, positions, names, colour, number, rail, nearestIndex, dark }) => {
       if (!instance) return;
 
       // What the map is painted on, which the signs are cut out of.
@@ -784,9 +1355,9 @@ export function RouteMap(props: {
       });
       upsertSource(instance, SRC_STOPS, stopFeatures(positions, names, nearestIndex));
 
-      if (!instance.getLayer("mb-route-line")) {
+      if (!instance.getLayer("app-route-line")) {
         instance.addLayer({
-          id: "mb-route-casing",
+          id: "app-route-casing",
           type: "line",
           source: SRC_LINE,
           layout: { "line-cap": "round", "line-join": "round" },
@@ -797,7 +1368,7 @@ export function RouteMap(props: {
           },
         });
         instance.addLayer({
-          id: "mb-route-line",
+          id: "app-route-line",
           type: "line",
           source: SRC_LINE,
           layout: { "line-cap": "round", "line-join": "round" },
@@ -807,7 +1378,7 @@ export function RouteMap(props: {
           },
         });
         instance.addLayer({
-          id: "mb-route-arrows",
+          id: "app-route-arrows",
           type: "symbol",
           source: SRC_LINE,
           layout: {
@@ -826,7 +1397,7 @@ export function RouteMap(props: {
             "text-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0, 13, 1],
           },
         });
-        painted = paintStopFlags(instance, colour, surface, number, names, painted);
+        painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
         /*
          * A stop dot is four pixels across at best, which is nothing to aim a
          * thumb at. This invisible circle is what actually receives the tap.
@@ -841,15 +1412,46 @@ export function RouteMap(props: {
         // A ring around the foot of the open stop's pole - where it stands,
         // which is the point the rest of the screen is talking about.
         instance.addLayer({
-          id: "mb-stop-selected",
+          id: "app-stop-selected",
           type: "circle",
           source: SRC_STOPS,
-          filter: ["==", ["get", "selected"], 1],
           paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 5.5, 14, 7.5, 17, 9.5],
+            "circle-radius": ringRadius(3, LIT),
             "circle-color": colour,
+            "circle-opacity": LIT,
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 2.5,
+            "circle-stroke-opacity": LIT,
+          },
+        });
+
+        // A soft pool of the route's colour spreading out from it, which is
+        // what makes the pick read as a settle rather than a switch.
+        instance.addLayer({
+          id: "app-stop-selected-glow",
+          type: "circle",
+          source: SRC_STOPS,
+          paint: {
+            "circle-radius": ringRadius(14, LIT),
+            "circle-color": colour,
+            "circle-opacity": ["*", 0.18, LIT],
+            "circle-blur": 0.6,
+          },
+        });
+
+        // And a hollow one under whichever pole the pointer is over: the stop
+        // that would be picked, shown before it is.
+        instance.addLayer({
+          id: "app-stop-hover",
+          type: "circle",
+          source: SRC_STOPS,
+          paint: {
+            "circle-radius": ringRadius(5, HOVER),
+            "circle-color": colour,
+            "circle-opacity": ["*", 0.14, HOVER],
+            "circle-stroke-color": colour,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": ["*", 0.95, HOVER],
           },
         });
 
@@ -865,11 +1467,11 @@ export function RouteMap(props: {
          * ends of the route, then everything else.
          */
         instance.addLayer({
-          id: "mb-stop-label",
+          id: LYR_LABEL,
           type: "symbol",
           source: SRC_STOPS,
           layout: {
-            "icon-image": ["get", "icon"],
+            "icon-image": ["case", SELECTED, ["concat", ["get", "icon"], "-on"], ["get", "icon"]],
             // The foot of the pole is the stop; everything else is above it.
             "icon-anchor": "bottom",
             "icon-allow-overlap": true,
@@ -907,22 +1509,21 @@ export function RouteMap(props: {
              * The stop being read is white; the rest are quieter, so the map
              * still has a subject rather than forty equal shouts.
              */
-            "text-color": [
-              "case",
-              ["==", ["get", "selected"], 1],
-              dark ? "#ffffff" : "#111111",
-              dark ? "#b9c0cc" : "#4a5160",
-            ],
+            "text-color": labelColour(colour, dark),
             "text-halo-color": dark ? "#000000" : "#ffffff",
             "text-halo-width": 1.6,
           },
         });
       } else {
-        instance.setPaintProperty("mb-route-line", "line-color", colour);
-        instance.setPaintProperty("mb-stop-selected", "circle-color", colour);
+        instance.setPaintProperty("app-route-line", "line-color", colour);
+        instance.setPaintProperty("app-stop-selected", "circle-color", colour);
+        instance.setPaintProperty("app-stop-hover", "circle-stroke-color", colour);
+        instance.setPaintProperty("app-stop-hover", "circle-color", colour);
+        instance.setPaintProperty("app-stop-selected-glow", "circle-color", colour);
+        instance.setPaintProperty(LYR_LABEL, "text-color", labelColour(colour, dark));
         // Colour, route number and stop names are all baked into the signs,
         // so they are repainted whenever any of them moves.
-        painted = paintStopFlags(instance, colour, surface, number, names, painted);
+        painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
       }
 
       /*
@@ -931,7 +1532,7 @@ export function RouteMap(props: {
        * the first bus arrived is drawn over the one thing on the map that is
        * moving now.
        */
-      for (const id of ["mb-bus-nose", "mb-bus-dot"]) {
+      for (const id of ["app-bus-nose", "app-bus-dot"]) {
         if (instance.getLayer(id)) instance.moveLayer(id);
       }
 
@@ -1000,6 +1601,119 @@ export function RouteMap(props: {
     },
   );
 
+  /*
+   * How the roads under this route are moving, painted on the line itself.
+   *
+   * The department's detectors cover the strategic network, so a route
+   * colours through its trunk-road middle and stays quiet on the estate
+   * streets at its ends. Free flow is not drawn at all - the layer marks
+   * trouble - and the ribbon rides on top of the route line inside a casing
+   * of the map's own surface, so a red stretch reads as the road's state and
+   * never blurs into an operator whose brand is the same red.
+   */
+  const roadgoing = () =>
+    props.route.co.some((co) => kindOf(co) === "bus" || kindOf(co) === "minibus");
+
+  const [trafficSpeeds, setTrafficSpeeds] = createSignal<Map<number, number> | null>(null);
+
+  /** The links riding this route's corridor, cut once per drawn shape. */
+  const corridor = createMemo(() => {
+    // Only the published geometry is a corridor; the straight hops the map
+    // falls back to would sweep up roads the bus never touches.
+    const lines = shape();
+    const links = roadgoing() ? trafficShapes() : null;
+    if (!lines || !links) return null;
+    return segmentsAlong(lines, links);
+  });
+
+  createEffect(
+    () => Boolean(map()) && frameInView() && roadgoing(),
+    (watching) => {
+      if (!watching) return;
+      let alive = true;
+      const poll = () => {
+        void fetchTrafficSpeeds().then((speeds) => {
+          if (alive && speeds) setTrafficSpeeds(speeds);
+        });
+      };
+      poll();
+      const timer = setInterval(poll, TRAFFIC_REFRESH_MS);
+      return () => {
+        alive = false;
+        clearInterval(timer);
+      };
+    },
+  );
+
+  createEffect(
+    () => ({
+      instance: map(),
+      ids: corridor(),
+      speeds: trafficSpeeds(),
+      dark: prefersDark(settings.theme()),
+    }),
+    ({ instance, ids, speeds, dark }) => {
+      // The route layers own the stacking order; nothing to ride on yet.
+      if (!instance || !instance.getLayer("app-route-line")) return;
+
+      const links = trafficShapes();
+      const features: GeoJSON.Feature[] = [];
+      for (const id of ids ?? []) {
+        const speed = speeds?.get(id);
+        const level = speed === undefined ? null : trafficLevel(speed);
+        if (!level) continue;
+        for (const line of links?.get(id) ?? []) {
+          features.push({
+            type: "Feature",
+            properties: { level },
+            geometry: { type: "LineString", coordinates: line },
+          });
+        }
+      }
+
+      const surface = dark ? "#0c0f14" : "#ffffff";
+      const slow = dark ? "#fbbf24" : "#f59e0b";
+      const congested = dark ? "#ff5a5a" : "#e02020";
+      const colour = ["match", ["get", "level"], "congested", congested, slow] as never;
+
+      upsertSource(instance, SRC_TRAFFIC, { type: "FeatureCollection", features });
+
+      if (!instance.getLayer("app-traffic-line")) {
+        // Above the route line, below its arrows - part of the line, not of
+        // the road labels and stops above it.
+        instance.addLayer(
+          {
+            id: "app-traffic-casing",
+            type: "line",
+            source: SRC_TRAFFIC,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": surface,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 16, 9],
+            },
+          },
+          "app-route-arrows",
+        );
+        instance.addLayer(
+          {
+            id: "app-traffic-line",
+            type: "line",
+            source: SRC_TRAFFIC,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": colour,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 16, 5],
+            },
+          },
+          "app-route-arrows",
+        );
+      } else {
+        instance.setPaintProperty("app-traffic-casing", "line-color", surface);
+        instance.setPaintProperty("app-traffic-line", "line-color", colour);
+      }
+    },
+  );
+
   const recentre = () => {
     const instance = map();
     const me = props.me;
@@ -1042,7 +1756,7 @@ export function RouteMap(props: {
       instance.easeTo({
         center: coming.position,
         // Off-centre by half the sheet, so the bus does not land behind it.
-        offset: expanded() ? [0, -70] : [0, 0],
+        offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
         // Close enough to read the road it is on, without throwing away a
         // wider view the rider has deliberately zoomed out to.
         zoom: Math.max(instance.getZoom(), 15),
@@ -1058,9 +1772,24 @@ export function RouteMap(props: {
     }
   };
 
+  /**
+   * The sheet over an opened-out map is the stop list, brought to the stop
+   * the map is about. It rests low and can be pulled up; below its top rest
+   * it does not scroll, because a finger moving up on content that can scroll
+   * is scrolling it and the sheet would never rise - held low it is a window
+   * onto its first rows and the whole sheet is what the finger moves. It
+   * never goes away: pushed down it comes back, and only the button that
+   * opened the map out puts it back.
+   */
+  const [listSnap, setListSnap] = createSignal(0);
+  const listScrolls = () => listSnap() >= 1;
+
+  /** How much of the opened-out map the sheet covers at rest, in pixels. */
+  const sheetHeight = () => Math.round(container.clientHeight * SHEET_LOW);
+
   /** Room for the sheet at the bottom, when there is a sheet. */
   const framePadding = (edge: number) =>
-    expanded() ? { top: edge, left: edge, right: edge, bottom: edge + 180 } : edge;
+    expanded() ? { top: edge, left: edge, right: edge, bottom: edge + sheetHeight() } : edge;
 
   const fitRoute = () => {
     const instance = map();
@@ -1116,10 +1845,19 @@ export function RouteMap(props: {
       vehicles: props.feed?.vehicles ?? [],
       measured: track(),
       colour: lineColour(props.route),
+      kind: vehicleKind(props.route.co),
       dark: prefersDark(settings.theme()),
+      inView: frameInView(),
+      // Tracked here so the creep re-arms at the right cadence the moment
+      // the map opens out - and so the loop below never has to read a
+      // signal from inside a frame callback, which dev flags on every tick.
+      full: expanded(),
     }),
-    ({ instance, vehicles, measured, colour, dark }) => {
+    ({ instance, vehicles, measured, colour, kind, dark, inView, full }) => {
       if (!instance) return;
+      // Off screen there is nothing to place or to creep; the re-run when the
+      // frame comes back does the whole reconcile against fresh positions.
+      if (!inView) return;
 
       const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
       if (!measured || vehicles.length === 0) {
@@ -1177,7 +1915,8 @@ export function RouteMap(props: {
 
           points.push({
             type: "Feature",
-            properties: { bearing: here.bearing },
+            // On the compass, 0-360: the layer below picks a drawing by half.
+            properties: { bearing: (here.bearing + 360) % 360 },
             geometry: { type: "Point", coordinates: here.position },
           });
           bands.push({
@@ -1196,7 +1935,7 @@ export function RouteMap(props: {
 
       draw(now);
 
-      if (!instance.getLayer("mb-bus-dot")) {
+      if (!instance.getLayer("app-bus-dot")) {
         /*
          * The band goes down first and stays under the badge: it is the claim
          * being qualified, and a smear drawn over the marker would read as the
@@ -1204,7 +1943,7 @@ export function RouteMap(props: {
          */
         instance.addLayer(
           {
-            id: "mb-bus-band",
+            id: "app-bus-band",
             type: "line",
             source: SRC_BAND,
             layout: { "line-cap": "round" },
@@ -1221,10 +1960,10 @@ export function RouteMap(props: {
            * line pink, which reads as the line being uncertain rather than the
            * bus, and costs the route the one colour that identifies it.
            */
-          instance.getLayer("mb-route-casing") ? "mb-route-casing" : undefined,
+          instance.getLayer("app-route-casing") ? "app-route-casing" : undefined,
         );
         instance.addLayer({
-          id: "mb-bus-nose",
+          id: "app-bus-nose",
           type: "symbol",
           source: SRC_BUS,
           layout: {
@@ -1246,21 +1985,37 @@ export function RouteMap(props: {
             "icon-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 13.5, 1],
           },
         });
+        /*
+         * The vehicle points the way it is going, like the nose in front of
+         * it. The drawing faces right, so it is turned by the bearing less a
+         * quarter turn - and for a heading with west in it the mirror image
+         * is turned the other way instead, because a bus heading west by
+         * rotation alone is a bus on its roof. Either way the wheels stay
+         * under it and the cab leads.
+         */
+        const eastbound: ExpressionSpecification = ["<", ["get", "bearing"], 180];
         instance.addLayer({
-          id: "mb-bus-dot",
+          id: "app-bus-dot",
           type: "symbol",
           source: SRC_BUS,
           layout: {
-            "icon-image": IMG_BUS,
+            "icon-image": ["case", eastbound, IMG_BUS, IMG_BUS_WEST],
+            "icon-rotate": [
+              "case",
+              eastbound,
+              ["-", ["get", "bearing"], 90],
+              ["-", ["get", "bearing"], 270],
+            ],
+            "icon-rotation-alignment": "map",
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
             "icon-size": busSize(),
           },
         });
-        paintBus(instance, colour);
+        paintBus(instance, colour, kind);
       } else {
-        instance.setPaintProperty("mb-bus-band", "line-color", bandColour(dark));
-        paintBus(instance, colour);
+        instance.setPaintProperty("app-bus-band", "line-color", bandColour(dark));
+        paintBus(instance, colour, kind);
       }
 
       /*
@@ -1272,11 +2027,11 @@ export function RouteMap(props: {
        * shows as a glow spilling either side instead of washing a long stretch
        * of the line pink.
        */
-      if (instance.getLayer("mb-route-casing")) {
-        instance.moveLayer("mb-bus-band", "mb-route-casing");
+      if (instance.getLayer("app-route-casing")) {
+        instance.moveLayer("app-bus-band", "app-route-casing");
       }
-      instance.moveLayer("mb-bus-nose");
-      instance.moveLayer("mb-bus-dot");
+      instance.moveLayer("app-bus-nose");
+      instance.moveLayer("app-bus-dot");
 
       /*
        * Reduced motion takes the creep away, not the buses: the marker is then
@@ -1289,7 +2044,7 @@ export function RouteMap(props: {
       let last = now;
       const loop = () => {
         const at = Date.now();
-        if (at - last >= CREEP_MS) {
+        if (at - last >= (full ? CREEP_MS : CREEP_PREVIEW_MS) && at - scrolledAt > 150) {
           last = at;
           draw(at);
         }
@@ -1300,12 +2055,98 @@ export function RouteMap(props: {
     },
   );
 
+  // Opening the map out is the moment sharpness starts being worth paying
+  // for; putting it back is the moment it stops.
+  createEffect(
+    () => ({ instance: map(), full: expanded() }),
+    ({ instance, full }) => {
+      if (!instance) return;
+      instance.setPixelRatio(mapPixelRatio(full));
+    },
+  );
+
   // The user's own position is a separate source so it updates without
   // touching the route geometry.
   createEffect(
-    () => ({ instance: map(), me: props.me }),
-    ({ instance, me }) => {
+    () => ({ instance: map(), me: props.me, target: props.walkTarget, lang: props.lang }),
+    ({ instance, me, target, lang }) => {
       if (!instance) return;
+
+      // The walk to the nearest stop: a dotted path and how long it takes,
+      // in the map's own language instead of a sentence under the frame.
+      upsertSource(instance, SRC_WALK, {
+        type: "FeatureCollection",
+        features:
+          me && target
+            ? [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "LineString",
+                    coordinates: [
+                      [me.lng, me.lat],
+                      [target.lng, target.lat],
+                    ],
+                  },
+                },
+                {
+                  type: "Feature",
+                  properties: {
+                    label: `${t("walk", lang)} ${walkMinutes(distanceM(me, target))} ${t("minute", lang)}`,
+                  },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [(me.lng + target.lng) / 2, (me.lat + target.lat) / 2],
+                  },
+                },
+              ]
+            : [],
+      });
+
+      if (!instance.getLayer("app-walk-line")) {
+        // Under the rider's own dot, which is the one thing here that must
+        // never be covered.
+        const beforeMe = instance.getLayer("app-me-halo") ? "app-me-halo" : undefined;
+        instance.addLayer(
+          {
+            id: "app-walk-line",
+            type: "line",
+            source: SRC_WALK,
+            filter: ["==", ["geometry-type"], "LineString"],
+            layout: { "line-cap": "round" },
+            paint: {
+              "line-color": ACCENT,
+              "line-width": 3,
+              "line-opacity": 0.85,
+              // Zero-length dashes with round caps read as a dotted walkway,
+              // the same vocabulary the rail network map uses.
+              "line-dasharray": [0, 2.2],
+            },
+          },
+          beforeMe,
+        );
+        instance.addLayer(
+          {
+            id: "app-walk-label",
+            type: "symbol",
+            source: SRC_WALK,
+            filter: ["==", ["geometry-type"], "Point"],
+            layout: {
+              "text-field": ["get", "label"],
+              "text-size": 11,
+              "text-offset": [0, -0.9],
+              "text-allow-overlap": true,
+            },
+            paint: {
+              "text-color": ACCENT,
+              "text-halo-color": "#0c0f14",
+              "text-halo-width": 1.4,
+            },
+          },
+          beforeMe,
+        );
+      }
 
       upsertSource(instance, SRC_ME, {
         type: "FeatureCollection",
@@ -1320,15 +2161,15 @@ export function RouteMap(props: {
           : [],
       });
 
-      if (!instance.getLayer("mb-me-dot")) {
+      if (!instance.getLayer("app-me-dot")) {
         instance.addLayer({
-          id: "mb-me-halo",
+          id: "app-me-halo",
           type: "circle",
           source: SRC_ME,
           paint: { "circle-radius": 17, "circle-color": ACCENT, "circle-opacity": 0.16 },
         });
         instance.addLayer({
-          id: "mb-me-dot",
+          id: "app-me-dot",
           type: "circle",
           source: SRC_ME,
           paint: {
@@ -1378,7 +2219,7 @@ export function RouteMap(props: {
       instance.cooperativeGestures?.disable();
 
       // Nothing behind a full-window map should scroll under it.
-      document.documentElement.classList.add("mb-locked");
+      document.documentElement.classList.add("app-locked");
 
       const onKey = (event: KeyboardEvent) => {
         if (event.key === "Escape") setExpanded(false);
@@ -1388,9 +2229,52 @@ export function RouteMap(props: {
       return () => {
         cancelAnimationFrame(frame);
         window.removeEventListener("keydown", onKey);
-        document.documentElement.classList.remove("mb-locked");
+        document.documentElement.classList.remove("app-locked");
         instance.cooperativeGestures?.enable();
       };
+    },
+  );
+
+  /*
+   * The sheet opens on the stop the map is about, and follows a new pick: the
+   * row is brought to the top of the sheet, where the peek shows it whole.
+   * The rows are a second copy of the page's list, so the row is found inside
+   * the sheet rather than in the document, where the page's copy comes first.
+   */
+  const [sheetList, setSheetList] = createSignal<HTMLDivElement | null>(null);
+  createEffect(
+    () => ({
+      list: sheetList(),
+      open: expanded(),
+      seq:
+        props.selectedIndex !== undefined
+          ? props.selectedIndex + 1
+          : props.nearestIndex !== undefined && props.nearestIndex >= 0
+            ? props.nearestIndex + 1
+            : null,
+    }),
+    ({ list, open, seq }) => {
+      if (!list || !open || seq === null) return;
+      // After the rows have laid out; a sheet still sliding in has no scroll to set.
+      const frame = requestAnimationFrame(() => {
+        const row = list.querySelector<HTMLElement>(`[data-stop-seq="${seq}"]`);
+        if (!row) return;
+        const top = row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        list.scrollTo({ top: list.scrollTop + top });
+      });
+      return () => cancelAnimationFrame(frame);
+    },
+  );
+
+  /* The pick settles rather than switches: the ring under the last stop lets
+     go as the one under the new stop takes hold, over the same few frames. */
+  createEffect(
+    () => ({ index: props.selectedIndex, drive: tween() }),
+    ({ index, drive }, previous) => {
+      if (!drive) return;
+      const before = previous?.index;
+      if (before !== undefined && before !== index) drive(before, "lit", 0);
+      if (index !== undefined) drive(index, "lit", 1);
     },
   );
 
@@ -1440,13 +2324,21 @@ export function RouteMap(props: {
   };
 
   const controlClass =
-    "mb-press flex size-9 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground shadow-card backdrop-blur";
+    "app-press app-glass flex size-[1.6rem] items-center justify-center rounded-full text-foreground lg:size-9";
 
   return (
     <>
-      <div class={expanded() ? "fixed inset-0 z-50 bg-map" : "relative"}>
+      {/* A flex column, so a height class of `flex-1` on the canvas lets it
+          fill a card that is itself filling its column - the map's height then
+          comes from the window rather than from a number. */}
+      <div
+        class={expanded() ? "fixed inset-0 z-50 bg-map" : "relative flex min-h-0 flex-1 flex-col"}
+      >
         <div
-          ref={container}
+          ref={(el: HTMLDivElement) => {
+            container = el;
+            watchFrame(el);
+          }}
           // Kept in the layout while loading so MapLibre can measure it, then
           // collapsed if it turns out the map will never paint.
           class={`w-full bg-map ${mapHeight()}`}
@@ -1463,12 +2355,12 @@ export function RouteMap(props: {
          */}
         <Show when={usable()}>
           <div
-            class="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-2.5 py-1 shadow-card backdrop-blur"
+            class="app-glass pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-1.5 py-0.5 lg:gap-1.5 lg:px-2.5 lg:py-1"
             style={expanded() ? { top: "max(0.625rem, env(safe-area-inset-top))" } : undefined}
           >
             <span
               class={[
-                "size-2 rounded-full",
+                "size-1 rounded-full lg:size-2",
                 {
                   // Waiting has to look like waiting, or it looks like nothing.
                   "animate-pulse bg-subtle-foreground": note() === "loading",
@@ -1479,7 +2371,9 @@ export function RouteMap(props: {
                 note() === "estimated" ? { "background-color": lineColour(props.route) } : undefined
               }
             />
-            <span class="text-[0.75rem] font-semibold text-subtle-foreground">{noteLabel()}</span>
+            <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.75rem]">
+              {noteLabel()}
+            </span>
           </div>
         </Show>
 
@@ -1493,20 +2387,36 @@ export function RouteMap(props: {
          * height it was opened out for; the camera moves pad themselves clear
          * of it instead.
          */}
-        <Show when={expanded() && usable() && props.sheet}>
-          {(sheet) => (
-            <div
-              class="mb-rise absolute inset-x-0 bottom-0 z-10 rounded-t-2xl border-t border-border bg-card/95 shadow-card backdrop-blur"
-              style={{ "padding-bottom": "max(0.75rem, env(safe-area-inset-bottom))" }}
+        <Show when={usable() && props.list}>
+          {(list) => (
+            <Drawer
+              open={expanded()}
+              onClose={() => setExpanded(false)}
+              within
+              dismissible={false}
+              snapPoints={[SHEET_LOW, SHEET_TALL]}
+              snap={listSnap()}
+              onSnapChange={setListSnap}
+              label={t("mapSheet", props.lang)}
+              class="lg:max-w-[36rem]"
             >
-              {/* The grabber says which edge this came from, even though it is
-                  not draggable: a panel that appears from nowhere reads as an
-                  overlay that has broken, not as a drawer. */}
-              <div aria-hidden="true" class="flex justify-center pt-2">
-                <span class="h-1 w-9 rounded-full bg-faint-foreground/50" />
-              </div>
-              {sheet()()}
-            </div>
+              {/* Built only while the map is opened out, so no arrivals are
+                  laid out for a sheet nobody can see. As tall as the part of
+                  the sheet that shows at whichever rest it is at, so the
+                  visible part is the scrolling part. */}
+              <Show when={expanded()}>
+                <div
+                  ref={setSheetList}
+                  class={[
+                    "app-scroll min-h-0 pb-safe-bottom",
+                    listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
+                  ]}
+                  style={{ height: "var(--snap-point-height)" }}
+                >
+                  {list()()}
+                </div>
+              </Show>
+            </Drawer>
           )}
         </Show>
 

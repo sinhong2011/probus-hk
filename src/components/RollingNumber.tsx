@@ -1,4 +1,4 @@
-import { createEffect, For } from "solid-js";
+import { createEffect, createMemo, For } from "solid-js";
 
 /** How far behind the units column each higher place lags, in ms, and the cap. */
 const STAGGER = 45;
@@ -19,8 +19,36 @@ const STAGGER_MAX = 3;
  *
  * Sized entirely in `em`, so it takes whatever type it is dropped into.
  */
-export function RollingNumber(props: { value: number }) {
-  const digits = () => String(Math.max(0, Math.trunc(props.value))).split("");
+export function RollingNumber(props: {
+  value: number;
+  /**
+   * Milliseconds to hold before the roll starts, on top of the digit stagger.
+   *
+   * A list of forty countdowns all tick on the same second, and forty numbers
+   * rolling in the same frame read as the screen glitching rather than as
+   * time passing. Each row hands in a slightly different delay and the change
+   * runs down the list instead.
+   */
+  delay?: number;
+}) {
+  /*
+   * Which way the number went. A countdown only ever moves one way, and the
+   * roll travels that way - up and out - so the motion itself says time is
+   * running out. But a fresh poll can push an arrival later, and a "19"
+   * becoming "20" that rolls upward says the opposite of what happened; that
+   * change rolls down instead, which reads as the number being corrected.
+   *
+   * Set inside the memo so it is already right when the columns' effects run:
+   * memos settle before effects do.
+   */
+  let previous: number | undefined;
+  let rising = false;
+  const digits = createMemo(() => {
+    const value = Math.max(0, Math.trunc(props.value));
+    rising = previous !== undefined && value > previous;
+    previous = value;
+    return String(value).split("");
+  });
 
   return (
     <span class="inline-flex">
@@ -37,7 +65,14 @@ export function RollingNumber(props: { value: number }) {
          * survives, and the change arrives as a value it can animate between.
          */}
         <For each={digits()} keyed={false}>
-          {(digit, index) => <Digit value={Number(digit())} place={digits().length - 1 - index} />}
+          {(digit, index) => (
+            <Digit
+              value={Number(digit())}
+              place={digits().length - 1 - index}
+              rising={() => rising}
+              delay={props.delay ?? 0}
+            />
+          )}
         </For>
       </span>
     </span>
@@ -92,7 +127,13 @@ function rollTiming() {
  * way a mechanical counter turns and reads as one movement rather than three
  * columns firing at once.
  */
-function Digit(props: { value: number; place: number }) {
+function Digit(props: {
+  value: number;
+  place: number;
+  /** Read at roll time, untracked: whether the whole number just went up. */
+  rising: () => boolean;
+  delay: number;
+}) {
   let leaving!: HTMLSpanElement;
   let arriving!: HTMLSpanElement;
 
@@ -115,10 +156,12 @@ function Digit(props: { value: number; place: number }) {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       const { duration, easing } = rollTiming();
+      // A correction rolls the other way; see `rising` on the parent.
+      const step = props.rising() ? "-1em" : "1em";
       const timing = {
         duration,
         easing,
-        delay: Math.min(props.place, STAGGER_MAX) * STAGGER,
+        delay: props.delay + Math.min(props.place, STAGGER_MAX) * STAGGER,
         /*
          * `both`, so the pair holds the row still through the stagger delay and
          * then stays where the roll left it - the leaving cell hidden, the
@@ -131,13 +174,13 @@ function Digit(props: { value: number; place: number }) {
         leaving.animate(
           [
             { transform: "translateY(0)", opacity: 1 },
-            { transform: "translateY(-1em)", opacity: 0 },
+            { transform: `translateY(calc(-1 * ${step}))`, opacity: 0 },
           ],
           timing,
         ),
         arriving.animate(
           [
-            { transform: "translateY(1em)", opacity: 0 },
+            { transform: `translateY(${step})`, opacity: 0 },
             { transform: "translateY(0)", opacity: 1 },
           ],
           timing,

@@ -102,6 +102,9 @@ export default defineConfig({
     // Served over TLS it is worth reaching from a phone, which means binding
     // to more than loopback.
     host: https ? true : undefined,
+    // The drawer is linked from a sibling checkout - outside the project, and
+    // so outside what the dev server is willing to serve unless told.
+    fs: { allow: [".", "../../lib"] },
   },
   plugins: [
     // Compiles messages/{locale}.json into tree-shakeable functions. Chosen over
@@ -136,7 +139,16 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "~": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+    /*
+     * The drawer is a package of its own, linked in from a sibling checkout
+     * while it is developed alongside the app. Its own `node_modules` holds a
+     * second Solid, and two Solids on one page share no reactive graph: the
+     * app's copy is the one that counts, for it and for anything else linked.
+     */
+    dedupe: ["solid-js", "@solidjs/web"],
   },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
@@ -148,6 +160,25 @@ export default defineConfig({
     // parsing - so it runs in Node. Anything needing a real browser lives in
     // tests/e2e and is driven by Playwright instead.
     environment: "node",
+    /*
+     * Vitest resolves packages the way a server would, and Solid's server
+     * build is deliberately inert: effects never run and stores refuse writes.
+     * The unit tests that exercise reactivity - the TanStack bindings - opt
+     * into jsdom per file and need the client build the browser gets, so it
+     * is named outright.
+     */
+    alias: [
+      {
+        find: /^solid-js$/,
+        replacement: fileURLToPath(new URL("./node_modules/solid-js/dist/dev.js", import.meta.url)),
+      },
+      {
+        find: /^@solidjs\/web$/,
+        replacement: fileURLToPath(
+          new URL("./node_modules/@solidjs/web/dist/dev.js", import.meta.url),
+        ),
+      },
+    ],
     include: ["tests/unit/**/*.test.ts"],
     exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
   },

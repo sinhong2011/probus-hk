@@ -102,10 +102,11 @@ test("planning and searching share one tab", async ({ page }) => {
   // question they were asking before they could ask it.
   await expect(tabs.getByRole("link", { name: "規劃" })).toHaveCount(0);
 
-  await page.getByRole("tab", { name: "規劃" }).click();
+  await page.getByRole("tab", { name: "規劃", exact: true }).click();
   await expect(page).toHaveURL(/\/plan/);
   await expect(tabs.getByRole("link", { name: "搜尋" })).toHaveAttribute("aria-current", "page");
 
-  await page.getByRole("tab", { name: "搜尋" }).click();
+  // Exact: the results card carries its own row of 搜尋-adjacent chips.
+  await page.getByRole("tab", { name: "搜尋", exact: true }).click();
   await expect(page).toHaveURL(/\/search/);
 });

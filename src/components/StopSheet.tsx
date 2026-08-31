@@ -74,29 +74,29 @@ export function StopSheet(props: {
                   props.onClose();
                 }}
                 class={[
-                  "mb-press flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-state",
-                  { "bg-primary-muted": picked() },
+                  "app-press flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left",
+                  { "bg-secondary": picked() },
                 ]}
               >
                 <span
                   class={[
                     "tnum w-6 shrink-0 text-[0.81rem] font-semibold",
-                    picked() ? "text-primary" : "text-faint-foreground",
+                    picked() ? "text-muted-foreground" : "text-faint-foreground",
                   ]}
                 >
                   {entry.seq}.
                 </span>
                 <span
                   class={[
-                    "min-w-0 grow truncate text-[0.88rem]",
-                    picked() ? "font-bold text-primary" : "font-semibold text-foreground",
+                    "min-w-0 grow truncate text-[0.88rem] text-foreground",
+                    picked() ? "font-bold" : "font-semibold",
                   ]}
                 >
                   {stripStopCode(pick(entry.name, props.lang))}
                 </span>
                 <StopCode name={entry.name} lang={props.lang} />
                 <Show when={picked()}>
-                  <span class="shrink-0 text-primary">
+                  <span class="shrink-0 text-foreground">
                     <CheckIcon size={12} />
                   </span>
                 </Show>

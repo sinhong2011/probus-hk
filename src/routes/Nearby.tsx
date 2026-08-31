@@ -1,3 +1,4 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { uniqBy } from "es-toolkit";
 import { For, Show, createMemo } from "solid-js";
 import {
@@ -9,16 +10,30 @@ import {
   ScreenTitle,
   SectionLabel,
   Segmented,
+  SpecialTag,
 } from "~/components/Chrome";
-import { CardColumns, CardColumnItem, Page, Section } from "~/components/Layout";
-import { ChevronRightIcon, MegaphoneIcon, PinIcon, RefreshIcon } from "~/components/Icons";
-import { RouteLine, RouteRow, routeHref } from "~/components/RouteRow";
+import { CardColumns, CardColumnItem, Page, RowCard, Section } from "~/components/Layout";
+import {
+  ChevronRightIcon,
+  MapIcon,
+  MegaphoneIcon,
+  PinIcon,
+  RadiusIcon,
+  RefreshIcon,
+} from "~/components/Icons";
+import { RouteLine } from "~/components/RouteRow";
+import { browseLink, routeLink } from "~/lib/links";
 import { RoutePlate } from "~/components/RoutePlate";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { StopCard } from "~/components/StopCard";
 import { StopListSkeleton } from "~/components/Skeleton";
 import { useDb } from "~/data/context";
+import { lastRunGone } from "~/data/schedule";
+import { now } from "~/stores/clock";
+import { presetRoutes, scenicHighlights } from "~/data/presets";
+import { operatorLabel } from "~/lib/operators";
 import {
+  isSpecialService,
   nearbyStopClusters,
   routeAt,
   routesAtCluster,
@@ -26,20 +41,34 @@ import {
   type StopCluster,
 } from "~/data/db";
 import { etaKey, fetchStopEtas } from "~/data/eta/batch";
+import { observe } from "~/data/observe";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
-import { fetchNotices, routesMentioned } from "~/data/notices";
-import { createAsyncMemo } from "~/lib/async";
-import { distanceM, formatDistance, walkMinutes } from "~/lib/geo";
+import { live } from "~/data/live";
+import { routesMentioned } from "~/data/notices";
+import { useNotices } from "~/data/useNotices";
+import { distanceM, formatDistance, formatRange, walkMinutes } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { etaTick, etaTickAt } from "~/stores/clock";
+import { liveUpdatedAt } from "~/data/live";
 import { frequent } from "~/stores/frequent";
 import { geo, useGeolocation } from "~/stores/geolocation";
 import { saved } from "~/stores/saved";
-import { RADIUS_CHOICES, settings, type NearbyMode } from "~/stores/settings";
+import { settings, type NearbyMode } from "~/stores/settings";
+import { sheets } from "~/stores/sheets";
 
-/** How many stops to render before the list stops being useful. */
-const MAX_STOPS = 12;
+/**
+ * How many stops to render before the list stops being useful.
+ *
+ * A dozen fills a phone screen, but the kilometre notches of the range slider
+ * exist for sparse country - and there, a hard twelve would hand the 2 km and
+ * 4 km choices the same list as 800 m. So the cap follows the range. It grows
+ * slower than the area does, because every extra card is another live
+ * arrivals query on a cadence.
+ */
+function maxStops(radiusM: number): number {
+  if (radiusM <= 800) return 12;
+  return radiusM <= 2000 ? 18 : 24;
+}
 /** Routes previewed per stop; the stop page shows the rest. */
 const PREVIEW_ROUTES = 4;
 /** Departures in the merged list. Past this it is a timetable, not an answer. */
@@ -51,6 +80,141 @@ interface Departure {
   etas: Eta[];
   /** Soonest arrival, or `Infinity` where the feed has nothing. */
   next: number;
+}
+
+/**
+ * The routes most of the city knows by number, for a screen with no position
+ * to fill itself from: a rider who has just installed the app on a desk, or
+ * refused the location prompt, still gets somewhere to go from here.
+ */
+function PopularRoutes(props: { lang: Lang }) {
+  const db = useDb();
+  const routes = createMemo(() => presetRoutes(db()));
+
+  return (
+    <Show when={routes().length > 0}>
+      <Section>
+        <SectionLabel
+          trailing={
+            <span class="text-[0.75rem] font-semibold text-faint-foreground">
+              {t("popularRoutesHint", props.lang)}
+            </span>
+          }
+        >
+          {t("popularRoutes", props.lang)}
+        </SectionLabel>
+        {/* Plain rows only: the card seams and columns itself. */}
+        <RowCard>
+          <For each={routes()}>
+            {(route) => (
+              <a
+                {...useLinkProps(routeLink(route.key))}
+                class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+              >
+                <RoutePlate route={route.route} co={route.co} size="sm" />
+                <div class="flex min-w-0 grow flex-col gap-0.5">
+                  <span class="flex min-w-0 items-center gap-1.5">
+                    <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                      <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
+                        {t("towards", props.lang)}
+                      </span>
+                      {pick(route.dest, props.lang)}
+                    </span>
+                    <Show when={isSpecialService(route)}>
+                      <SpecialTag lang={props.lang} />
+                    </Show>
+                  </span>
+                  <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                    {operatorLabel(route.co, props.lang)} · {pick(route.orig, props.lang)}
+                  </span>
+                </div>
+                <span class="text-faint-foreground">
+                  <ChevronRightIcon size={15} />
+                </span>
+              </a>
+            )}
+          </For>
+        </RowCard>
+      </Section>
+    </Show>
+  );
+}
+
+/**
+ * The buses tourists and day-trippers ride for the view - one route fronting
+ * each scenic series, so the list spans the Peak, the beaches, the corridor
+ * and Lantau rather than six numbers from the same coast. Leads the screen
+ * only when there is no position; a located rider gets `ScenicLink` instead.
+ */
+function ScenicRoutes(props: { lang: Lang }) {
+  const db = useDb();
+  const highlights = createMemo(() => scenicHighlights(db()));
+
+  return (
+    <Show when={highlights().length > 0}>
+      <Section>
+        <SectionLabel
+          trailing={
+            <a
+              {...useLinkProps(browseLink("tourism"))}
+              class="app-tap text-[0.75rem] font-semibold text-primary"
+            >
+              {t("more", props.lang)}
+            </a>
+          }
+        >
+          {t("scenicRoutes", props.lang)}
+        </SectionLabel>
+        {/* Plain rows only: the card draws its own seams, and on a wide
+            window flows the rows into columns - a Hairline child would sit
+            in a grid cell of its own and tear the card apart. */}
+        <RowCard>
+          <For each={highlights()}>
+            {(entry) => (
+              <a
+                {...useLinkProps(routeLink(entry.route.key))}
+                class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+              >
+                <RoutePlate route={entry.route.route} co={entry.route.co} size="sm" />
+                <div class="flex min-w-0 grow flex-col gap-0.5">
+                  <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                    {pick(entry.series.name, props.lang)}
+                  </span>
+                  <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                    {t("towards", props.lang)} {pick(entry.route.dest, props.lang)} ·{" "}
+                    {operatorLabel(entry.route.co, props.lang)}
+                  </span>
+                </div>
+                <span class="text-faint-foreground">
+                  <ChevronRightIcon size={15} />
+                </span>
+              </a>
+            )}
+          </For>
+        </RowCard>
+      </Section>
+    </Show>
+  );
+}
+
+/**
+ * The located rider's way into the same catalogue. Nearby stops are the
+ * screen's answer; this is one quiet line at the bottom, not a section
+ * competing with them.
+ */
+function ScenicLink(props: { lang: Lang }) {
+  return (
+    <a
+      {...useLinkProps(browseLink("tourism"))}
+      class="app-press flex items-center gap-2.5 rounded-xl bg-card px-3.5 py-2.5 text-subtle-foreground shadow-card"
+    >
+      <MapIcon size={14} />
+      <span class="min-w-0 grow truncate text-[0.81rem] font-bold">
+        {t("scenicRoutes", props.lang)}
+      </span>
+      <ChevronRightIcon size={13} />
+    </a>
+  );
 }
 
 /** How far a stop can be and still be the one you are heading for. */
@@ -82,17 +246,24 @@ function clockTime(at: number): string {
  * and opens the route at that stop when tapped.
  */
 function NextTrip(props: { trip: Guess; lang: Lang }) {
+  const db = useDb();
   const etas = useEta(() => ({
     route: props.trip.route,
     seq: props.trip.seq,
     stopIdByCo: stopIdsFor(props.trip.route, props.trip.seq),
   }));
+  /* An empty answer at a kerb at midnight is not the same news as an empty
+     answer at noon; the timetable is what tells the two apart. */
+  const over = () => {
+    now();
+    return lastRunGone(db(), props.trip.route);
+  };
 
   return (
     <Card>
       <a
-        href={`${routeHref(props.trip.route.key)}?stop=${props.trip.seq}`}
-        class="mb-tap flex items-center gap-3 px-3.5 py-3"
+        {...useLinkProps(routeLink(props.trip.route.key, props.trip.seq))}
+        class="app-tap flex items-center gap-3 px-3.5 py-3"
       >
         <RoutePlate route={props.trip.route.route} co={props.trip.route.co} size="md" />
 
@@ -106,7 +277,7 @@ function NextTrip(props: { trip: Guess; lang: Lang }) {
           </span>
         </div>
 
-        <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} />
+        <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} over={over()} />
       </a>
     </Card>
   );
@@ -162,7 +333,7 @@ function NoLocation(props: { lang: Lang }) {
             type="button"
             disabled={busy()}
             onClick={() => geo.retry()}
-            class="mb-press flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-[0.88rem] font-bold text-primary-foreground disabled:opacity-60"
+            class="app-press flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-[0.88rem] font-bold text-primary-foreground disabled:opacity-60"
           >
             <span class={{ "motion-safe:animate-spin": busy() }}>
               <RefreshIcon size={13} />
@@ -180,10 +351,28 @@ export default function Nearby() {
   const lang = settings.lang;
   const { position, status } = useGeolocation();
 
+  /*
+   * Same kerbs -> same objects. `<For>` keys rows by reference, so handing it
+   * fresh copies of the same clusters unmounted and remounted every card -
+   * queries, observers and all - whenever the position moved enough to pass
+   * the store's jitter gate without changing the answer. The distances on the
+   * kept objects can lag by a few tens of metres; the moment one drifts past
+   * that, or any kerb changes place in the list, the list is rebuilt.
+   */
+  let lastStops: StopCluster[] = [];
   const stops = createMemo(() => {
     const at = position();
-    if (!at) return [];
-    return nearbyStopClusters(db(), at, settings.radiusM()).slice(0, MAX_STOPS);
+    if (!at) return (lastStops = []);
+    const radius = settings.radiusM();
+    const next = nearbyStopClusters(db(), at, radius).slice(0, maxStops(radius));
+    const same =
+      next.length === lastStops.length &&
+      next.every(
+        (cluster, i) =>
+          cluster.stopId === lastStops[i]?.stopId &&
+          Math.abs(cluster.metres - (lastStops[i]?.metres ?? 0)) < 40,
+      );
+    return same ? lastStops : (lastStops = next);
   });
 
   /*
@@ -208,13 +397,7 @@ export default function Nearby() {
    * Arrivals are batched per kerb, so the merged list costs the same requests
    * as the grouped one rather than one per row.
    */
-  const departures = createAsyncMemo<Departure[]>(async () => {
-    etaTick();
-    if (settings.nearbyMode() !== "routes") return [];
-
-    const clusters = stops();
-    if (clusters.length === 0) return [];
-
+  const load = async (clusters: StopCluster[]): Promise<Departure[]> => {
     const perStop = await Promise.all(
       clusters.map(async (cluster) => {
         // One route number can call at a kerb as several service types; to
@@ -251,7 +434,22 @@ export default function Nearby() {
       .sort((a, b) => a.next - b.next || a.cluster.metres - b.cluster.metres);
 
     return uniqBy(sorted, (row) => row.at.route.key).slice(0, MAX_DEPARTURES);
+  };
+
+  // A plain signal, not a query read: this screen owning a `useQuery` had its
+  // rendering held through every poll - see `~/data/observe`.
+  const departureQuery = observe<Departure[]>(() => {
+    const clusters = stops();
+    // Only fetched while the merged view is the one on screen; the grouped
+    // view's cards ask for the same kerbs themselves.
+    if (settings.nearbyMode() !== "routes" || clusters.length === 0) return null;
+    return {
+      ...live(),
+      queryKey: ["departures", clusters.map((cluster) => cluster.stopId)] as const,
+      queryFn: () => load(clusters),
+    };
   });
+  const departures = (): Departure[] => departureQuery.data() ?? [];
 
   /*
    * The route you are probably about to take: the one you open most often,
@@ -259,9 +457,10 @@ export default function Nearby() {
    * offered when it is a good one - a route you have opened before, with a
    * stop of it inside a short walk.
    */
+  let lastGuess: Guess | null = null;
   const guess = createMemo(() => {
     const here = position();
-    if (!here) return null;
+    if (!here) return (lastGuess = null);
 
     for (const key of frequent.top(5)) {
       const route = routeAt(db(), key);
@@ -285,23 +484,28 @@ export default function Nearby() {
       const stopId = index >= 0 ? ids[index] : undefined;
       const stop = stopId ? db().stopList[stopId] : undefined;
       if (stop && stopId && metres <= GUESS_RADIUS_M) {
-        return { route, seq: index + 1, stopId, stop, metres };
+        /* Same trip -> same object: the keyed <Show> above the card remounts
+           its child per new reference, and the card re-created its query for
+           every wobble the jitter gate let through. */
+        if (
+          lastGuess &&
+          lastGuess.route.key === route.key &&
+          lastGuess.seq === index + 1 &&
+          Math.abs(lastGuess.metres - metres) < 40
+        ) {
+          return lastGuess;
+        }
+        return (lastGuess = { route, seq: index + 1, stopId, stop, metres });
       }
     }
-    return null;
+    return (lastGuess = null);
   });
 
   /**
    * Notices that name a route you keep or use, so a disruption reaches the
    * screen the rider actually opens rather than waiting in a tab.
    */
-  const notices = createAsyncMemo(async () => {
-    try {
-      return await fetchNotices();
-    } catch {
-      return [];
-    }
-  });
+  const { notices } = useNotices();
 
   const mine = createMemo(() => {
     const numbers = new Set<string>();
@@ -319,7 +523,7 @@ export default function Nearby() {
   const affecting = createMemo(() => {
     const numbers = mine();
     if (numbers.size === 0) return [];
-    return (notices() ?? []).filter((notice) =>
+    return notices().list.filter((notice) =>
       routesMentioned(notice).some((route) => numbers.has(route)),
     );
   });
@@ -331,11 +535,11 @@ export default function Nearby() {
   ];
 
   return (
-    <Page wide>
+    <Page>
       {/* Where you are belongs beside the title, and how far you will walk for
           a bus belongs beside both - one band, not three stacked rows. */}
       <ScreenTitle
-        title={t("nearby", lang())}
+        title={t("home", lang())}
         trailing={
           <div class="flex min-w-0 items-center gap-1.5 pb-1 text-primary lg:pb-0">
             <PinIcon size={15} />
@@ -357,24 +561,17 @@ export default function Nearby() {
             <Show when={status() === "ready"}>
               <LivePill label={t("live", lang())} />
             </Show>
-            <For each={RADIUS_CHOICES}>
-              {(radius) => (
-                <button
-                  type="button"
-                  onClick={() => settings.setRadiusM(radius)}
-                  aria-pressed={settings.radiusM() === radius ? "true" : "false"}
-                  class={[
-                    "flex h-[1.6rem] items-center rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-150",
-                    {
-                      "bg-primary text-primary-foreground": settings.radiusM() === radius,
-                      "bg-secondary text-subtle-foreground": settings.radiusM() !== radius,
-                    },
-                  ]}
-                >
-                  <span class="tnum">{radius} m</span>
-                </button>
-              )}
-            </For>
+            {/* One chip wearing the current range, not a row of presets:
+                the choosing happens on a map, in its own sheet. */}
+            <button
+              type="button"
+              onClick={() => sheets.openRange()}
+              aria-label={`${t("radius", lang())} ${formatRange(settings.radiusM())}`}
+              class="app-press flex h-[1.6rem] items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-subtle-foreground"
+            >
+              <RadiusIcon size={12} />
+              <span class="tnum">{formatRange(settings.radiusM())}</span>
+            </button>
           </>
         }
       />
@@ -385,7 +582,7 @@ export default function Nearby() {
             <SectionLabel
               trailing={
                 <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                  {t("updatedAt", lang())} {clockTime(etaTickAt())}
+                  {t("updatedAt", lang())} {clockTime(liveUpdatedAt())}
                 </span>
               }
             >
@@ -399,14 +596,14 @@ export default function Nearby() {
       {/* One line for the state of the network, and only about the routes this
           rider actually uses - a tab full of notices is not an answer to
           "is anything wrong with my bus". */}
-      <Show when={mine().size > 0 && notices() !== undefined}>
+      <Show when={mine().size > 0}>
         <a
-          href="/notices"
+          {...useLinkProps({ to: "/notices" })}
           class={[
-            "mb-press flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5",
+            "app-press flex items-center gap-2.5 rounded-xl px-3.5 py-2.5",
             affecting().length > 0
-              ? "border-warning/25 bg-warning/10 text-warning"
-              : "border-border bg-card text-subtle-foreground",
+              ? "bg-warning/10 text-warning"
+              : "bg-card text-subtle-foreground shadow-card",
           ]}
         >
           <MegaphoneIcon size={14} />
@@ -440,6 +637,18 @@ export default function Nearby() {
             : t("nearbyStops", lang())}
         </SectionLabel>
 
+        {/*
+         * Something to open before the phone knows where it is - and
+         * something to open if it never will. A home screen that is a
+         * blank until a permission dialog is answered is not a home screen.
+         */}
+        <Show when={position() === null}>
+          {/* The scenic list leads: a rider with no position granted is more
+              often a visitor planning a day than a commuter chasing a stop. */}
+          <ScenicRoutes lang={lang()} />
+          <PopularRoutes lang={lang()} />
+        </Show>
+
         <Show
           when={status() !== "denied" && status() !== "unavailable"}
           fallback={<NoLocation lang={lang()} />}
@@ -470,7 +679,7 @@ export default function Nearby() {
                     <For each={stops()}>
                       {(entry, index) => (
                         <CardColumnItem
-                          class="motion-safe:mb-rise"
+                          class="motion-safe:app-rise"
                           style={{ "animation-delay": `${Math.min(index(), 8) * 24}ms` }}
                         >
                           <StopCard
@@ -514,6 +723,10 @@ export default function Nearby() {
           </Show>
         </Show>
       </Section>
+
+      <Show when={position() !== null}>
+        <ScenicLink lang={lang()} />
+      </Show>
     </Page>
   );
 }

@@ -1,26 +1,24 @@
-import { createEffect } from "solid-js";
-import { Portal, type JSX } from "@solidjs/web";
-import { CloseIcon } from "./Icons";
-import { t, type Lang } from "~/lib/i18n";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Drawer } from "./Drawer";
+import { type Lang, t } from "~/lib/i18n";
 
 /**
- * A dialog: a bottom sheet on a phone, a centred card on a wide screen.
+ * A dialog: a drawer that covers the page.
  *
  * Reference material - a timetable, a full stop list - does not belong inline.
  * Opening it there pushed the page it was attached to out from under the
  * reader, and inside a sticky column it had nowhere to go at all.
  *
- * It stays mounted so the close can animate, which means the closed dialog has
- * to be genuinely out of reach: `inert` for focus and pointers, and a delayed
- * `visibility` flip so it stops taking hits the moment the fade ends.
+ * It was a sheet that faded in and out; it is now the same drawer the map
+ * uses, in its modal form - a scrim, focus held inside, Escape to leave, and a
+ * handle that can be pulled to put it away. One kind of sheet across the app,
+ * so a gesture learned on one works on all of them.
  *
- * Rendered under `document.body` rather than where it is used. A dialog is
- * opened from deep inside a page - a header, a scrolling stop list - and
- * `position: fixed` is only fixed to the viewport until an ancestor gets a
- * transform, a filter or a scrolling touch region, after which it is fixed to
- * that ancestor instead. iOS Safari makes every one of those a containing
- * block, and the sheet came up underneath the page content it was meant to
- * cover. The portal keeps the reactive scope and disposes with the owner.
+ * Laid out as shadcn's drawer lays its own out: a header of title and
+ * description, the body as the one part that scrolls, and a footer that
+ * holds the way out - the same from the bottom of a phone and from the side
+ * of a wide window.
  */
 export function Modal(props: {
   open: boolean;
@@ -28,99 +26,50 @@ export function Modal(props: {
   title: string;
   lang: Lang;
   children: JSX.Element;
+  /**
+   * A panel from the right rather than a sheet from the bottom, for a wide
+   * window where a long list reads better as a column beside the page.
+   */
+  side?: "bottom" | "right";
+  /** A line under the title saying what the sheet is for. */
+  description?: string;
 }) {
-  let sheet!: HTMLDivElement;
-  let restore: HTMLElement | null = null;
-
-  createEffect(
-    () => props.open,
-    (open) => {
-      if (!open) return;
-
-      // Escape closes it, and the page underneath must not scroll away behind
-      // the sheet while it is up.
-      restore = document.activeElement as HTMLElement | null;
-
-      /*
-       * Pinning the body at its current offset, rather than `overflow: hidden`,
-       * which iOS Safari ignores - the page keeps scrolling and rubber-banding
-       * behind the sheet.
-       */
-      const offset = window.scrollY;
-      const body = document.body.style;
-      const previous = { position: body.position, top: body.top, width: body.width };
-      body.position = "fixed";
-      body.top = `-${offset}px`;
-      body.width = "100%";
-
-      sheet.focus();
-
-      const onKey = (event: KeyboardEvent) => {
-        if (event.key === "Escape") props.onClose();
-      };
-      document.addEventListener("keydown", onKey);
-
-      /*
-       * Returned, not registered: in Solid 2 an effect's callback runs with no
-       * owner, so an `onCleanup` inside it is dropped on the floor - and the
-       * body stayed pinned after every sheet, which on a phone is the whole
-       * page refusing to scroll. A function returned from the callback is the
-       * cleanup, run before the next run and on disposal.
-       */
-      return () => {
-        document.removeEventListener("keydown", onKey);
-        body.position = previous.position;
-        body.top = previous.top;
-        body.width = previous.width;
-        window.scrollTo(0, offset);
-        // Put the caret back where it was, or the next Tab starts from the top
-        // of the document.
-        restore?.focus();
-      };
-    },
-  );
-
+  const right = () => props.side === "right";
   return (
-    <Portal>
+    <Drawer
+      open={props.open}
+      onClose={props.onClose}
+      modal
+      side={props.side}
+      scroll={false}
+      label={props.title}
+      class={right() ? "" : "sm:max-w-[32rem]"}
+    >
+      {/* Centred on a sheet, as shadcn centres its own; a panel reads from
+          the left, as a column does. */}
       <div
-        class="mb-modal fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
-        data-open={props.open ? "true" : "false"}
-        inert={!props.open}
+        class={[
+          "flex shrink-0 flex-col gap-0.5 p-4 pb-0",
+          { "text-center md:text-left": !right() },
+        ]}
       >
-        <div
-          class="absolute inset-0 bg-black/55"
-          style={{ "backdrop-filter": "blur(2px)", "-webkit-backdrop-filter": "blur(2px)" }}
-          onClick={props.onClose}
-          aria-hidden="true"
-        />
-
-        <div
-          ref={sheet}
-          role="dialog"
-          aria-modal="true"
-          aria-label={props.title}
-          tabindex="-1"
-          class="mb-sheet relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-card outline-none sm:max-h-[80dvh] sm:max-w-[32rem] sm:rounded-3xl"
-        >
-          <header class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
-              {props.title}
-            </span>
-            <button
-              type="button"
-              aria-label={t("close", props.lang)}
-              onClick={props.onClose}
-              class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
-            >
-              <CloseIcon size={14} />
-            </button>
-          </header>
-
-          {/* Contained, so flicking past the end of the sheet does not start
-            scrolling the page underneath it. */}
-          <div class="mb-scroll grow overscroll-contain px-4 py-4">{props.children}</div>
-        </div>
+        <h2 class="text-base font-medium text-foreground">{props.title}</h2>
+        <Show when={props.description}>
+          <p class="text-balance text-sm text-muted-foreground">{props.description}</p>
+        </Show>
       </div>
-    </Portal>
+      <div class="app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4">
+        {props.children}
+      </div>
+      <div class="mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0">
+        <button
+          type="button"
+          onClick={props.onClose}
+          class="app-press flex h-10 w-full items-center justify-center rounded-xl bg-secondary text-[0.88rem] font-semibold text-foreground"
+        >
+          {t("close", props.lang)}
+        </button>
+      </div>
+    </Drawer>
   );
 }

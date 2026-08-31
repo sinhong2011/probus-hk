@@ -15,17 +15,17 @@ import { t, type Lang } from "~/lib/i18n";
 export function Toaster(props: { lang: Lang }) {
   return (
     <div
-      class="mb-safe-top pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4"
+      class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4"
       aria-live="assertive"
     >
       <For each={toast.items()}>
         {(item) => (
           <div
             class={[
-              "pointer-events-auto flex w-full max-w-[26rem] items-center gap-3 rounded-2xl border px-3.5 py-3 shadow-card motion-safe:mb-rise",
+              "pointer-events-auto flex w-full max-w-[26rem] items-center gap-3 rounded-2xl px-3.5 py-3 shadow-card motion-safe:app-rise",
               {
-                "border-primary-border bg-primary-muted": item.tone === "alert",
-                "border-border bg-card": item.tone !== "alert",
+                "bg-primary-muted": item.tone === "alert",
+                "bg-card": item.tone !== "alert",
               },
             ]}
           >
@@ -54,7 +54,7 @@ export function Toaster(props: { lang: Lang }) {
               type="button"
               aria-label={t("close", props.lang)}
               onClick={() => toast.dismiss(item.id)}
-              class="mb-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+              class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
             >
               <CloseIcon size={12} />
             </button>

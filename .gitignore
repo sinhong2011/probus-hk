@@ -14,3 +14,8 @@ design/
 
 # Locally generated development certificate; see `npm run cert`.
 .certs/
+
+# Screenshots dropped in the working directory while checking a change - the
+# same thing `shots/` and `.playwright-mcp/` above hold, just loose. Only the
+# root: the app's own images live under `public/`.
+/*.png

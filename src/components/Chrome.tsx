@@ -1,9 +1,9 @@
 import { For, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { SlidingPill } from "./SlidingPill";
 import type { IconProps } from "./Icons";
+import { SlidingPill } from "./SlidingPill";
 import type { Bilingual } from "~/data/types";
-import { pick, stopCode, type Lang } from "~/lib/i18n";
+import { pick, stopCode, t, type Lang } from "~/lib/i18n";
 
 /**
  * The pole code printed on the stop itself - "WT916".
@@ -25,7 +25,10 @@ export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class
       {(value) => (
         <span
           class={[
-            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.69rem] font-bold tracking-[0.06em] text-faint-foreground",
+            // Set well under the name it follows: the code is what a rider
+            // checks once they are already at the right row, so it only has
+            // to be legible, not weigh the same as the name.
+            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.55rem] font-bold tracking-[0.06em] text-faint-foreground",
             props.class ?? "",
           ]}
         >
@@ -48,11 +51,25 @@ export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Elem
   );
 }
 
-/** Rounded surface that groups rows, with hairlines drawn between them. */
-export function Card(props: { children: JSX.Element; class?: string }) {
+/**
+ * Rounded surface that groups rows, with hairlines drawn between them.
+ *
+ * `raised` lifts it one step above the surface it sits on - for a card
+ * inside a sheet, where `bg-card` would vanish into the ground. The step is
+ * the secondary tone, except inside a drawer, whose lighter ground re-points
+ * `--raised` a full step further up - see `.bg-drawer` in app.css.
+ */
+export function Card(props: { children: JSX.Element; class?: string; raised?: boolean }) {
   return (
     <div
-      class={`overflow-hidden rounded-xl border border-border bg-card shadow-card ${props.class ?? ""}`}
+      class={[
+        /* The hairline, not the shadow, is what draws the card's edge: in the
+           dark `--shadow-card` is `none`, and a card one step off the page
+           tone needs an edge of its own to read as lifted. */
+        "overflow-hidden rounded-xl border border-border shadow-card",
+        props.raised ? "bg-raised" : "bg-card",
+        props.class ?? "",
+      ]}
     >
       {props.children}
     </div>
@@ -69,7 +86,7 @@ export function Card(props: { children: JSX.Element; class?: string }) {
 export function Reveal(props: { open: boolean; children: JSX.Element; class?: string }) {
   return (
     <div
-      class={`mb-reveal ${props.class ?? ""}`}
+      class={`app-reveal ${props.class ?? ""}`}
       data-open={props.open ? "true" : "false"}
       /* Closed content stays in the DOM so the exit can play, which would
          otherwise leave its buttons and links tabbable and readable by a
@@ -82,13 +99,46 @@ export function Reveal(props: { open: boolean; children: JSX.Element; class?: st
 }
 
 /** Inset divider matching the card's left padding. */
+/**
+ * One fare, as a tag on the line that names it - set a step below the words
+ * around it. A fare is a thing to check, not the answer the row is giving,
+ * and at the same size as the small type beside it the tags were the loudest
+ * thing on the line.
+ */
+export function FareTag(props: { children: JSX.Element }) {
+  return (
+    <span class="tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.59rem] font-bold text-muted-foreground">
+      {props.children}
+    </span>
+  );
+}
+
+/**
+ * Marks a special-pattern entry apart from the main service it shadows.
+ *
+ * The route database keys every service pattern separately, and a variant
+ * that starts and ends where the main one does reads as its exact double -
+ * same number, same ends, same fare. This is the one word that tells them
+ * apart, worn by every pattern that is not the main one, as the reference
+ * app wears it.
+ */
+export function SpecialTag(props: { lang: Lang }) {
+  return (
+    <span class="shrink-0 self-center rounded bg-warning/12 px-1 py-px text-[0.66rem] font-bold leading-[1.5] text-warning">
+      {t("specialDepartures", props.lang)}
+    </span>
+  );
+}
+
 export function Hairline() {
   return <div class="ml-3.5 h-px bg-border" />;
 }
 
 export function Chip(props: {
   children: JSX.Element;
-  tone?: "plain" | "accent" | "warn";
+  /** `card` is `plain` for a chip on a raised (`bg-secondary`) surface,
+      where the plain tone would vanish into its own background. */
+  tone?: "plain" | "accent" | "warn" | "card";
   /** For the flex behaviour of the row it sits in, e.g. `shrink-0`. */
   class?: string;
 }) {
@@ -98,14 +148,18 @@ export function Chip(props: {
          wraps does not make the chip taller, it spills out of it. "52 m" broke
          across two lines the moment a long stop name claimed the row. */
       class={[
-        "inline-flex h-[1.6rem] w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[0.75rem] font-bold",
+        "inline-flex h-[1.6rem] w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[0.75rem] font-bold",
         props.class ?? "",
         {
-          "bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
-          "bg-primary-muted text-primary border border-primary-border": props.tone === "accent",
+          "border-border bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
+          "border-border bg-card text-muted-foreground": props.tone === "card",
+          /* A toned chip takes its edge from its own colour, not the neutral
+             hairline: a grey ring around a primary or amber ground reads as a
+             second, unrelated shape drawn over it. */
+          "border-primary-border bg-primary-muted text-primary": props.tone === "accent",
           // The last bus of the night is the one piece of timetable that is
           // urgent, and it shares its colour with an arrival that is imminent.
-          "bg-warning/12 text-warning border border-warning/25": props.tone === "warn",
+          "border-warning/25 bg-warning/12 text-warning": props.tone === "warn",
         },
       ]}
     >
@@ -117,9 +171,9 @@ export function Chip(props: {
 /** The live-data pill with its pulsing dot. */
 export function LivePill(props: { label: string }) {
   return (
-    <span class="inline-flex items-center gap-[7px] rounded-full border border-primary-border bg-primary-muted py-[5px] pl-[9px] pr-[11px]">
+    <span class="inline-flex items-center gap-[7px] rounded-full bg-primary-muted py-[5px] pl-[9px] pr-[11px]">
       <span
-        class="size-1.5 rounded-full bg-primary motion-safe:animate-[mb-pulse_2s_ease-in-out_infinite]"
+        class="size-1.5 rounded-full bg-primary motion-safe:animate-[app-pulse_2s_ease-in-out_infinite]"
         style={{
           "box-shadow": "0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)",
         }}
@@ -190,9 +244,10 @@ export function ScreenTitle(props: {
       <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
         <div class="flex items-end justify-between gap-4 lg:min-w-0 lg:items-baseline lg:justify-start lg:gap-3">
           <div class="flex min-w-0 shrink-0 flex-col gap-[3px] lg:flex-row lg:items-baseline lg:gap-2.5">
-            <span class="text-[1.7rem] font-bold leading-[1.05] tracking-[-0.035em] text-foreground lg:text-[1.3rem]">
-              {props.title}
-            </span>
+            {/* The name stays for screen readers; visually the tab bar and
+                the sidebar already say where you are, and the heading
+                repeating them was the tallest thing on every screen. */}
+            <h1 class="sr-only">{props.title}</h1>
             <Show when={props.subtitle}>
               <span class="text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
                 {props.subtitle}
@@ -238,6 +293,14 @@ export function Segmented<T extends string | number>(props: {
    */
   fill?: boolean;
 }) {
+  /*
+   * -1 parks the pill rather than sending it to the first choice: a value
+   * persisted by an older build may no longer be one of the options, and a
+   * control that quietly claims a choice nobody made is worse than one that
+   * shows none.
+   */
+  const activeIndex = () => props.options.findIndex((option) => option.value === props.value);
+
   return (
     <div
       role="radiogroup"
@@ -248,10 +311,16 @@ export function Segmented<T extends string | number>(props: {
         { "w-full": Boolean(props.fill) },
       ]}
     >
-      <SlidingPill
-        active={props.value}
-        class={`inset-y-[3px] bg-card shadow-card ${props.pill ? "rounded-full" : "rounded-md"}`}
-      />
+      {/* The pill the choices ride on, which is what this control has always
+          been built for - the buttons below mark themselves `data-pill-active`
+          and stand at `z-10` so it can pass under them. The same component
+          slides down the navigation rail and across the search/plan switch. */}
+      <Show when={activeIndex() >= 0}>
+        <SlidingPill
+          active={activeIndex()}
+          class={`inset-y-[3px] bg-card shadow-card ${props.pill ? "rounded-full" : "rounded-md"}`}
+        />
+      </Show>
 
       <For each={props.options}>
         {(option) => {
@@ -268,7 +337,7 @@ export function Segmented<T extends string | number>(props: {
               class={[
                 // `whitespace-nowrap`: a two-character label broken across two
                 // lines is not a shorter label, it is a broken one.
-                "mb-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
+                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
                 props.fill ? "grow basis-0" : "shrink-0",
                 props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
                 props.pill ? "rounded-full" : "rounded-md",
@@ -299,7 +368,9 @@ export function Toggle(props: { checked: boolean; onChange: (v: boolean) => void
       onClick={() => props.onChange(!props.checked)}
       class={[
         "flex h-[1.7rem] w-[2.9rem] items-center rounded-full p-[2.5px] transition-colors duration-200",
-        { "bg-primary": props.checked, "bg-secondary": !props.checked },
+        /* The off track is a well cut into whatever the toggle sits on - a
+           raised card in settings - so it cannot share that card's surface. */
+        { "bg-primary": props.checked, "bg-card": !props.checked },
       ]}
     >
       <span

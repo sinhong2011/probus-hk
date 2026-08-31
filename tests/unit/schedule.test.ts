@@ -286,6 +286,33 @@ describe("serviceSpan", () => {
     expect(serviceSpan(makeDb(), route)?.untilFirst).toBe(90);
   });
 
+  /*
+   * The service day ends when the last one arrives, not when it leaves. Asked
+   * in the gap between the two, this used to hand back today's span - which
+   * had the route page saying "no service now, first at 05:35" over a bus
+   * still carrying people to its terminus.
+   */
+  it("still answers for last night's run while the last one is on the road", () => {
+    // 00:10, half an hour after a 23:40 departure that takes 30 minutes.
+    vi.setSystemTime(new Date("2026-03-04T16:10:00Z"));
+    const route = makeRoute({ freq: { daily: { "0535": ["2340", "600"] } }, jt: "30" });
+    const span = serviceSpan(makeDb(), route);
+
+    expect(span?.last).toBe("23:40");
+    // Left, but not arrived: behind us by half an hour, and no talk of 05:35.
+    expect(span?.untilLast).toBe(-30);
+    expect(span?.untilFirst).toBeLessThan(0);
+  });
+
+  it("moves on to today once the last one has reached its terminus", () => {
+    // 00:20, ten minutes after that same bus finished its run at 00:10.
+    vi.setSystemTime(new Date("2026-03-04T16:20:00Z"));
+    const route = makeRoute({ freq: { daily: { "0535": ["2340", "600"] } }, jt: "30" });
+
+    // 315 minutes from 00:20 to 05:35 - the wait a rider now actually has.
+    expect(serviceSpan(makeDb(), route)?.untilFirst).toBe(315);
+  });
+
   it("after midnight, answers for the service still running rather than tonight's", () => {
     // 01:00 Hong Kong time on the Thursday, inside Wednesday's 23:10 -> 02:20.
     vi.setSystemTime(new Date("2026-03-04T17:00:00Z"));

@@ -44,8 +44,10 @@ export const OPERATORS: Record<Company, OperatorStyle> = {
   lightRail: {
     name: { zh: "輕鐵", en: "Light Rail" },
     short: { zh: "輕鐵", en: "LR" },
-    color: "#7baf3c",
-    ink: "#0d1806",
+    // The railway's own gold, not a green: on the network map the light rail
+    // runs beside the Kwun Tong line's green, and they have to read apart.
+    color: "#d3a809",
+    ink: "#231c02",
   },
   lrtfeeder: {
     name: { zh: "港鐵巴士", en: "MTR Bus" },
@@ -92,6 +94,30 @@ const PRECEDENCE: Company[] = [
   "fortuneferry",
 ];
 
+/**
+ * The kinds a rider sorts routes into. "1" is a KMB bus, a Citybus bus, a
+ * Lantau bus and a green minibus, and someone typing it knows which of those
+ * they are waiting for; this is the axis the results can be narrowed on.
+ */
+export type Kind = "bus" | "minibus" | "rail" | "ferry";
+
+const KINDS: Record<Company, Kind> = {
+  kmb: "bus",
+  ctb: "bus",
+  nlb: "bus",
+  lrtfeeder: "bus",
+  gmb: "minibus",
+  mtr: "rail",
+  lightRail: "rail",
+  sunferry: "ferry",
+  hkkf: "ferry",
+  fortuneferry: "ferry",
+};
+
+export function kindOf(co: Company): Kind {
+  return KINDS[co];
+}
+
 export function operatorRank(co: Company): number {
   const index = PRECEDENCE.indexOf(co);
   return index < 0 ? PRECEDENCE.length : index;
@@ -106,7 +132,7 @@ export function operatorRank(co: Company): number {
  * the same here as in the dataset this app's route logic comes from.
  */
 const MTR_LINES: Record<string, string> = {
-  AEL: "#00888E",
+  AEL: "#03828B",
   TCL: "#F3982D",
   TML: "#9C2E00",
   TKL: "#7E3C93",
@@ -180,6 +206,11 @@ export function plateStyle(co: Company[], route: string): { background: string; 
     };
   }
   return { background: a.color, color: a.ink };
+}
+
+/** The short form, for the line under a route number: "九巴", "KMB · CTB". */
+export function operatorShort(co: Company[], lang: "zh" | "en"): string {
+  return co.map((c) => OPERATORS[c].short[lang]).join(" · ");
 }
 
 /** Label such as "九巴 KMB" or "聯營 KMB · Citybus". */

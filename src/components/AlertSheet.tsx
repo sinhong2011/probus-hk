@@ -122,7 +122,7 @@ function PermissionRow(props: { permission: NotifyPermission; lang: Lang; onRequ
         <button
           type="button"
           onClick={props.onRequest}
-          class="mb-press flex h-8 shrink-0 items-center rounded-full bg-primary px-3.5 text-[0.81rem] font-bold text-primary-foreground"
+          class="app-press flex h-8 shrink-0 items-center rounded-full bg-primary px-3.5 text-[0.81rem] font-bold text-primary-foreground"
         >
           {t("alertEnable", props.lang)}
         </button>
@@ -152,10 +152,10 @@ function AlertOption(props: {
   return (
     <div
       class={[
-        "flex flex-col gap-3 rounded-xl border p-3.5 transition-colors duration-state",
+        "flex flex-col gap-3 rounded-xl p-3.5 transition-colors duration-state",
         {
-          "border-primary-border bg-primary-muted": props.armed,
-          "border-border bg-card": !props.armed,
+          "bg-primary-muted": props.armed,
+          "bg-card": !props.armed,
         },
       ]}
     >
@@ -215,7 +215,7 @@ function AlertOption(props: {
         aria-label={`${props.title} · ${props.armed ? t("alertOff", props.lang) : t("remindMe", props.lang)}`}
         onClick={props.onToggle}
         class={[
-          "mb-press flex h-10 items-center justify-center gap-1.5 rounded-lg text-[0.88rem] font-bold",
+          "app-press flex h-10 items-center justify-center gap-1.5 rounded-lg text-[0.88rem] font-bold",
           {
             "bg-secondary text-destructive": props.armed,
             "bg-primary text-primary-foreground": !props.armed,

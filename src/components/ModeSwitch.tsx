@@ -1,12 +1,14 @@
-import { useLocation } from "@solidjs/router";
+import { useLinkProps, useLocation } from "@tanstack/solid-router";
 import { For } from "solid-js";
 import { SlidingPill } from "./SlidingPill";
 import { t, type Lang, type MessageKey } from "~/lib/i18n";
 
-const MODES: { href: string; label: MessageKey }[] = [
+// `as const` so each href is its own literal: the router type-checks a link
+// against the route tree, and a plain `string` matches nothing in it.
+const MODES = [
   { href: "/search", label: "search" },
   { href: "/plan", label: "plan" },
-];
+] as const satisfies readonly { href: string; label: MessageKey }[];
 
 /**
  * Searching and planning are one place, not two.
@@ -24,7 +26,7 @@ export function ModeSwitch(props: { lang: Lang }) {
   const activeIndex = () =>
     Math.max(
       0,
-      MODES.findIndex((m) => m.href === location.pathname),
+      MODES.findIndex((m) => m.href === location().pathname),
     );
 
   return (
@@ -39,15 +41,15 @@ export function ModeSwitch(props: { lang: Lang }) {
 
       <For each={MODES}>
         {(mode) => {
-          const current = () => location.pathname === mode.href;
+          const current = () => location().pathname === mode.href;
           return (
             <a
-              href={mode.href}
+              {...useLinkProps({ to: mode.href })}
               role="tab"
               aria-selected={current() ? "true" : "false"}
               data-pill-active={current() ? "true" : "false"}
               class={[
-                "mb-press relative z-10 flex h-8 grow items-center justify-center rounded-full text-[0.88rem] transition-colors duration-state",
+                "app-press relative z-10 flex h-7 grow items-center justify-center rounded-full text-[0.81rem] transition-colors duration-state",
                 {
                   "font-bold text-foreground": current(),
                   "font-semibold text-subtle-foreground": !current(),

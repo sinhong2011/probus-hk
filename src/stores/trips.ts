@@ -1,8 +1,4 @@
-import { installPersistence, persistedSignal } from "./persisted";
-
-// The old name, kept on purpose: renaming the key empties a rider's saved trips on every
-// device that already has one.
-const KEY = "motherbus:trips";
+import { persistedCollection } from "./collection";
 
 /** An end of a trip: where the rider is, or a stop they named. */
 export type TripEnd = { kind: "me" } | { kind: "stop"; id: string };
@@ -21,10 +17,12 @@ export function tripId(from: TripEnd, to: TripEnd): string {
   return `${end(from)}>${end(to)}`;
 }
 
-/** A stored list that is not a list is not a list of trips. */
-const revive = (raw: unknown): SavedTrip[] => (Array.isArray(raw) ? (raw as SavedTrip[]) : []);
-
-const [items, setItems] = persistedSignal<SavedTrip[]>(KEY, [], revive);
+const store = persistedCollection<SavedTrip>({
+  id: "trips",
+  storageKey: "probus:db:trips",
+  getKey: (trip) => trip.id,
+  legacyKeys: ["probus:trips", "motherbus:trips"],
+});
 
 /**
  * The journeys a rider makes over and over.
@@ -35,27 +33,24 @@ const [items, setItems] = persistedSignal<SavedTrip[]>(KEY, [], revive);
  * is worked out afresh every time the trip is opened.
  */
 export const trips = {
-  items,
+  items: store.rows,
 
   has(from: TripEnd, to: TripEnd): boolean {
     const id = tripId(from, to);
-    return items().some((t) => t.id === id);
+    return store.rows().some((t) => t.id === id);
   },
 
   toggle(from: TripEnd, to: TripEnd, label: string) {
     const id = tripId(from, to);
-    setItems((prev) =>
-      prev.some((t) => t.id === id)
-        ? prev.filter((t) => t.id !== id)
-        : [...prev, { id, from, to, label }],
-    );
+    if (store.collection.has(id)) store.collection.delete(id);
+    else store.collection.insert({ id, from, to, label });
   },
 
   remove(id: string) {
-    setItems((prev) => prev.filter((t) => t.id !== id));
+    if (store.collection.has(id)) store.collection.delete(id);
   },
 };
 
 export function installTripEffects() {
-  installPersistence(KEY, items, setItems, revive);
+  store.install();
 }

@@ -1,9 +1,11 @@
+import { useLinkProps } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
 import { Card, EmptyState, Hairline, ScreenTitle, SectionLabel } from "~/components/Chrome";
-import { ChevronRightIcon } from "~/components/Icons";
-import { CardColumnItem, CardColumns, Page, Section } from "~/components/Layout";
+import { ChevronRightIcon, MapIcon } from "~/components/Icons";
+import { CardColumnItem, CardColumns, Page, RowCard, Section } from "~/components/Layout";
+import { RailPlanner } from "~/components/RailPlanner";
 import { RoutePlate } from "~/components/RoutePlate";
-import { routeHref } from "~/components/RouteRow";
+import { railLink, routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { lightRailRoutes, lineName, lineStations, railLines, type RailLine } from "~/data/rail";
 import type { KeyedRoute } from "~/data/types";
@@ -33,8 +35,8 @@ function LineCard(props: { line: RailLine; lang: Lang }) {
       <div class="h-1 w-full" style={{ background: colour() }} aria-hidden="true" />
 
       <a
-        href={`/rail/${encodeURIComponent(props.line.code)}`}
-        class="mb-tap flex items-center gap-3 px-3.5 py-3"
+        {...useLinkProps(railLink(props.line.code))}
+        class="app-tap flex items-center gap-3 px-3.5 py-3"
       >
         <RoutePlate route={props.line.code} co={["mtr"]} size="md" />
         <div class="flex min-w-0 grow flex-col gap-0.5">
@@ -58,7 +60,10 @@ function LineCard(props: { line: RailLine; lang: Lang }) {
         {(route) => (
           <>
             <Hairline />
-            <a href={routeHref(route.key)} class="mb-tap flex items-center gap-2.5 px-3.5 py-2.5">
+            <a
+              {...useLinkProps(routeLink(route.key))}
+              class="app-tap flex items-center gap-2.5 px-3.5 py-2.5"
+            >
               <span
                 class="size-2 shrink-0 rounded-full"
                 style={{ background: colour() }}
@@ -81,7 +86,10 @@ function LineCard(props: { line: RailLine; lang: Lang }) {
 /** Light rail is genuinely route-numbered, so it stays a list of routes. */
 function LightRailRow(props: { route: KeyedRoute; lang: Lang }) {
   return (
-    <a href={routeHref(props.route.key)} class="mb-tap flex items-center gap-3 px-3.5 py-2.5">
+    <a
+      {...useLinkProps(routeLink(props.route.key))}
+      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+    >
       <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
       <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
         {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
@@ -109,13 +117,35 @@ export default function Rail() {
   const light = createMemo(() => lightRailRoutes(db()));
 
   return (
-    <Page wide>
-      <ScreenTitle title={t("rail", lang())} />
+    <Page>
+      <ScreenTitle
+        title={t("rail", lang())}
+        controls={
+          /* The diagram is how most people hold this network in their head, so
+             it is offered before the list rather than buried under it. */
+          <a
+            {...useLinkProps({ to: "/rail/map" })}
+            class="app-press flex h-8 items-center gap-1.5 rounded-full bg-secondary pl-2.5 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground"
+          >
+            <MapIcon size={13} />
+            {t("networkMap", lang())}
+          </a>
+        }
+      />
 
       <Show
         when={lines().length > 0 || light().length > 0}
         fallback={<EmptyState title={t("noResults", lang())} />}
       >
+        {/* Where to, before which line: a rider with two stations in mind
+            wants the way between them, and the lines below are for the
+            rider who already knows it. */}
+        <Show when={lines().length > 0}>
+          <Section class="lg:max-w-[46rem]">
+            <RailPlanner lang={lang()} />
+          </Section>
+        </Show>
+
         <Show when={lines().length > 0}>
           <Section>
             <SectionLabel
@@ -132,7 +162,7 @@ export default function Rail() {
               <For each={lines()}>
                 {(line, index) => (
                   <CardColumnItem
-                    class="motion-safe:mb-rise"
+                    class="motion-safe:app-rise"
                     style={{ "animation-delay": `${Math.min(index(), 8) * 24}ms` }}
                   >
                     <LineCard line={line} lang={lang()} />
@@ -155,21 +185,12 @@ export default function Rail() {
               {OPERATORS.lightRail.name[lang()]}
             </SectionLabel>
 
-            {/* A row is a row on any screen: the light rail list keeps the
-                column width the rest of the app reads at rather than stretching
-                a route number away from its terminus. */}
-            <Card class="lg:max-w-[42rem]">
-              <For each={light()}>
-                {(route, index) => (
-                  <>
-                    <Show when={index() > 0}>
-                      <Hairline />
-                    </Show>
-                    <LightRailRow route={route} lang={lang()} />
-                  </>
-                )}
-              </For>
-            </Card>
+            {/* A row is a row on any screen: twenty-seven light rail routes on
+                a wide window wrap into columns rather than stretching a route
+                number away from its terminus. */}
+            <RowCard>
+              <For each={light()}>{(route) => <LightRailRow route={route} lang={lang()} />}</For>
+            </RowCard>
           </Section>
         </Show>
       </Show>
