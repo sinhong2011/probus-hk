@@ -1,6 +1,15 @@
-import { useLinkProps } from "@tanstack/solid-router";
-import { groupBy } from "es-toolkit";
-import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
+import Sortable from "sortablejs";
+import {
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  flush,
+  onCleanup,
+  untrack,
+} from "solid-js";
 import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
@@ -12,7 +21,7 @@ import {
   ExchangeIcon,
   GripIcon,
   LayersIcon,
-  MinusIcon,
+  TrashIcon,
   SortIcon,
   ThumbtackIcon,
   WalkIcon,
@@ -28,6 +37,7 @@ import { arrivals, type Arrival } from "~/data/arrivals";
 import { createLiveQuery } from "~/lib/tanstack/db";
 import { countdown } from "~/lib/format";
 import { distanceM, walkMinutes } from "~/lib/geo";
+import { groupColor, groupColorVar, groupTagStyle } from "~/lib/groupColors";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { alerts } from "~/stores/alerts";
 import { frequent } from "~/stores/frequent";
@@ -44,9 +54,6 @@ interface GroupAsk {
   apply: (group: string) => void;
 }
 
-/** Matches the rendered row height, used to turn a drag offset into an index. */
-const ROW_HEIGHT = 78;
-
 /** The value that sorts a bookmark with no arrival to the end of the list. */
 const NO_ARRIVAL = Number.POSITIVE_INFINITY;
 
@@ -56,8 +63,6 @@ interface Resolved {
   stop: StopEntry | undefined;
   stopName: string;
   running: boolean;
-  /** The next buses, from the arrivals table; absent until it has answered. */
-  arrival: Arrival | undefined;
 }
 
 /**
@@ -92,22 +97,11 @@ function BookmarkCard(props: {
   entry: Resolved;
   lang: Lang;
   metres: number | null;
-  editing: boolean;
-  dragging: boolean;
+  /** The next buses, from the arrivals table; absent until it has answered. */
+  arrival: Arrival | undefined;
   /** Reordering by hand only makes sense while the list is in hand order. */
   draggable: boolean;
-  /**
-   * Whether the card has to name its own group.
-   *
-   * Only where nothing else on the screen already has. A hand-ordered list is
-   * cut into headed sections and a filtered one is named by the lit chip above
-   * it, so the tag in the corner was the third printing of the same word - it
-   * earns its place only in a ranked, unfiltered list, where the groups are
-   * interleaved and nothing else says which is which.
-   */
-  showGroup: boolean;
   onRemove: () => void;
-  onDrag: (event: PointerEvent) => void;
   onRegroup: () => void;
   /** Move the bookmark to another stop on the same route. */
   onRestop: () => void;
@@ -115,7 +109,7 @@ function BookmarkCard(props: {
   onPin: () => void;
 }) {
   // From the arrivals table, which the screen fetches for every card at once.
-  const etas = () => props.entry.arrival?.etas;
+  const etas = () => props.arrival?.etas;
 
   const advice = () => leaveAdvice(etas() ?? [], props.metres, now());
 
@@ -142,31 +136,30 @@ function BookmarkCard(props: {
            it: side by side in the grid, two cards share a height, and a leave-
            now line floating halfway up one of them reads as a different kind of
            thing from the same line sitting on the edge of its neighbour. */
-        "mb-press flex flex-col overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-state motion-safe:mb-rise",
-        {
-          "border-primary shadow-lg": props.dragging,
-          "border-border": !props.dragging,
-          "opacity-60": dim(),
-        },
+        "app-press flex flex-col overflow-hidden rounded-xl bg-card shadow-card motion-safe:app-rise",
+        { "opacity-60": dim() },
       ]}
-      style={props.dragging ? { transform: "scale(1.02) rotate(-0.6deg)" } : undefined}
+      data-bookmark-id={props.entry.item.id}
+      data-held={props.entry.item.pinned ? "" : undefined}
     >
-      <div class="flex items-center gap-3 px-3.5 py-3">
-        <Show when={props.editing && props.draggable}>
+      <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+        {/* Always on show while the list is in hand order: a grip that only
+            appeared in a mode was a drag nobody found. */}
+        <Show when={props.draggable}>
           <button
             type="button"
             aria-label="reorder"
-            class="cursor-grab touch-none text-faint-foreground"
-            onPointerDown={props.onDrag}
+            data-drag-handle
+            class="-ml-1 cursor-grab touch-none text-faint-foreground"
           >
-            <GripIcon size={17} />
+            <GripIcon size={14} />
           </button>
         </Show>
 
         <RoutePlate
           route={props.entry.route.route}
           co={props.entry.route.co}
-          size="md"
+          size="sm"
           muted={dim()}
         />
 
@@ -174,7 +167,7 @@ function BookmarkCard(props: {
           {...useLinkProps(routeLink(props.entry.route.key))}
           class="flex min-w-0 grow flex-col gap-0.5"
         >
-          <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
             {t("towards", props.lang)} {pick(props.entry.route.dest, props.lang)}
           </span>
           <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
@@ -191,127 +184,123 @@ function BookmarkCard(props: {
 
         {/* An armed reminder belongs on the card it was set from, not only on
             the screen that set it. */}
-        <Show when={alerted() && !props.editing}>
+        <Show when={alerted()}>
           <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
             <AlarmIcon size={14} />
           </span>
         </Show>
 
-        <Show when={!props.editing}>
-          <EtaCountdown
-            etas={etas()}
-            lang={props.lang}
-            size="md"
-            limit={2}
-            unreachable={unreachable()}
-          />
-        </Show>
+        <EtaCountdown
+          etas={etas()}
+          lang={props.lang}
+          size="sm"
+          limit={2}
+          unreachable={unreachable()}
+        />
       </div>
 
       {/*
-       * Everything that can be done to a bookmark, in a row of its own under
-       * the card while the list is being edited. They sat at the end of the
-       * top row for a while, where the countdown goes; a third action there
-       * squeezed the route's name out of a phone-width card, and this is the
-       * row the advice line occupies the rest of the time, so the card does
-       * not change height on the way into editing.
+       * One strip under the card: the line that turns arrival times into a
+       * decision on the left, and everything that can be done to the bookmark
+       * on the right. The actions used to hide behind an Edit mode, which
+       * made every change a three-tap errand and left the card with no next
+       * step on show; icon-sized and quiet, they can afford to just be there.
        *
-       * The stop is as much a part of a bookmark as the group: a route offered
-       * from the "you keep opening these" list is saved at its first stop, and
-       * before this the only way to move it was to delete it and start again.
+       * Urgency is carried by the ink alone: a filled strip, a 7% wash and
+       * finally a rule down the left edge each made the row a second plate
+       * competing with the route's. Indigo on the icon and the minutes says
+       * the same thing, and only where the eye already reads.
        */}
-      <Show when={props.editing}>
-        <div class="mt-auto flex items-center gap-2 border-t border-border px-3.5 py-2">
+      <div class="mt-auto flex items-center gap-1.5 border-t border-border py-1 pl-3.5 pr-2">
+        {/* The group opens the strip: which drawer the bookmark is filed in,
+            said once, at the corner the eye enters the row from. */}
+        <Show when={props.entry.item.group}>
+          {(name) => (
+            <span
+              class="min-w-0 shrink truncate rounded-full px-2 py-0.5 text-[0.7rem] font-bold"
+              style={groupTagStyle(name())}
+            >
+              {name()}
+            </span>
+          )}
+        </Show>
+
+        <Show when={advice()}>
+          {(a) => (
+            <>
+              <span class={a().urgent ? "text-primary" : "text-subtle-foreground"}>
+                <WalkIcon size={12} />
+              </span>
+              {/* Only the dead end needs words. "Catch the next one" was the
+                  struck-out arrival above saying itself a second time. */}
+              <Show when={a().nth < 0}>
+                <span class="text-[0.81rem] font-semibold text-faint-foreground">
+                  {t("tooLate", props.lang)}
+                </span>
+              </Show>
+
+              <Show when={a().leaveIn !== null}>
+                <span
+                  class={[
+                    "tnum whitespace-nowrap text-[0.81rem] font-bold",
+                    { "text-primary": a().urgent, "text-subtle-foreground": !a().urgent },
+                  ]}
+                >
+                  <Show when={a().leaveIn! > 0} fallback={t("leaveNow", props.lang)}>
+                    {a().leaveIn} {t("leaveIn", props.lang)}
+                  </Show>
+                </span>
+              </Show>
+            </>
+          )}
+        </Show>
+
+        <div class="ml-auto flex items-center">
           {/* Lit when it is on: the button wears the state as well as the
-              action, so a pinned card says so even under a filter that has
-              hoisted every card on screen into the pinned section. */}
+              action, so a pinned card says so wherever it is on the screen. */}
           <button
             type="button"
             aria-pressed={props.entry.item.pinned ? "true" : "false"}
+            aria-label={t(props.entry.item.pinned ? "unpinTop" : "pinTop", props.lang)}
+            data-pinned={props.entry.item.pinned ? "" : undefined}
             onClick={props.onPin}
             class={[
-              "flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-150",
-              {
-                "bg-primary text-primary-foreground": !!props.entry.item.pinned,
-                "bg-secondary text-muted-foreground": !props.entry.item.pinned,
-              },
+              "app-bare flex size-7 items-center justify-center rounded-full transition-colors duration-150 hover:bg-secondary",
+              props.entry.item.pinned
+                ? "text-primary"
+                : "text-faint-foreground hover:text-foreground",
             ]}
           >
-            <ThumbtackIcon size={11} />
-            {t(props.entry.item.pinned ? "unpinTop" : "pinTop", props.lang)}
+            <ThumbtackIcon size={12} />
           </button>
           <button
             type="button"
+            aria-label={t("changeStop", props.lang)}
             onClick={props.onRestop}
-            class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground"
+            class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
           >
-            <ExchangeIcon size={11} />
-            {t("changeStop", props.lang)}
+            <ExchangeIcon size={12} />
           </button>
+          {/* Icon only: the name it would repeat is already printed under the
+              plate, and the label survives as the button's accessible name. */}
           <button
             type="button"
+            aria-label={props.entry.item.group || t("noGroup", props.lang)}
             onClick={props.onRegroup}
-            class="flex h-7 min-w-0 max-w-[9rem] items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground"
+            class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
           >
-            <LayersIcon size={11} />
-            <span class="truncate">{props.entry.item.group || t("noGroup", props.lang)}</span>
+            <LayersIcon size={12} />
           </button>
           <button
             type="button"
             aria-label="remove"
             onClick={props.onRemove}
-            class="ml-auto flex size-7 shrink-0 items-center justify-center rounded-full text-destructive"
-            style={{ background: "color-mix(in srgb, var(--destructive) 14%, transparent)" }}
+            class="flex size-7 items-center justify-center rounded-full text-destructive/70 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
           >
-            <MinusIcon size={13} />
+            <TrashIcon size={12} />
           </button>
         </div>
-      </Show>
-
-      {/*
-       * The one line that turns arrival times into a decision. Urgency is
-       * carried by the ink alone: a filled strip, a 7% wash and finally a rule
-       * down the left edge each made the row a second plate competing with the
-       * route's - and with two bookmarks due at once the list became two
-       * indigo bands. Indigo on the icon and the minutes says the same thing,
-       * and only where the eye already reads.
-       */}
-      <Show when={!props.editing && advice()}>
-        {(a) => (
-          <div class="mt-auto flex items-center gap-2 border-t border-border px-3.5 py-2">
-            <span class={a().urgent ? "text-primary" : "text-subtle-foreground"}>
-              <WalkIcon size={12} />
-            </span>
-            {/* Only the dead end needs words. "Catch the next one" was the
-                struck-out arrival above saying itself a second time. */}
-            <Show when={a().nth < 0}>
-              <span class="text-[0.81rem] font-semibold text-faint-foreground">
-                {t("tooLate", props.lang)}
-              </span>
-            </Show>
-
-            <Show when={a().leaveIn !== null}>
-              <span
-                class={[
-                  "tnum text-[0.81rem] font-bold",
-                  { "text-primary": a().urgent, "text-subtle-foreground": !a().urgent },
-                ]}
-              >
-                <Show when={a().leaveIn! > 0} fallback={t("leaveNow", props.lang)}>
-                  {a().leaveIn} {t("leaveIn", props.lang)}
-                </Show>
-              </span>
-            </Show>
-
-            {/* The group, said once, on the side the eye is already leaving. */}
-            <Show when={props.showGroup && props.entry.item.group}>
-              <span class="ml-auto min-w-0 shrink truncate rounded-full bg-secondary px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                {props.entry.item.group}
-              </span>
-            </Show>
-          </div>
-        )}
-      </Show>
+      </div>
     </div>
   );
 }
@@ -320,10 +309,30 @@ export default function Saved() {
   const db = useDb();
   const lang = settings.lang;
   const { position } = useGeolocation();
-  const [editing, setEditing] = createSignal(false);
-  const [dragId, setDragId] = createSignal<string | null>(null);
-  /** `null` is "every group"; "" is the ungrouped bucket, which is a real one. */
-  const [filter, setFilter] = createSignal<string | null>(null);
+  /*
+   * The order a drag just produced, mirrored synchronously. The collection
+   * commits on its own schedule - a task later - and a paint can land in
+   * that gap, which showed the dropped card flashing back to its old slot.
+   * The list renders from this mirror the moment the drop happens; the
+   * store catches up underneath and agrees.
+   */
+  const [handOrder, setHandOrder] = createSignal<string[] | null>(null);
+
+  /*
+   * The group filter lives in the URL (`?group=`), not in a signal: a cut of
+   * the list is a place worth reloading and worth sending. `null` is "every
+   * group"; "" is the ungrouped bucket, which is a real one. Replace, not
+   * push - re-cutting the list is looking, not travelling.
+   */
+  const searchParams = useSearch({ from: "/saved" });
+  const navigate = useNavigate();
+  const filter = () => searchParams().group ?? null;
+  const setFilter = (group: string | null) =>
+    void navigate({
+      to: "/saved",
+      search: group === null ? {} : { group },
+      replace: true,
+    });
   /*
    * One sheet, two questions: where an existing bookmark should move to, and
    * where a new one should land. Both end in a group, so both are asked the
@@ -360,23 +369,42 @@ export default function Saved() {
     return rank;
   });
 
-  const resolved = createMemo<Resolved[]>(() =>
-    saved.items().flatMap((item) => {
+  /*
+   * Referentially stable: a card whose content has not changed gets the same
+   * object back, so `For` moves its node instead of rebuilding it. This is
+   * what makes a drag smooth - a reorder only changes each bookmark's rank,
+   * and rebuilding every card's DOM on every crossing dropped frames. The
+   * comparison deliberately ignores `order`: rank is read from the list's
+   * position, never off the card.
+   */
+  const resolved = createMemo<Resolved[]>((prev) => {
+    const before = new Map((prev ?? []).map((r) => [r.item.id, r]));
+    return saved.items().flatMap((item) => {
       const route = routeAt(db(), item.routeKey);
       if (!route) return [];
       const stop = db().stopList[item.stopId];
-      return [
-        {
-          item,
-          route,
-          stop,
-          stopName: stop ? stripStopCode(pick(stop.name, lang())) : "",
-          running: isRunningNow(db(), route),
-          arrival: arrivalOf().get(item.id),
-        },
-      ];
-    }),
-  );
+      const next: Resolved = {
+        item,
+        route,
+        stop,
+        stopName: stop ? stripStopCode(pick(stop.name, lang())) : "",
+        running: isRunningNow(db(), route),
+      };
+      const old = before.get(item.id);
+      const same =
+        old &&
+        old.route === next.route &&
+        old.stop === next.stop &&
+        old.stopName === next.stopName &&
+        old.running === next.running &&
+        old.item.group === item.group &&
+        old.item.pinned === item.pinned &&
+        old.item.stopId === item.stopId &&
+        old.item.co === item.co &&
+        old.item.seq === item.seq;
+      return [same ? old : next];
+    });
+  });
 
   const metresTo = (entry: Resolved) => {
     const here = position();
@@ -396,7 +424,7 @@ export default function Saved() {
   createEffect(
     () =>
       resolved()
-        .filter((r) => (r.arrival?.etas.length ?? 0) > 0)
+        .filter((r) => (arrivalOf().get(r.item.id)?.etas.length ?? 0) > 0)
         .map((r) => r.item.id),
     (ids) => {
       setLive((prev) => {
@@ -418,7 +446,15 @@ export default function Saved() {
   const matchesFilter = (r: Resolved) => filter() === null || r.item.group === filter();
 
   const order = () => settings.savedOrder();
-  /** Hand order is the only one a drag can rearrange. */
+  createEffect(
+    () => settings.savedOrder(),
+    () => {
+      // Braced on purpose: the setter's return value must not become the
+      // effect's cleanup - Solid 2's dev assertion halts the screen over it.
+      setHandOrder(null);
+    },
+  );
+  /** The stored order: how the bookmarks were made, or the last adopted ranking. */
   const manual = () => order() === "manual";
 
   const sort = (list: Resolved[]): Resolved[] => {
@@ -437,9 +473,16 @@ export default function Saved() {
             a.route.route.localeCompare(b.route.route, "en", { numeric: true }) ||
             a.stopName.localeCompare(b.stopName),
         );
-      default:
-        // The stored order is the hand-dragged one; leave it exactly as it is.
-        return list;
+      default: {
+        // The stored order - unless a drag just made a newer one, which the
+        // store has not caught up with yet.
+        const hand = handOrder();
+        if (!hand) return list;
+        const rank = new Map(hand.map((id, at) => [id, at]));
+        return [...list].sort(
+          (a, b) => (rank.get(a.item.id) ?? NO_ARRIVAL) - (rank.get(b.item.id) ?? NO_ARRIVAL),
+        );
+      }
     }
   };
 
@@ -463,16 +506,11 @@ export default function Saved() {
   );
 
   /*
-   * Sections only where they mean something. Hand order is the rider's own
-   * arrangement, so it keeps its group headings; any other order is a single
-   * ranked list, and a heading in the middle of one would be a claim the
-   * ranking does not make.
+   * One flat list, pinned first, in every order: each card wears its group
+   * as a coloured tag, so cutting the list into headed group sections said
+   * the same thing twice and cost a band of chrome per group.
    */
-  const groupedActive = createMemo<[string, Resolved[]][]>(() => {
-    if (!manual() || filter() !== null) return [["", active()]];
-    const buckets = groupBy(active(), (r) => r.item.group);
-    return Object.entries(buckets).sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : 0));
-  });
+  const listed = createMemo(() => [...pinned(), ...active()]);
 
   /** Reminders that are armed right now, so they can be seen and called off. */
   const armed = createMemo(() =>
@@ -507,48 +545,146 @@ export default function Saved() {
     requestAnimationFrame(() => setGroupOpen(true));
   };
 
-  const startDrag = (event: PointerEvent, id: string, index: number) => {
-    event.preventDefault();
-    const handle = event.currentTarget as HTMLElement;
-    handle.setPointerCapture(event.pointerId);
-    setDragId(id);
+  /*
+   * Reordering is SortableJS's job: the drag preview, the cards gliding out
+   * of the way, touch, auto-scroll - a solved problem, taken off the shelf.
+   * The split of duties is the standard one for a rendered list: Sortable
+   * owns the DOM only while the finger is down; on drop its DOM move is
+   * reverted, and the new order is written to the store for Solid to render
+   * - one authority over the list at a time.
+   */
+  const sorters = new Set<Sortable>();
+  createEffect(
+    () => manual(),
+    (hand) => {
+      for (const sorter of sorters) sorter.option("disabled", !hand);
+    },
+  );
 
-    const startY = event.clientY;
-    const flat = resolved();
-    const baseIndex = flat.findIndex((r) => r.item.id === id);
+  const sortableGrid = (el: HTMLDivElement) => {
+    /*
+     * Where inside the card the finger picked it up. The preview keeps
+     * this grip point, so release point minus grip is where the rider
+     * last saw the card - the place the drop settle has to start from.
+     */
+    let grip = { x: 0, y: 0 };
+    const pointOf = (raw: Event | undefined) => {
+      if (!raw) return null;
+      const source = "changedTouches" in raw ? (raw as TouchEvent).changedTouches[0] : raw;
+      const at = source as { clientX?: number; clientY?: number } | undefined;
+      return at?.clientX !== undefined && at?.clientY !== undefined
+        ? { x: at.clientX, y: at.clientY }
+        : null;
+    };
 
-    const onMove = (move: PointerEvent) => {
-      const delta = Math.round((move.clientY - startY) / ROW_HEIGHT);
-      const next = Math.max(0, Math.min(flat.length - 1, baseIndex + delta));
-      if (next !== index) saved.reorder(id, next);
-    };
-    const onUp = () => {
-      setDragId(null);
-      handle.releasePointerCapture(event.pointerId);
-      handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onUp);
-    };
-    handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onUp);
+    const sorter = Sortable.create(el, {
+      group: "bookmarks",
+      handle: "[data-drag-handle]",
+      draggable: "[data-bookmark-id]",
+      filter: "[data-held]",
+      disabled: !untrack(manual),
+      animation: 250,
+      easing: "cubic-bezier(0.25, 1, 0.4, 1)",
+      // Cards give way once the preview is two-thirds over them, rather
+      // than demanding a full eclipse before anything moves.
+      swapThreshold: 0.65,
+      // Sortable's own drag preview on every input, not the browser's
+      // native HTML5 image: consistent, and it can be styled as a lift.
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackClass: "app-lift",
+      ghostClass: "app-drag-ghost",
+      onStart: (evt) => {
+        const at = pointOf((evt as { originalEvent?: Event }).originalEvent);
+        const rect = evt.item.getBoundingClientRect();
+        grip = at ? { x: at.x - rect.left, y: at.y - rect.top } : { x: 0, y: 0 };
+      },
+      onEnd: (evt) => {
+        const item = evt.item as HTMLElement;
+        const id = item.dataset.bookmarkId;
+
+        // The visual order at the moment of the drop, over every section.
+        const ids = [...document.querySelectorAll<HTMLElement>("[data-bookmark-id]")]
+          .map((card) => card.dataset.bookmarkId)
+          .filter((value): value is string => Boolean(value));
+
+        // Hand the DOM back before the store speaks: Sortable's move is
+        // undone so Solid's list model and the document agree, then the
+        // render replays the move from the data.
+        const from = evt.from as HTMLElement;
+        const siblings = [...from.children].filter((child) => child !== item);
+        from.insertBefore(item, siblings[evt.oldIndex ?? 0] ?? null);
+
+        if (!id) return;
+        /*
+         * Rendered from the mirror in the same task as the drop - flushed,
+         * so the DOM below is already the new order - while the collection
+         * write catches up on its own schedule. Without the mirror there
+         * was a painted frame of the old order between the two.
+         */
+        setHandOrder(ids);
+        flush();
+        saved.adopt(ids);
+
+        /*
+         * The settle. Sortable's preview vanishes on release and the card
+         * would simply appear in its slot; instead the rendered card is
+         * played from where the preview was let go - release point minus
+         * the grip - into rest, shedding the lift on the way. Individual
+         * transform properties, so nothing else on the card is disturbed.
+         * Measured now, synchronously: the flush above has already put the
+         * card in its final slot.
+         */
+        const released = pointOf((evt as { originalEvent?: Event }).originalEvent);
+        if (!released || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        {
+          const card = [...document.querySelectorAll<HTMLElement>("[data-bookmark-id]")].find(
+            (node) => node.dataset.bookmarkId === id,
+          );
+          if (!card) return;
+          const rest = card.getBoundingClientRect();
+          const dx = released.x - grip.x - rest.left;
+          const dy = released.y - grip.y - rest.top;
+          if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+          card.animate(
+            [
+              {
+                translate: `${dx}px ${dy}px`,
+                scale: "1.03",
+                rotate: "-0.5deg",
+                boxShadow: "0 12px 32px rgb(0 0 0 / 0.22)",
+              },
+              {
+                translate: "0px 0px",
+                scale: "1",
+                rotate: "0deg",
+                boxShadow: "0 0 0 rgb(0 0 0 / 0)",
+              },
+            ],
+            { duration: 320, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+          );
+        }
+      },
+    });
+    sorters.add(sorter);
+    onCleanup(() => {
+      sorters.delete(sorter);
+      sorter.destroy();
+    });
   };
 
   /*
-   * `atTop` is the pinned band. Its cards are lifted out of the group sections,
-   * so they name their own group the way a ranked list's do; and their place in
-   * it is not the hand-dragged one, so they do not offer a grip that would move
-   * them somewhere they are not.
+   * A pinned card's place in the list is not the hand-arranged one, so it
+   * does not offer a grip that would move it somewhere it is not.
    */
-  const cardFor = (entry: Resolved, index: number, atTop = false) => (
+  const cardFor = (entry: Resolved) => (
     <BookmarkCard
       entry={entry}
       lang={lang()}
       metres={metresTo(entry)}
-      editing={editing()}
-      draggable={manual() && !atTop}
-      showGroup={atTop ? filter() === null : !manual() && filter() === null}
-      dragging={dragId() === entry.item.id}
+      arrival={arrivalOf().get(entry.item.id)}
+      draggable={manual() && !entry.item.pinned}
       onRemove={() => saved.remove(entry.item.id)}
-      onDrag={(e) => startDrag(e, entry.item.id, index)}
       onRegroup={() =>
         askGroup({
           current: entry.item.group,
@@ -569,34 +705,20 @@ export default function Saved() {
         title={t("saved", lang())}
         trailing={
           <Show when={resolved().length > 0}>
-            <div class="flex items-center gap-2">
-              {/* Order is a setting made once, so it rides in the header
-                  wearing its own answer rather than holding a row open above
-                  the list for ever. */}
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                onClick={() => setSortOpen(true)}
-                class="mb-press flex h-[2.1rem] min-w-0 items-center gap-1.5 rounded-full bg-secondary pl-3 pr-3.5 text-[0.81rem] font-bold text-muted-foreground"
-              >
-                <SortIcon size={13} />
-                <span class="truncate">{orderLabel()}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditing((e) => !e)}
-                class={[
-                  "mb-press flex h-[2.1rem] shrink-0 items-center rounded-full px-4 text-[0.88rem] font-bold transition-colors duration-150",
-                  {
-                    "bg-primary text-primary-foreground": editing(),
-                    "bg-secondary text-muted-foreground": !editing(),
-                  },
-                ]}
-              >
-                {t(editing() ? "done" : "edit", lang())}
-              </button>
-            </div>
+            {/* Order is a setting made once, so it rides in the header
+                wearing its own answer rather than holding a row open above
+                the list for ever. The same quiet chip the other screens put
+                in their headers - at pill size it outweighed the title it
+                sat beside. */}
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => setSortOpen(true)}
+              class="app-press flex h-[1.6rem] min-w-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-subtle-foreground"
+            >
+              <SortIcon size={12} />
+              <span class="truncate">{orderLabel()}</span>
+            </button>
           </Show>
         }
       />
@@ -681,9 +803,9 @@ export default function Saved() {
                                 saved.toggle({ routeKey: route.key, co, stopId, seq: 1, group }),
                             });
                           }}
-                          class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[0.81rem] font-bold text-primary-foreground"
+                          class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-primary px-2.5 text-[0.75rem] font-bold text-primary-foreground"
                         >
-                          <BookmarkIcon size={13} />
+                          <BookmarkIcon size={12} />
                           {t("addBookmark", lang())}
                         </button>
                       </div>
@@ -705,7 +827,7 @@ export default function Saved() {
            */}
           <Show when={groups().length > 0}>
             <div class="-mb-2">
-              <div class="flex items-center gap-2 overflow-x-auto pb-0.5 mb-scroll">
+              <div class="flex items-center gap-2 overflow-x-auto pb-0.5 app-scroll">
                 <FilterChip
                   label={t("allItems", lang())}
                   active={filter() === null}
@@ -715,6 +837,7 @@ export default function Saved() {
                   {(group) => (
                     <FilterChip
                       label={group}
+                      color={groupColorVar(groupColor(group))}
                       active={filter() === group}
                       onSelect={() => setFilter(group)}
                     />
@@ -731,19 +854,7 @@ export default function Saved() {
             </div>
           </Show>
 
-          <Show when={editing()}>
-            <p class="-mb-3 text-[0.75rem] font-medium text-subtle-foreground">
-              {manual()
-                ? lang() === "zh"
-                  ? "拖曳排序 · 撳分組改名 · 撳減號移除"
-                  : "Drag to reorder, tap the group to change it, minus to remove"
-                : lang() === "zh"
-                  ? "揀「自訂」排序先可以拖曳"
-                  : "Switch to Manual order to drag"}
-            </p>
-          </Show>
-
-          <Show when={!editing() && position() === null}>
+          <Show when={position() === null}>
             <p class="-mb-3 text-[0.75rem] font-medium text-subtle-foreground">
               {t("noLocation", lang())}
             </p>
@@ -753,51 +864,17 @@ export default function Saved() {
             when={pinned().length > 0 || active().length > 0 || resting().length > 0}
             fallback={<EmptyState title={t("nothingInFilter", lang())} />}
           >
-            <Show when={pinned().length > 0}>
-              <Section>
-                {/* The thumbtack, so the band reads as "held here" rather than
-                    as one more group that happens to be called that. */}
-                <SectionLabel>
-                  <span class="inline-flex items-center gap-1.5">
-                    <ThumbtackIcon size={11} />
-                    {t("pinnedTop", lang())}
-                  </span>
-                </SectionLabel>
-                <CardGrid single={editing()}>
-                  <For each={pinned()}>{(entry, index) => cardFor(entry, index(), true)}</For>
-                </CardGrid>
-              </Section>
+            <Show when={listed().length > 0}>
+              <CardGrid dense ref={sortableGrid}>
+                <For each={listed()}>{(entry) => cardFor(entry)}</For>
+              </CardGrid>
             </Show>
-
-            <For each={groupedActive()}>
-              {([group, entries]) => (
-                <Show when={entries.length > 0}>
-                  <Section>
-                    <Show when={group !== ""}>
-                      <div class="flex items-center gap-2">
-                        <span class="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
-                          {group}
-                        </span>
-                        <div class="h-px grow bg-border" />
-                      </div>
-                    </Show>
-
-                    {/* One column while the list is being re-ordered: a drag
-                        is measured in rows, and rows only mean something in a
-                        single file. */}
-                    <CardGrid single={editing()}>
-                      <For each={entries}>{(entry, index) => cardFor(entry, index())}</For>
-                    </CardGrid>
-                  </Section>
-                </Show>
-              )}
-            </For>
 
             <Show when={resting().length > 0}>
               <Section>
                 <SectionLabel>{t("notRunning", lang())}</SectionLabel>
-                <CardGrid single={editing()}>
-                  <For each={resting()}>{(entry, index) => cardFor(entry, index())}</For>
+                <CardGrid dense ref={sortableGrid}>
+                  <For each={resting()}>{(entry) => cardFor(entry)}</For>
                 </CardGrid>
               </Section>
             </Show>
@@ -810,7 +887,14 @@ export default function Saved() {
         onClose={() => setSortOpen(false)}
         value={order()}
         options={orders()}
-        onChoose={(value) => settings.setSavedOrder(value)}
+        onChoose={(value) => {
+          // Switching to the stored order keeps the order already on screen:
+          // the ranking being looked at becomes the stored arrangement.
+          if (value === "manual" && order() !== "manual") {
+            saved.adopt(sort(resolved()).map((r) => r.item.id));
+          }
+          settings.setSavedOrder(value);
+        }}
         lang={lang()}
       />
 
@@ -850,17 +934,41 @@ export default function Saved() {
 }
 
 /** One group in the filter row, including the "everything" pseudo-group. */
-function FilterChip(props: { label: string; active: boolean; onSelect: () => void }) {
+function FilterChip(props: {
+  label: string;
+  /** The group's colour: the chip's whole ground is painted with it. */
+  color?: string;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  /*
+   * Inline, because the chosen-state utility rules would otherwise repaint
+   * the chip in the accent: a group chip answers in its own colour - a tinted
+   * ground while open, the full colour once chosen, with the page's ground
+   * colour as ink, which reads on a mid-tone in the light theme and on a
+   * bright one in the dark.
+   */
+  const paint = () =>
+    props.color
+      ? props.active
+        ? { background: props.color, color: "var(--background)" }
+        : {
+            background: `color-mix(in srgb, ${props.color} 15%, transparent)`,
+            color: props.color,
+          }
+      : undefined;
+
   return (
     <button
       type="button"
       aria-pressed={props.active ? "true" : "false"}
       onClick={props.onSelect}
+      style={paint()}
       class={[
         "flex h-[1.6rem] shrink-0 items-center rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-150",
         {
-          "bg-primary text-primary-foreground": props.active,
-          "bg-secondary text-subtle-foreground": !props.active,
+          "bg-primary text-primary-foreground": props.active && !props.color,
+          "bg-secondary text-subtle-foreground": !props.active && !props.color,
         },
       ]}
     >

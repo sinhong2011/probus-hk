@@ -27,6 +27,8 @@ import IconPlus from "~icons/lineicons/plus";
 import IconReload from "~icons/lineicons/reload";
 import IconRoute from "~icons/lineicons/route-1";
 import IconSearch from "~icons/lineicons/search-alt";
+import IconStarFat from "~icons/lineicons/star-fat";
+import IconStarFill from "~icons/lineicons/star-fill";
 import IconInformation from "~icons/lineicons/information";
 import IconClipboard from "~icons/lineicons/clipboard";
 import IconWarning from "~icons/lineicons/warning";
@@ -73,6 +75,8 @@ export const PinIcon = wrap(IconMapMarker as IconComponent);
 export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
 export const BookmarkIcon = wrap(IconBookmark as IconComponent);
+export const StarIcon = wrap(IconStarFat as IconComponent);
+export const StarFillIcon = wrap(IconStarFill as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
 /** The rest of the navigation, behind one tab on a phone. */
 export const MoreIcon = wrap(IconMenu as IconComponent);

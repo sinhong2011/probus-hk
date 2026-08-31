@@ -137,6 +137,13 @@ const browseCategoryRoute = createRoute({
 const savedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/saved",
+  // Which group the list is cut to. The empty string is a real value - the
+  // ungrouped bucket - so this cannot go through `asText`, which folds ""
+  // into "unset"; absent genuinely means "every group".
+  validateSearch: (search: Record<string, unknown>) => {
+    const group = typeof search.group === "string" ? search.group : undefined;
+    return { ...(group !== undefined && { group }) };
+  },
   component: lazyScreen(() => import("~/routes/Saved")),
 });
 

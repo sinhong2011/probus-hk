@@ -146,6 +146,22 @@ export const saved = {
     });
   },
 
+  /**
+   * Takes an order the rider is already looking at and makes it the stored
+   * one, so switching to manual order does not shuffle the list on the way in:
+   * the ranked view they were dragging towards becomes the starting point.
+   */
+  adopt(ids: string[]) {
+    const rank = new Map(ids.map((id, index) => [id, index]));
+    const changed = current()
+      .filter((item) => rank.has(item.id) && item.order !== rank.get(item.id))
+      .map((item) => item.id);
+    if (changed.length === 0) return;
+    bookmarks.update(changed, (drafts) => {
+      for (const draft of drafts) draft.order = rank.get(draft.id) ?? draft.order;
+    });
+  },
+
   /** Every group a bookmark has been put in, in the order they were made. */
   groups(): string[] {
     const seen: string[] = [];

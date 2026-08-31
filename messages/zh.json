@@ -224,7 +224,7 @@
   "sort_route": "路線號",
   "sort_fare": "車費",
   "sort_operator": "營辦商",
-  "sort_manual_hint": "你自己拖出嚟嘅次序",
+  "sort_manual_hint": "跟你加入或保留嘅次序",
   "sort_eta_hint": "最快到嘅班次行先",
   "sort_distance_hint": "行得最近嘅站行先",
   "sort_route_hint": "跟路線號碼排",

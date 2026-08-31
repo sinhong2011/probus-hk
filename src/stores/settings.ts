@@ -22,6 +22,12 @@ interface Persisted {
   alertRadiusM: number;
   /** Desktop only: whether the sidebar names its destinations or just shows them. */
   railOpen: boolean;
+  /**
+   * The colour a group's tag wears, by group name. Only overrides live here -
+   * a group with no entry takes a colour hashed from its name, so every tag
+   * is coloured from the moment the group is invented.
+   */
+  groupColors: Record<string, string>;
 }
 
 const DEFAULTS: Persisted = {
@@ -36,6 +42,7 @@ const DEFAULTS: Persisted = {
   alertLeadMinutes: 3,
   alertRadiusM: 300,
   railOpen: true,
+  groupColors: {},
 };
 
 /**
@@ -81,6 +88,12 @@ const [savedOrder, setSavedOrder] = field("savedOrder");
 const [alertLeadMinutes, setAlertLeadMinutes] = field("alertLeadMinutes");
 const [alertRadiusM, setAlertRadiusM] = field("alertRadiusM");
 const [railOpen, setRailOpen] = field("railOpen");
+const [groupColors, writeGroupColors] = field("groupColors");
+
+/** Pins one group's tag colour; the map is copied because the row is a draft. */
+function setGroupColor(name: string, color: string) {
+  writeGroupColors({ ...groupColors(), [name]: color });
+}
 
 export const settings = {
   lang,
@@ -103,9 +116,16 @@ export const settings = {
   setAlertRadiusM,
   railOpen,
   setRailOpen,
+  groupColors,
+  setGroupColor,
 };
 
-export const RADIUS_CHOICES = [200, 400, 800] as const;
+/**
+ * Where the search-range slider can rest. The range itself is a plain number
+ * of metres - any persisted value works - these are the notches a thumb can
+ * actually hit, spaced the way distance is felt: each step roughly doubles.
+ */
+export const RADIUS_STEPS = [100, 200, 400, 800, 2000, 4000] as const;
 export const REFRESH_CHOICES = [10, 20, 30] as const;
 /** Lead times offered for an arrival reminder, in minutes. */
 export const ALERT_LEAD_CHOICES = [1, 3, 5, 10] as const;

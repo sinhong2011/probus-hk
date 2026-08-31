@@ -65,3 +65,44 @@ test("a page transition leaves nothing behind that could trap fixed children", a
     .toBe("none");
   expect(await shell.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
 });
+
+test("the saved screen renders its cards with no development warnings", async ({ page }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(String(e)));
+  page.on("console", (m) => {
+    const text = m.text();
+    if (m.type() === "error" && !text.includes("Failed to load resource")) problems.push(text);
+  });
+
+  await mockTransit(page);
+  // The route dev.spec walks /saved empty; the cards, the sortable grid and
+  // the drag wiring only exist once there are bookmarks to draw.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("probus:db:bookmarks")) {
+      localStorage.setItem(
+        "probus:saved",
+        JSON.stringify([
+          {
+            id: "1+1+CHUK YUEN ESTATE+STAR FERRY@9ED7E93749ABAE67",
+            routeKey: "1+1+CHUK YUEN ESTATE+STAR FERRY",
+            co: "kmb",
+            stopId: "9ED7E93749ABAE67",
+            seq: 2,
+            group: "返工",
+          },
+          {
+            id: "102+1+MEI FOO+SHAU KEI WAN@001436",
+            routeKey: "102+1+MEI FOO+SHAU KEI WAN",
+            co: "ctb",
+            stopId: "001436",
+            seq: 2,
+            group: "",
+          },
+        ]),
+      );
+    }
+  });
+  await page.goto("/saved");
+  await expect(page.locator("[data-bookmark-id]")).toHaveCount(2, { timeout: 20_000 });
+  expect(problems, "development warnings on /saved with bookmarks").toEqual([]);
+});

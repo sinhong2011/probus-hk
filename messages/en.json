@@ -224,7 +224,7 @@
   "sort_route": "Route",
   "sort_fare": "Fare",
   "sort_operator": "Operator",
-  "sort_manual_hint": "The order you dragged them into",
+  "sort_manual_hint": "The order you added or kept them in",
   "sort_eta_hint": "Soonest arrival first",
   "sort_distance_hint": "Shortest walk first",
   "sort_route_hint": "By route number",

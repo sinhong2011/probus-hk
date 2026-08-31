@@ -2,6 +2,8 @@ import { For, Show, createEffect, createSignal } from "solid-js";
 import { Modal } from "./Modal";
 import { CheckIcon, PlusIcon, TagIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
+import { GROUP_COLORS, groupColor, groupColorVar } from "~/lib/groupColors";
+import { settings } from "~/stores/settings";
 
 /**
  * Which group a bookmark belongs to.
@@ -106,6 +108,7 @@ export function GroupSheet(props: {
             {(group) => (
               <Chip
                 label={group}
+                color={groupColorVar(groupColor(group))}
                 selected={picked() === group}
                 /* Only the ones invented here spring in; the rest were already
                    on screen when the sheet opened. */
@@ -116,14 +119,52 @@ export function GroupSheet(props: {
           </For>
         </div>
 
+        {/* The picked group's swatches. Every group is born coloured - its
+            name lands on one of the eight - and this is where the rider moves
+            it. The change is saved as it is tapped: a colour is dressing, not
+            a decision the sheet's commit button should hold hostage. */}
+        <Show when={picked()}>
+          {(name) => (
+            <div class="flex items-center gap-2.5">
+              <span class="shrink-0 text-[0.75rem] font-semibold text-subtle-foreground">
+                {props.lang === "zh" ? "標籤顏色" : "Tag colour"}
+              </span>
+              <div
+                role="radiogroup"
+                aria-label={props.lang === "zh" ? "標籤顏色" : "Tag colour"}
+                class="flex items-center gap-1.5"
+              >
+                <For each={GROUP_COLORS}>
+                  {(color) => (
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={groupColor(name()) === color ? "true" : "false"}
+                      aria-label={color}
+                      onClick={() => settings.setGroupColor(name(), color)}
+                      class="app-press flex size-6 items-center justify-center rounded-full"
+                      style={{ background: groupColorVar(color) }}
+                    >
+                      <Show when={groupColor(name()) === color}>
+                        <span class="text-white">
+                          <CheckIcon size={11} />
+                        </span>
+                      </Show>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+          )}
+        </Show>
+
         {/* One field, with its own add button inside it, so the pair reads as
             a single instrument rather than as a box next to a button that
             happens to be near it. */}
         <form
-          class={[
-            "flex h-12 items-center gap-2.5 rounded-2xl border-[1.5px] bg-background pl-3.5 pr-1.5 transition-colors duration-state focus-within:border-primary-border",
-            { "border-primary-border": draft() !== "", "border-border": draft() === "" },
-          ]}
+          // Filled, not outlined: the sunken background is what says "type
+          // here", the same way every field in the app now does.
+          class="flex h-12 items-center gap-2.5 rounded-2xl bg-background pl-3.5 pr-1.5"
           onSubmit={(event) => {
             event.preventDefault();
             invent();
@@ -150,10 +191,10 @@ export function GroupSheet(props: {
                tinted, not filled: the filled button on this sheet is the one
                that saves, and a second one made adding a name look like it. */
             class={[
-              "mb-press flex size-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-state",
+              "app-press flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-state",
               {
-                "border-border bg-card text-faint-foreground": draft().trim() === "",
-                "border-primary-border bg-primary-muted text-primary": draft().trim() !== "",
+                "bg-secondary text-faint-foreground": draft().trim() === "",
+                "bg-primary-muted text-primary": draft().trim() !== "",
               },
             ]}
           >
@@ -168,7 +209,7 @@ export function GroupSheet(props: {
         <button
           type="button"
           onClick={commit}
-          class="mb-press flex h-12 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[0.88rem] font-bold text-primary-foreground shadow-card"
+          class="app-press flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[0.88rem] font-bold text-primary-foreground shadow-card"
         >
           <span class="shrink-0">{props.confirmLabel ?? t("saveLabel", props.lang)}</span>
           <Show when={target()}>
@@ -188,6 +229,8 @@ export function GroupSheet(props: {
 /** One group to choose from, sized to its name. */
 function Chip(props: {
   label: string;
+  /** The group's colour: the chip's whole ground is painted with it. */
+  color?: string;
   selected: boolean;
   /** The "no group" default, which is an absence and is drawn as one. */
   ghost?: boolean;
@@ -195,30 +238,49 @@ function Chip(props: {
   fresh?: boolean;
   onSelect: () => void;
 }) {
+  /*
+   * A group chip answers in its own colour - the whole ground, not a mark on
+   * it: a tint while open, the full colour once chosen. Inline, because the
+   * chosen-state utility rules would otherwise repaint it in the accent.
+   */
+  const paint = () =>
+    props.color
+      ? props.selected
+        ? { background: props.color, color: "var(--background)" }
+        : {
+            background: `color-mix(in srgb, ${props.color} 15%, transparent)`,
+            color: props.color,
+          }
+      : undefined;
+
   return (
     <button
       type="button"
       role="radio"
       aria-checked={props.selected ? "true" : "false"}
       onClick={props.onSelect}
+      style={paint()}
       class={[
-        "mb-press flex h-8 max-w-full items-center gap-1.5 rounded-full border px-3 text-[0.81rem] transition-colors duration-state",
+        "app-press flex h-8 max-w-full items-center gap-1.5 rounded-full px-3 text-[0.81rem] transition-colors duration-state",
         {
-          // Tinted rather than filled: the one solid block of accent on the
-          // sheet is the button that saves, and a filled chip beside it was
-          // competing for the same glance while deciding nothing.
-          "border-primary-border bg-primary-muted font-bold text-primary": props.selected,
-          "border-dashed border-border bg-transparent font-semibold text-subtle-foreground":
+          "font-bold": props.selected,
+          // Tinted rather than filled while colourless: the accent belongs
+          // to the button that saves.
+          "bg-primary-muted text-primary": props.selected && !props.color,
+          // The one border that stays: dashed is what says "not made yet",
+          // and a ghost with no edge at all is indistinguishable from a gap.
+          "border border-dashed border-border bg-transparent font-semibold text-subtle-foreground":
             !props.selected && !!props.ghost,
-          "border-transparent bg-secondary font-semibold text-muted-foreground":
-            !props.selected && !props.ghost,
-          "mb-pop": !!props.fresh,
+          "bg-secondary font-semibold text-muted-foreground":
+            !props.selected && !props.ghost && !props.color,
+          "font-semibold": !props.selected && !!props.color,
+          "app-pop": !!props.fresh,
         },
       ]}
     >
       <span class="min-w-0 truncate">{props.label}</span>
       <Show when={props.selected}>
-        <span class="mb-pop shrink-0">
+        <span class="app-pop shrink-0">
           <CheckIcon size={11} />
         </span>
       </Show>

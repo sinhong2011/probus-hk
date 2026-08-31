@@ -97,6 +97,20 @@ describe("saved", () => {
     expect(saved.items().map((i) => i.order)).toEqual([0, 1, 2]);
   });
 
+  it("adopts a shown order as the stored ranks", async () => {
+    const { saved } = await fresh();
+    for (const [r, s] of [
+      ["1", "A"],
+      ["2", "B"],
+      ["3", "C"],
+    ])
+      saved.toggle(entry(r!, s!));
+    saved.adopt(["3@C", "1@A", "2@B"]);
+    await settled();
+    expect(saved.items().map((i) => i.id)).toEqual(["3@C", "1@A", "2@B"]);
+    expect(saved.items().map((i) => i.order)).toEqual([0, 1, 2]);
+  });
+
   it("retargets a bookmark to another stop, absorbing one already there", async () => {
     const { saved } = await fresh();
     saved.toggle(entry("1", "A"));
