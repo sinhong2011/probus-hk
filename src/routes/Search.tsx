@@ -513,17 +513,24 @@ export default function Search() {
       {/* The dial itself, in the house sheet: handle, drag, and the drawer
           ground its keys step up from. Non-modal, so the list above it stays
           live, and dismissible - pushed down it is gone until the dock's
-          button asks for it back. A phone matter only: a wide window keeps
-          the dial in its panel. */}
+          button asks for it back. It rests above the tab bar rather than
+          over it: the tabs are the way off this screen and stay pressable
+          under the sheet, so the card keeps its corners and the bar keeps
+          its safe-area inset. A phone matter only: a wide window keeps the
+          dial in its panel. */}
       <Show when={!wide()}>
         <Drawer
           open={dialOpen()}
           onClose={() => setDialOpen(false)}
-          flush
           scroll={false}
+          /* The pad is not one fixed slab: letters that can follow the typed
+             digits come and go, and the sheet glides to each height instead
+             of jumping - the library animates the resize itself. */
+          transitionResize
+          class="!bottom-[var(--tabbar-height)] max-w-[27.5rem] !pb-1"
           label={t("routeNumber", lang())}
         >
-          <div class="mx-auto w-full max-w-[27rem] px-4 pb-2 pt-1">{keypad(false)}</div>
+          <div class="mx-auto w-full px-4 pb-3 pt-1">{keypad(false)}</div>
         </Drawer>
       </Show>
     </SplitPage>
