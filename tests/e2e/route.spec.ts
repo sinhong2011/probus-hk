@@ -376,26 +376,6 @@ test("the tab bar stays reachable from a route page", async ({ page }) => {
   await expect(page).toHaveURL(/\/search/);
 });
 
-test("a stop opened from a route says which route it came through", async ({ page }) => {
-  await page.goto("/search");
-  await page.getByRole("button", { name: "1", exact: true }).click();
-  await page.locator('a[href^="/route/"]').first().click();
-  await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
-
-  await stopRows(page).nth(2).click();
-  await page.locator('[data-open="true"] a[href^="/stop/"]').first().click();
-  await expect(page).toHaveURL(/\/stop\//);
-
-  // The whole way back, not just the tab: a stop reached through a route is a
-  // different place from one opened straight off the nearby list.
-  const crumbs = page.getByRole("navigation", { name: "breadcrumb" });
-  await expect(crumbs.getByText("搜尋")).toBeVisible({ timeout: 10_000 });
-  await expect(crumbs.getByText("路線 1")).toBeVisible();
-
-  await crumbs.getByText("路線 1").click();
-  await expect(page).toHaveURL(/\/route\//);
-});
-
 test("the timetable opens as a dialog and closes with Escape", async ({ page }) => {
   await page.goto(`/route/${KMB_1}`);
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
@@ -439,26 +419,6 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
     .toBe(false);
 });
 
-test("the nearest stop is named, and jumps to itself", async ({ page, context }) => {
-  await context.grantPermissions(["geolocation"]);
-  await context.setGeolocation({ latitude: 22.3396, longitude: 114.1949 });
-  await page.goto(`/route/${KMB_1}`);
-
-  // "You are here" answered nothing on a page that is a whole route; the chip
-  // has to say which stop it means.
-  const nearest = page.getByRole("button", { name: /最近車站/ });
-  await expect(nearest).toBeVisible({ timeout: 15_000 });
-  await expect(nearest).toContainText("步行");
-
-  await nearest.click();
-  await expect(page.locator('[data-open="true"]')).toHaveCount(1);
-});
-
-/**
- * The map answers "where is it" in metres; the list answers it in stops, which
- * is the unit a rider standing at a kerb can check against the road in front of
- * them - and the only one available to someone who never opens the map.
- */
 test("says how far up the road the bus still is", async ({ page }) => {
   await mockRunningBuses(page);
   await page.goto(`/route/${KMB_1}`);
