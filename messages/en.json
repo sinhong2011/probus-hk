@@ -142,6 +142,7 @@
   "walk_label": "Walk",
   "swap_ends": "Swap",
   "board_at": "Board",
+  "notice_count": "notices",
   "alight_at": "Alight",
   "affects_routes": "Routes affected",
   "notices_failed": "Could not load notices",

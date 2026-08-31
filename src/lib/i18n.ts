@@ -192,6 +192,7 @@ const MESSAGES = {
   walkLabel: m.walk_label,
   boardAt: m.board_at,
   alightAt: m.alight_at,
+  noticeCount: m.notice_count,
   affectsRoutes: m.affects_routes,
   noticesFailed: m.notices_failed,
   leaveNow: m.leave_now,
