@@ -12,11 +12,22 @@ import {
 } from "~/lib/tanstack/virtual";
 import { Hairline } from "./Chrome";
 
-/** The nearest ancestor that scrolls, or nothing if the page does. */
+/**
+ * The nearest ancestor that scrolls, or nothing if the page does.
+ *
+ * Actually scrolls: `overflow: auto` alone is not enough. On a phone the
+ * pane that scrolls on a wide window keeps its `app-scroll` class but loses
+ * its height cap, so it grows with its content and never clips - yet its
+ * computed overflow still says auto. Handed to the virtualiser, a container
+ * that tall is a viewport the whole list is inside, and it drew every one of
+ * four thousand rows in one flush, which froze the tab. A box whose content
+ * fits is not the scroller; keep climbing.
+ */
 function scrollParent(el: HTMLElement): HTMLElement | null {
   for (let node = el.parentElement; node; node = node.parentElement) {
     const overflow = getComputedStyle(node).overflowY;
-    if (overflow === "auto" || overflow === "scroll") return node;
+    if ((overflow === "auto" || overflow === "scroll") && node.scrollHeight > node.clientHeight + 1)
+      return node;
   }
   return null;
 }
@@ -61,14 +72,6 @@ export function VirtualRows<T>(props: {
     );
   };
 
-  // Placed once mounted, and again whenever the list above it could have
-  // changed height - a different set of rows means a different screen.
-  createEffect(
-    () => [list(), props.items.length] as const,
-    () => {
-      place();
-    },
-  );
   window.addEventListener("resize", place);
   onCleanup(() => window.removeEventListener("resize", place));
 
@@ -106,6 +109,18 @@ export function VirtualRows<T>(props: {
     },
     overscan: 6,
   });
+
+  // Placed once mounted, and again whenever the list above it could have
+  // changed height - a different set of rows means a different screen. The
+  // list's own height is a dependency too: whether the pane scrolls is only
+  // knowable once the list stands at its full height inside it, and a pane
+  // judged against the empty list read as one that never overflows.
+  createEffect(
+    () => [list(), props.items.length, virtualizer.getTotalSize()] as const,
+    () => {
+      place();
+    },
+  );
 
   const first = () => virtualizer.getVirtualItems()[0]?.index ?? 0;
 
