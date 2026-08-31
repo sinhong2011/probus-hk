@@ -1,11 +1,12 @@
 import { useLinkProps, useParams } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
-import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
+import { EmptyState, ScreenTitle, SectionLabel, SpecialTag } from "~/components/Chrome";
 import { Page, RowCard, Section } from "~/components/Layout";
 import { ChevronRightIcon, SortIcon } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { VirtualRows } from "~/components/VirtualRows";
 import { useDb } from "~/data/context";
+import { isSpecialService } from "~/data/db";
 import { CATEGORIES, categoryById, categoryCounts, routesInCategory } from "~/data/categories";
 import type { KeyedRoute } from "~/data/types";
 import { fareLabel } from "~/lib/format";
@@ -210,8 +211,13 @@ function RouteRowItem(props: { route: KeyedRoute; lang: Lang }) {
     >
       <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
       <div class="flex min-w-0 grow flex-col gap-0.5">
-        <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-          {pick(props.route.orig, props.lang)} → {pick(props.route.dest, props.lang)}
+        <span class="flex min-w-0 items-center gap-1.5">
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+            {pick(props.route.orig, props.lang)} → {pick(props.route.dest, props.lang)}
+          </span>
+          <Show when={isSpecialService(props.route)}>
+            <SpecialTag lang={props.lang} />
+          </Show>
         </span>
         <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
           {[operatorLabel(props.route.co, props.lang), fareLabel(props.route.fares?.[0])]

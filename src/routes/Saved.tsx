@@ -10,7 +10,7 @@ import {
   onCleanup,
   untrack,
 } from "solid-js";
-import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
+import { EmptyState, ScreenTitle, SectionLabel, SpecialTag } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, type SortChoice } from "~/components/SortSheet";
@@ -30,7 +30,7 @@ import { RoutePlate } from "~/components/RoutePlate";
 import { CardGrid, Page, RowCard, Section } from "~/components/Layout";
 import { routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
-import { routeAt } from "~/data/db";
+import { isSpecialService, routeAt } from "~/data/db";
 import { isRunningNow } from "~/data/schedule";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
 import { arrivals, type Arrival } from "~/data/arrivals";
@@ -167,8 +167,13 @@ function BookmarkCard(props: {
           {...useLinkProps(routeLink(props.entry.route.key))}
           class="flex min-w-0 grow flex-col gap-0.5"
         >
-          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-            {t("towards", props.lang)} {pick(props.entry.route.dest, props.lang)}
+          <span class="flex min-w-0 items-center gap-1.5">
+            <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+              {t("towards", props.lang)} {pick(props.entry.route.dest, props.lang)}
+            </span>
+            <Show when={isSpecialService(props.entry.route)}>
+              <SpecialTag lang={props.lang} />
+            </Show>
           </span>
           <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
             {[
@@ -785,8 +790,13 @@ export default function Saved() {
                     {(route) => (
                       <div class="flex items-center gap-3 px-3.5 py-2.5">
                         <RoutePlate route={route.route} co={route.co} size="sm" />
-                        <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
-                          {t("towards", lang())} {pick(route.dest, lang())}
+                        <span class="flex min-w-0 grow items-center gap-1.5">
+                          <span class="min-w-0 truncate text-[0.88rem] font-bold text-foreground">
+                            {t("towards", lang())} {pick(route.dest, lang())}
+                          </span>
+                          <Show when={isSpecialService(route)}>
+                            <SpecialTag lang={lang()} />
+                          </Show>
                         </span>
                         <button
                           type="button"

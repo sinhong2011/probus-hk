@@ -1,6 +1,14 @@
 import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
-import { Card, EmptyState, FareTag, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
+import {
+  Card,
+  EmptyState,
+  FareTag,
+  Hairline,
+  SectionLabel,
+  SpecialTag,
+  StopCode,
+} from "~/components/Chrome";
 import { SplitPage } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
@@ -18,6 +26,7 @@ import { useDb } from "~/data/context";
 import { CATEGORIES } from "~/data/categories";
 import {
   allRoutes,
+  isSpecialService,
   nextRouteChars,
   routeAt,
   searchDestinations,
@@ -100,11 +109,16 @@ function RouteItem(props: {
           </span>
         </div>
         <div class="flex min-w-0 grow flex-col gap-0.5">
-          <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
-            <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
-              {t("towards", props.lang)}
+          <span class="flex min-w-0 items-center gap-1.5">
+            <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
+              <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
+                {t("towards", props.lang)}
+              </span>
+              {pick(props.route.dest, props.lang)}
             </span>
-            {pick(props.route.dest, props.lang)}
+            <Show when={isSpecialService(props.route)}>
+              <SpecialTag lang={props.lang} />
+            </Show>
           </span>
           {/* Where it starts, and what it costs - the full fare and the
               two-dollar concession each in a tag, so the two amounts read as

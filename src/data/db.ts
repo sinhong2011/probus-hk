@@ -309,6 +309,18 @@ export function searchRoutes(db: RouteDb, query: string, limit = 60): KeyedRoute
   return [...exact.sort(compareRoutes), ...prefix.sort(compareRoutes)].slice(0, limit);
 }
 
+/**
+ * Whether an entry is a special pattern of its route rather than the main
+ * service - service type "1" is the timetable's backbone, everything else is
+ * an extra the operator runs at certain hours, often calling at a few stops
+ * the main pattern skips. The database keys each pattern separately, so a
+ * list that shows them all needs this to stop a variant with the same two
+ * ends reading as an exact double of the main row.
+ */
+export function isSpecialService(route: KeyedRoute): boolean {
+  return String(route.serviceType) !== "1";
+}
+
 /** Which characters could still extend `query` into a real route number. */
 export function nextRouteChars(db: RouteDb, query: string): Set<string> {
   const q = query.trim().toUpperCase();

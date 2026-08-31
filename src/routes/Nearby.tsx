@@ -10,6 +10,7 @@ import {
   ScreenTitle,
   SectionLabel,
   Segmented,
+  SpecialTag,
 } from "~/components/Chrome";
 import { CardColumns, CardColumnItem, Page, RowCard, Section } from "~/components/Layout";
 import {
@@ -29,6 +30,7 @@ import { useDb } from "~/data/context";
 import { presetRoutes } from "~/data/presets";
 import { operatorLabel } from "~/lib/operators";
 import {
+  isSpecialService,
   nearbyStopClusters,
   routeAt,
   routesAtCluster,
@@ -111,11 +113,16 @@ function PopularRoutes(props: { lang: Lang }) {
                 >
                   <RoutePlate route={route.route} co={route.co} size="sm" />
                   <div class="flex min-w-0 grow flex-col gap-0.5">
-                    <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                      <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
-                        {t("towards", props.lang)}
+                    <span class="flex min-w-0 items-center gap-1.5">
+                      <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                        <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
+                          {t("towards", props.lang)}
+                        </span>
+                        {pick(route.dest, props.lang)}
                       </span>
-                      {pick(route.dest, props.lang)}
+                      <Show when={isSpecialService(route)}>
+                        <SpecialTag lang={props.lang} />
+                      </Show>
                     </span>
                     <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
                       {operatorLabel(route.co, props.lang)} · {pick(route.orig, props.lang)}

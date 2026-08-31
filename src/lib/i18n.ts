@@ -331,6 +331,7 @@ const MESSAGES = {
   trafficCamera: m.traffic_camera,
   cameraFailed: m.camera_failed,
   cameraSource: m.camera_source,
+  specialDepartures: m.special_departures,
 } as const satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof MESSAGES;

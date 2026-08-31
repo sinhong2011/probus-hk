@@ -1,11 +1,13 @@
 import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
+import { isSpecialService } from "~/data/db";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
 import { concessionFare, fareAt } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
+import { SpecialTag } from "./Chrome";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
 
@@ -50,8 +52,13 @@ export function RouteLine(props: LineProps) {
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 
       <div class="flex min-w-0 grow flex-col gap-0.5">
-        <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-          {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
+        <span class="flex min-w-0 items-center gap-1.5">
+          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+            {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
+          </span>
+          <Show when={isSpecialService(props.route)}>
+            <SpecialTag lang={props.lang} />
+          </Show>
         </span>
         <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
           {subtitleFor(props)}

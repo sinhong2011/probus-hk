@@ -313,5 +313,6 @@
   "lines_here": "Lines here",
   "traffic_camera": "Traffic snapshot",
   "camera_failed": "The picture didn't load",
-  "camera_source": "Pictures from the Transport Department, refreshed every two minutes"
+  "camera_source": "Pictures from the Transport Department, refreshed every two minutes",
+  "special_departures": "Special departures"
 }

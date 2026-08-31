@@ -7,6 +7,7 @@ import {
   FareTag,
   Reveal,
   SectionLabel,
+  SpecialTag,
   StopCode,
 } from "~/components/Chrome";
 import { Alert } from "~/components/Alert";
@@ -37,7 +38,7 @@ import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { useInView } from "~/lib/inView";
 import { nearestCamera, type NearbyCamera } from "~/data/cameras";
-import { reverseRoute, routeAt, routeStops } from "~/data/db";
+import { isSpecialService, reverseRoute, routeAt, routeStops } from "~/data/db";
 import { lineName, lineRank, stationLines } from "~/data/rail";
 import { railFare } from "~/data/railFares";
 import { rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
@@ -1879,8 +1880,16 @@ export default function RouteDetail() {
                 <RoutePlate route={r().route} co={r().co} size="md" />
 
                 <div class="flex min-w-0 grow flex-col gap-0.5">
-                  <span class="truncate text-[1rem] font-bold tracking-[-0.02em] text-foreground">
-                    {t("towards", lang())} {pick(r().dest, lang())}
+                  <span class="flex min-w-0 items-center gap-1.5">
+                    <span class="truncate text-[1rem] font-bold tracking-[-0.02em] text-foreground">
+                      {t("towards", lang())} {pick(r().dest, lang())}
+                    </span>
+                    {/* The tag a special row wears in a list, kept on when the
+                        row is opened - or the page it lands on looks like the
+                        main service it is not. */}
+                    <Show when={isSpecialService(r())}>
+                      <SpecialTag lang={lang()} />
+                    </Show>
                   </span>
                   <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
                     {operatorLabel(r().co, lang())} · {pick(r().orig, lang())}
