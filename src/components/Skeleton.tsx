@@ -11,7 +11,7 @@ import { CardColumnItem } from "./Layout";
 export function Skeleton(props: { width: string; height: string; class?: string }) {
   return (
     <span
-      class={`mb-shimmer block rounded-md ${props.class ?? ""}`}
+      class={`app-shimmer block rounded-md ${props.class ?? ""}`}
       style={{ width: props.width, height: props.height }}
       aria-hidden="true"
     />

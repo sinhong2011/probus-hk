@@ -56,7 +56,7 @@ export function SortSheet<T extends string>(props: {
                 class={[
                   // Full rows, and a thumb-sized one: this is a sheet the hand
                   // reaches into, not a strip of segments read at a glance.
-                  "mb-press flex min-h-[3.1rem] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors duration-state",
+                  "app-press flex min-h-[3.1rem] items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors duration-state",
                   { "bg-primary-muted": on(), "bg-transparent": !on() },
                 ]}
               >

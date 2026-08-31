@@ -37,6 +37,12 @@ export function Page(props: {
    * at every width, with the rest kept in view over it.
    */
   fill?: boolean | "always";
+  /**
+   * On a wide screen, start level with the sidebar's top rather than at the
+   * page's own top padding: for a screen that is one panel filling the
+   * window - the map - whose edges should line up with the sidebar's.
+   */
+  flush?: boolean;
   class?: string;
 }) {
   /*
@@ -48,7 +54,7 @@ export function Page(props: {
     () => props.fill ?? false,
     (fill) => {
       if (!fill) return;
-      const pinned = fill === "always" ? ["mb-fill", "mb-fill-always"] : ["mb-fill"];
+      const pinned = fill === "always" ? ["app-fill", "app-fill-always"] : ["app-fill"];
       document.documentElement.classList.add(...pinned);
       // Returned rather than `onCleanup`: the callback has no owner in Solid 2,
       // so a registered cleanup never ran and the root stayed pinned on every
@@ -70,14 +76,15 @@ export function Page(props: {
   return (
     <div
       class={[
-        "pt-safe-top mb-scroll flex min-h-dvh flex-col",
+        "pt-safe-top app-scroll flex min-h-dvh flex-col",
         { "lg:h-dvh lg:min-h-0 lg:overflow-hidden": Boolean(props.fill) },
         { "h-dvh min-h-0 overflow-hidden": props.fill === "always" },
       ]}
     >
       <div
         class={[
-          `flex w-full grow flex-col gap-6 pt-4 lg:gap-8 lg:pt-8 ${GUTTER} ${props.class ?? ""}`,
+          `flex w-full grow flex-col gap-6 pt-4 lg:gap-8 ${GUTTER} ${props.class ?? ""}`,
+          props.flush ? "lg:pt-3" : "lg:pt-8",
           /* A filled page ends where the sidebar ends: the sidebar floats
              `inset-y-3` from the window, and a pane that ran on to the very
              edge made the two look cut to different lengths. */
@@ -175,7 +182,7 @@ export function RowCard(props: {
   return (
     <div
       class={[
-        "grid overflow-hidden rounded-xl border border-border bg-card shadow-card",
+        "grid overflow-hidden rounded-xl bg-card shadow-card",
         "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:left-3.5 [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
         props.single
           ? ""
@@ -212,13 +219,29 @@ export function CardGrid(props: {
   children: JSX.Element;
   /** Hold the cards to one column, e.g. while they are being dragged. */
   single?: boolean;
+  /**
+   * Let the window decide the column count instead of two fixed steps.
+   *
+   * For a grid of compact cards: two fixed columns stretched each card to
+   * half a desktop window, which put a hand's width of nothing between a
+   * route's name and its arrival time. Sized from a minimum card width, the
+   * same window carries three or four readable cards instead.
+   */
+  dense?: boolean;
+  /** The grid element itself, for a screen that wires behaviour onto it. */
+  ref?: (el: HTMLDivElement) => void;
   class?: string;
 }) {
   return (
     <div
+      ref={props.ref}
       class={[
         "grid gap-2.5 lg:gap-4",
-        props.single ? "" : "lg:grid-cols-2 min-[110rem]:grid-cols-3",
+        props.single
+          ? ""
+          : props.dense
+            ? "lg:grid-cols-[repeat(auto-fill,minmax(21rem,1fr))]"
+            : "lg:grid-cols-2 min-[110rem]:grid-cols-3",
         props.class ?? "",
       ]}
     >
@@ -291,8 +314,15 @@ export function SplitPage(props: {
           props.mainFills
             ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-10"
             : "grid gap-6 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
+          /*
+           * The list's cap is what actually hands the map its width: the map
+           * takes whatever the list leaves. At 46rem the list swallowed a
+           * 1440px window whole and the map sat at its 22rem floor - the
+           * opposite of what this mode is for. 36rem still fits a row's name
+           * and its numbers side by side; everything past that is map.
+           */
           props.wideAside
-            ? "lg:grid-cols-[minmax(22rem,1fr)_minmax(0,46rem)]"
+            ? "lg:grid-cols-[minmax(26.4rem,1fr)_minmax(0,36rem)]"
             : "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]",
         ]}
       >
@@ -305,8 +335,8 @@ export function SplitPage(props: {
         <div
           class={
             props.mainFills
-              ? "mb-scroll flex min-h-0 flex-col gap-3 overflow-y-auto [&>*]:shrink-0 lg:h-full lg:gap-6"
-              : "mb-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0"
+              ? "app-scroll flex min-h-0 flex-col gap-3 overflow-y-auto [&>*]:shrink-0 lg:h-full lg:gap-6"
+              : "app-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0"
           }
         >
           {props.aside}
@@ -316,7 +346,7 @@ export function SplitPage(props: {
             row is the height it has and the card inside it does the scrolling. */}
         <div
           class={[
-            "mb-scroll flex min-w-0 flex-col lg:h-full lg:min-h-0",
+            "app-scroll flex min-w-0 flex-col lg:h-full lg:min-h-0",
             props.mainFills
               ? "min-h-0 gap-3 overflow-hidden lg:gap-8"
               : "gap-6 pb-2 lg:gap-8 lg:overflow-y-auto lg:pb-0 lg:[&>*]:shrink-0",

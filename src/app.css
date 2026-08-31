@@ -63,6 +63,21 @@
   --warning: oklch(0.58 0.15 62);
   --destructive: oklch(0.577 0.245 27.325);
 
+  /*
+   * The group-tag palette: eight hues a bookmark group can wear, spread
+   * around the wheel so neighbours never read as each other, and each
+   * re-lit for dark mode below. `--group-indigo` deliberately matches the
+   * accent - it is the same indigo, just available as a choice.
+   */
+  --group-red: oklch(0.55 0.2 25);
+  --group-orange: oklch(0.6 0.16 55);
+  --group-amber: oklch(0.62 0.14 90);
+  --group-green: oklch(0.56 0.15 150);
+  --group-teal: oklch(0.56 0.11 200);
+  --group-blue: oklch(0.55 0.16 245);
+  --group-indigo: oklch(0.52 0.19 277);
+  --group-purple: oklch(0.56 0.2 310);
+
   --border: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
   --map: oklch(0.94 0.004 286.3);
@@ -120,6 +135,15 @@
     --warning: oklch(0.79 0.15 70);
     --destructive: oklch(0.704 0.191 22.216);
 
+    --group-red: oklch(0.72 0.17 25);
+    --group-orange: oklch(0.78 0.14 60);
+    --group-amber: oklch(0.82 0.13 90);
+    --group-green: oklch(0.76 0.14 150);
+    --group-teal: oklch(0.78 0.11 200);
+    --group-blue: oklch(0.74 0.13 245);
+    --group-indigo: oklch(0.68 0.16 277);
+    --group-purple: oklch(0.74 0.16 310);
+
     --border: oklch(1 0 0 / 7%);
     --ring: oklch(0.552 0.016 285.938);
     --map: oklch(0.205 0.002 286);
@@ -152,6 +176,15 @@
 
   --warning: oklch(0.79 0.15 70);
   --destructive: oklch(0.704 0.191 22.216);
+
+  --group-red: oklch(0.72 0.17 25);
+  --group-orange: oklch(0.78 0.14 60);
+  --group-amber: oklch(0.82 0.13 90);
+  --group-green: oklch(0.76 0.14 150);
+  --group-teal: oklch(0.78 0.11 200);
+  --group-blue: oklch(0.74 0.13 245);
+  --group-indigo: oklch(0.68 0.16 277);
+  --group-purple: oklch(0.74 0.16 310);
 
   --border: oklch(1 0 0 / 7%);
   --ring: oklch(0.552 0.016 285.938);
@@ -272,7 +305,7 @@
   --color-op-gmb: #00843d;
   --color-op-mtr: #a32638;
   --color-op-ael: #00888a;
-  --color-op-lightrail: #7baf3c;
+  --color-op-lightrail: #d3a809;
   --color-op-lrtfeeder: #b4472e;
   --color-op-ferry: #1d6fa3;
 }
@@ -317,6 +350,51 @@
   }
 }
 
+/*
+ * The search-range slider. The filled share of the track is handed in as
+ * `--fill` by the component, because only it knows where the thumb is; the
+ * two pseudo-element worlds (WebKit and Gecko) each get the same drawing.
+ */
+.app-range {
+  appearance: none;
+  height: 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+.app-range:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 9999px;
+}
+.app-range::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--primary) var(--fill), var(--secondary) var(--fill));
+}
+.app-range::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: -0.4375rem;
+  height: 1.125rem;
+  width: 1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+.app-range::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--primary) var(--fill), var(--secondary) var(--fill));
+}
+.app-range::-moz-range-thumb {
+  height: 1.125rem;
+  width: 1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -327,7 +405,7 @@
   }
 }
 
-@keyframes mb-pulse {
+@keyframes app-pulse {
   0%,
   100% {
     opacity: 1;
@@ -337,7 +415,7 @@
   }
 }
 
-@keyframes mb-rise {
+@keyframes app-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -348,7 +426,7 @@
   }
 }
 
-@keyframes mb-page-in {
+@keyframes app-page-in {
   from {
     opacity: 0;
     transform: translateY(5px);
@@ -359,7 +437,7 @@
   }
 }
 
-@keyframes mb-page-wait {
+@keyframes app-page-wait {
   from {
     transform: translateX(-100%);
   }
@@ -378,13 +456,13 @@
  * space a countdown was using. It springs in so the row reads as having gained
  * something, rather than as having been redrawn behind the rider's back.
  */
-@keyframes mb-spin {
+@keyframes app-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes mb-pop {
+@keyframes app-pop {
   from {
     opacity: 0;
     transform: translateY(2px) scale(0.86);
@@ -395,7 +473,7 @@
   }
 }
 
-@keyframes mb-shimmer {
+@keyframes app-shimmer {
   from {
     background-position: 200% 0;
   }
@@ -404,7 +482,7 @@
   }
 }
 
-@keyframes mb-flash {
+@keyframes app-flash {
   from {
     background: color-mix(in srgb, var(--primary) 16%, transparent);
   }
@@ -415,8 +493,8 @@
 
 @layer components {
   /* Staggered list entrance, capped so a long list does not crawl in. */
-  .mb-rise {
-    animation: mb-rise 320ms var(--ease-out) both;
+  .app-rise {
+    animation: app-rise 320ms var(--ease-out) both;
   }
 
   /*
@@ -424,7 +502,7 @@
    * row from 0fr to 1fr, so the child measures itself - no height has to be
    * known in advance, and unlike a `Show` the leaving state still plays.
    */
-  .mb-reveal {
+  .app-reveal {
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
@@ -440,11 +518,11 @@
       opacity var(--duration-reveal) var(--ease-out),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-reveal > * {
+  .app-reveal > * {
     min-height: 0;
     overflow: hidden;
   }
-  .mb-reveal[data-open="true"] {
+  .app-reveal[data-open="true"] {
     grid-template-rows: 1fr;
     opacity: 1;
     visibility: visible;
@@ -459,16 +537,16 @@
    * a transform or an opacity that stays applied would make this element the
    * containing block for every fixed child under it.
    */
-  .mb-page-in {
-    animation: mb-page-in var(--duration-reveal) var(--ease-out);
+  .app-page-in {
+    animation: app-page-in var(--duration-reveal) var(--ease-out);
   }
 
   /*
    * A control that is working rather than waiting to be pressed. One turn a
    * second: fast enough to read as busy, slow enough not to nag.
    */
-  .mb-spin {
-    animation: mb-spin 1s linear infinite;
+  .app-spin {
+    animation: app-spin 1s linear infinite;
   }
 
   /*
@@ -476,23 +554,23 @@
    * a second of nothing happening. This creeps across the top rather than
    * claiming to know a percentage it cannot know.
    */
-  .mb-page-wait {
-    animation: mb-page-wait 2.4s var(--ease-out) both;
+  .app-page-wait {
+    animation: app-page-wait 2.4s var(--ease-out) both;
   }
 
   /*
-   * A modal, animating both ways. Same trick as `mb-reveal`: `visibility` flips
+   * A modal, animating both ways. Same trick as `app-reveal`: `visibility` flips
    * only once the fade has finished, so the closed dialog stops existing for
    * hit-testing instead of sitting invisibly over the page.
    */
-  .mb-modal {
+  .app-modal {
     opacity: 0;
     visibility: hidden;
     transition:
       opacity var(--duration-reveal) var(--ease-out),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-modal[data-open="true"] {
+  .app-modal[data-open="true"] {
     opacity: 1;
     visibility: visible;
     transition:
@@ -505,11 +583,11 @@
    * phone, where it is a bottom sheet, and a small settle on a wide screen,
    * where it is a centred dialog.
    */
-  .mb-sheet {
+  .app-sheet {
     transform: translateY(100%);
     transition: transform var(--duration-reveal) var(--ease-spring);
   }
-  .mb-modal[data-open="true"] .mb-sheet {
+  .app-modal[data-open="true"] .app-sheet {
     transform: none;
   }
 
@@ -521,7 +599,7 @@
    * jumping. `visibility` flips only after the fall, so a band on its way out
    * cannot take a tap meant for the row behind it.
    */
-  .mb-dock {
+  .app-dock {
     opacity: 0;
     visibility: hidden;
     transform: translateY(0.9rem) scale(0.98);
@@ -530,7 +608,7 @@
       transform var(--duration-reveal) var(--ease-spring),
       visibility 0s linear var(--duration-reveal);
   }
-  .mb-dock[data-open="true"] {
+  .app-dock[data-open="true"] {
     opacity: 1;
     visibility: visible;
     transform: none;
@@ -540,11 +618,11 @@
       visibility 0s linear 0s;
   }
 
-  .mb-pop {
-    animation: mb-pop var(--duration-reveal) var(--ease-spring) both;
+  .app-pop {
+    animation: app-pop var(--duration-reveal) var(--ease-spring) both;
   }
   @media (min-width: 40rem) {
-    .mb-sheet {
+    .app-sheet {
       transform: translateY(10px) scale(0.97);
     }
   }
@@ -555,23 +633,23 @@
    * that wipe and show through it, so it is turned off for the length of the
    * swap - and only then, so any other view transition keeps its default.
    */
-  :root.mb-theme-swap::view-transition-old(root),
-  :root.mb-theme-swap::view-transition-new(root) {
+  :root.app-theme-swap::view-transition-old(root),
+  :root.app-theme-swap::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;
   }
-  :root.mb-theme-swap::view-transition-old(root) {
+  :root.app-theme-swap::view-transition-old(root) {
     /* The old theme stays put while the new one is drawn over it. */
     z-index: 0;
   }
-  :root.mb-theme-swap::view-transition-new(root) {
+  :root.app-theme-swap::view-transition-new(root) {
     z-index: 1;
   }
 
   /* Set while a screen holds itself to the window; see `Page`'s `fill`. */
   @media (min-width: 64rem) {
-    html.mb-fill,
-    html.mb-fill body {
+    html.app-fill,
+    html.app-fill body {
       height: 100%;
       overflow: hidden;
     }
@@ -579,18 +657,18 @@
 
   /* The same at every width, for a screen that holds itself to a phone's
      window too; see `Page`'s `fill="always"`. */
-  html.mb-fill-always,
-  html.mb-fill-always body {
+  html.app-fill-always,
+  html.app-fill-always body {
     height: 100%;
     overflow: hidden;
   }
 
   /*
    * Set while something owns the whole window - the route map opened out. At
-   * every width, unlike `mb-fill`: a phone is where a map is opened out most.
+   * every width, unlike `app-fill`: a phone is where a map is opened out most.
    */
-  html.mb-locked,
-  html.mb-locked body {
+  html.app-locked,
+  html.app-locked body {
     height: 100%;
     overflow: hidden;
   }
@@ -600,7 +678,7 @@
    * times take a moment to arrive, and the alternative was showing "no service"
    * at a stop that has plenty - a loading state that lies.
    */
-  .mb-shimmer {
+  .app-shimmer {
     background-image: linear-gradient(
       90deg,
       var(--secondary) 0%,
@@ -608,40 +686,234 @@
       var(--secondary) 100%
     );
     background-size: 200% 100%;
-    animation: mb-shimmer 1.3s linear infinite;
+    animation: app-shimmer 1.3s linear infinite;
   }
 
   /*
    * Two kinds of tap feedback, because a scale is not always safe.
    *
-   * `mb-press` shrinks a discrete object - a button, a chip, a card - which is
+   * `app-press` shrinks a discrete object - a button, a chip, a card - which is
    * the clearest acknowledgement there is.
    *
-   * `mb-tap` is for a row inside a continuous structure. Scaling one of those
+   * `app-tap` is for a row inside a continuous structure. Scaling one of those
    * drags whatever it contains out of alignment with its neighbours: the stop
    * rows carry the route's timeline rail, and pressing one visibly broke the
    * line. A row tints instead, and nothing moves.
    */
-  .mb-press {
+  .app-press {
     transition: transform var(--duration-press) var(--ease-out);
   }
-  .mb-press:active {
+  .app-press:active {
     transform: scale(0.985);
   }
 
-  .mb-tap {
+  /*
+   * The two halves of a drag, worn as SortableJS's classes: `app-lift` is
+   * the floating preview that rides the pointer - raised, tilted, shadowed -
+   * and `app-drag-ghost` is the slot it left behind.
+   */
+  .app-lift {
+    scale: 1.03;
+    rotate: -0.5deg;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+    /* The preview is a clone of the card, `app-press` transition and all -
+       and that transition eased every positional update, so the preview
+       trailed the finger by a beat. It must ride 1:1. */
+    transition: none;
+    /* Its own layer: it rides the pointer every frame, and repainting the
+       card each tick is exactly the stutter this exists to avoid. */
+    will-change: transform;
+    opacity: 1 !important;
+  }
+  /* The pickup is felt, not instant: the preview grows into the hand. */
+  @media (prefers-reduced-motion: no-preference) {
+    .app-lift {
+      animation: app-liftin 160ms var(--ease-out);
+    }
+  }
+  @keyframes app-liftin {
+    from {
+      scale: 1;
+      rotate: 0deg;
+      box-shadow: 0 0 0 rgb(0 0 0 / 0);
+    }
+  }
+
+  /* The slot the dragged card left behind, kept faint under the preview. */
+  .app-drag-ghost {
+    opacity: 0.35;
+    transition: opacity 150ms var(--ease-out);
+  }
+
+  .app-tap {
     transition: background-color var(--duration-press) var(--ease-out);
   }
-  .mb-tap:active {
+  .app-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
-  /* Hides the scrollbar without disabling scrolling. */
-  .mb-scroll {
-    overflow-y: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+  /*
+   * Liquid-glass surface for controls floating over imagery - the map's
+   * buttons and its status note. Mostly the picture behind it, bent: a heavy
+   * blur with a saturation lift so the colours underneath pool instead of
+   * greying out, and a breath of the card tint for contrast. No inset
+   * hairline: in a dark theme it read as a border, which this design has
+   * none of - the blur and the gradient alone are the glass.
+   */
+  /*
+   * Liquid glass is the app's button surface, declared once against the
+   * elements rather than rewritten on every call site: any button or link
+   * that fills itself with the secondary or primary surface renders as glass
+   * instead of a flat fill. The element selector outranks the utility it
+   * overrides, and a control that must stay flat can always say so inline.
+   */
+  button.bg-secondary,
+  a.bg-secondary {
+    background: linear-gradient(
+      color-mix(in srgb, var(--secondary) 55%, transparent),
+      color-mix(in srgb, var(--secondary) 38%, transparent)
+    );
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    backdrop-filter: blur(14px) saturate(1.6);
   }
-  .mb-scroll::-webkit-scrollbar {
+  button.bg-primary,
+  a.bg-primary {
+    background: linear-gradient(
+      color-mix(in srgb, var(--primary) 72%, transparent),
+      color-mix(in srgb, var(--primary) 58%, transparent)
+    );
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    backdrop-filter: blur(14px) saturate(1.6);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+
+  /*
+   * The chosen state, declared AFTER the glass and outside any layer: a
+   * chosen chip or radio pools the primary colour behind primary ink. It
+   * used to live in the utilities layer, where the unlayered glass rules
+   * above always beat it - a pressed "all" chip rendered exactly like an
+   * open one, and the choice was invisible.
+   */
+  button[aria-pressed="true"],
+  button[role="radio"][aria-checked="true"] {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  /*
+   * A toggle that reads as a bare icon rather than a choice chip - the
+   * bookmark and the alarm on a stop row - opts out of the chosen tint;
+   * its own colour keeps carrying the state.
+   */
+  button[aria-pressed].app-bare {
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-glass {
+    /*
+     * Opaque enough to read on whatever it floats over. At a fifth of the
+     * card's colour the controls on a dark basemap were dark-on-dark ghosts;
+     * the material has to carry its own surface, and the blur is what still
+     * lets the map move underneath it. The top inset is the rim light that
+     * cuts a glass control out of its background - a caught edge, not a
+     * border - which is how the same buttons stay legible on iOS.
+     */
+    background: linear-gradient(
+      color-mix(in srgb, var(--card) 74%, transparent),
+      color-mix(in srgb, var(--card) 58%, transparent)
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+    backdrop-filter: blur(16px) saturate(1.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      0 4px 14px rgb(0 0 0 / 0.25);
+  }
+
+  /*
+   * The app's one tooltip (src/lib/tooltip.ts): a mouse resting on a
+   * labelled icon is told the icon's aria-label. An inverted pill - the
+   * darkest surface in the light theme, the lightest in the dark one -
+   * because a tooltip is the interface annotating itself and has to read
+   * over anything it lands on, glass included. The script owns left/top;
+   * the transform is only the motion, a small settle toward the control it
+   * names, from whichever side it appears on.
+   */
+  .app-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 60;
+    max-width: 17rem;
+    pointer-events: none;
+    border-radius: var(--radius);
+    background: var(--foreground);
+    color: var(--background);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.18);
+    opacity: 0;
+    visibility: hidden;
+  }
+  .app-tip[data-side="top"] {
+    transform: translateY(3px);
+  }
+  .app-tip[data-side="bottom"] {
+    transform: translateY(-3px);
+  }
+  .app-tip[data-show] {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Visibility waits out the fade on the way down; the shown state omits
+       it so appearing is immediate. */
+    .app-tip {
+      transition:
+        opacity var(--duration-press) var(--ease-out),
+        transform var(--duration-press) var(--ease-out),
+        visibility 0s linear var(--duration-press);
+    }
+    .app-tip[data-show] {
+      transition:
+        opacity var(--duration-state) var(--ease-out),
+        transform var(--duration-state) var(--ease-out);
+    }
+  }
+}
+
+/*
+ * Choice controls carry their state as a tint, not a border: an open
+ * choice is whatever surface its call site gave it - usually glass - and
+ * a chosen one pools the primary colour behind primary ink. The border
+ * that used to say "chosen" fought the glass surface everywhere else on
+ * screen, and an edge is not part of this design language any more.
+ * Declared against the roles rather than per call site, so every
+ * aria-pressed chip and radio in the app answers the same way.
+ *
+ * In the utilities layer, not components: a call site that also says
+ * `bg-primary` must lose to the role, and utilities outrank components
+ * whatever their selectors say. Here the attribute selector's specificity
+ * settles it, and the chosen chip stops rendering as a solid fill wearing
+ * the choice tint and the glass glow at once.
+ */
+
+/* Hides the scrollbar without disabling scrolling. An @utility rather than a
+   plain class so it can take responsive variants - the route page scrolls its
+   list inside the card only on a wide screen. */
+@utility app-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
     display: none;
   }
 }

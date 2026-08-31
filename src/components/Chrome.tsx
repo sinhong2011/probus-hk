@@ -1,6 +1,5 @@
 import { For, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { SlidingPill } from "./SlidingPill";
 import type { IconProps } from "./Icons";
 import type { Bilingual } from "~/data/types";
 import { pick, stopCode, type Lang } from "~/lib/i18n";
@@ -51,11 +50,20 @@ export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Elem
   );
 }
 
-/** Rounded surface that groups rows, with hairlines drawn between them. */
-export function Card(props: { children: JSX.Element; class?: string }) {
+/**
+ * Rounded surface that groups rows, with hairlines drawn between them.
+ *
+ * `raised` lifts it one step above the card surface it sits on - for a card
+ * inside a sheet, which is itself a card and leaves `bg-card` invisible.
+ */
+export function Card(props: { children: JSX.Element; class?: string; raised?: boolean }) {
   return (
     <div
-      class={`overflow-hidden rounded-xl border border-border bg-card shadow-card ${props.class ?? ""}`}
+      class={[
+        "overflow-hidden rounded-xl shadow-card",
+        props.raised ? "bg-secondary" : "bg-card",
+        props.class ?? "",
+      ]}
     >
       {props.children}
     </div>
@@ -72,7 +80,7 @@ export function Card(props: { children: JSX.Element; class?: string }) {
 export function Reveal(props: { open: boolean; children: JSX.Element; class?: string }) {
   return (
     <div
-      class={`mb-reveal ${props.class ?? ""}`}
+      class={`app-reveal ${props.class ?? ""}`}
       data-open={props.open ? "true" : "false"}
       /* Closed content stays in the DOM so the exit can play, which would
          otherwise leave its buttons and links tabbable and readable by a
@@ -105,7 +113,9 @@ export function Hairline() {
 
 export function Chip(props: {
   children: JSX.Element;
-  tone?: "plain" | "accent" | "warn";
+  /** `card` is `plain` for a chip on a raised (`bg-secondary`) surface,
+      where the plain tone would vanish into its own background. */
+  tone?: "plain" | "accent" | "warn" | "card";
   /** For the flex behaviour of the row it sits in, e.g. `shrink-0`. */
   class?: string;
 }) {
@@ -119,10 +129,11 @@ export function Chip(props: {
         props.class ?? "",
         {
           "bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
-          "bg-primary-muted text-primary border border-primary-border": props.tone === "accent",
+          "bg-card text-muted-foreground": props.tone === "card",
+          "bg-primary-muted text-primary": props.tone === "accent",
           // The last bus of the night is the one piece of timetable that is
           // urgent, and it shares its colour with an arrival that is imminent.
-          "bg-warning/12 text-warning border border-warning/25": props.tone === "warn",
+          "bg-warning/12 text-warning": props.tone === "warn",
         },
       ]}
     >
@@ -134,9 +145,9 @@ export function Chip(props: {
 /** The live-data pill with its pulsing dot. */
 export function LivePill(props: { label: string }) {
   return (
-    <span class="inline-flex items-center gap-[7px] rounded-full border border-primary-border bg-primary-muted py-[5px] pl-[9px] pr-[11px]">
+    <span class="inline-flex items-center gap-[7px] rounded-full bg-primary-muted py-[5px] pl-[9px] pr-[11px]">
       <span
-        class="size-1.5 rounded-full bg-primary motion-safe:animate-[mb-pulse_2s_ease-in-out_infinite]"
+        class="size-1.5 rounded-full bg-primary motion-safe:animate-[app-pulse_2s_ease-in-out_infinite]"
         style={{
           "box-shadow": "0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)",
         }}
@@ -207,9 +218,10 @@ export function ScreenTitle(props: {
       <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
         <div class="flex items-end justify-between gap-4 lg:min-w-0 lg:items-baseline lg:justify-start lg:gap-3">
           <div class="flex min-w-0 shrink-0 flex-col gap-[3px] lg:flex-row lg:items-baseline lg:gap-2.5">
-            <span class="text-[1.7rem] font-bold leading-[1.05] tracking-[-0.035em] text-foreground lg:text-[1.3rem]">
-              {props.title}
-            </span>
+            {/* The name stays for screen readers; visually the tab bar and
+                the sidebar already say where you are, and the heading
+                repeating them was the tallest thing on every screen. */}
+            <h1 class="sr-only">{props.title}</h1>
             <Show when={props.subtitle}>
               <span class="text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
                 {props.subtitle}
@@ -259,17 +271,8 @@ export function Segmented<T extends string | number>(props: {
     <div
       role="radiogroup"
       aria-label={props.label}
-      class={[
-        "relative flex items-center bg-secondary p-[3px]",
-        props.pill ? "rounded-full" : "rounded-lg",
-        { "w-full": Boolean(props.fill) },
-      ]}
+      class={["flex items-center gap-1", { "w-full": Boolean(props.fill) }]}
     >
-      <SlidingPill
-        active={props.value}
-        class={`inset-y-[3px] bg-card shadow-card ${props.pill ? "rounded-full" : "rounded-md"}`}
-      />
-
       <For each={props.options}>
         {(option) => {
           const on = () => props.value === option.value;
@@ -285,7 +288,7 @@ export function Segmented<T extends string | number>(props: {
               class={[
                 // `whitespace-nowrap`: a two-character label broken across two
                 // lines is not a shorter label, it is a broken one.
-                "mb-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
+                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
                 props.fill ? "grow basis-0" : "shrink-0",
                 props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
                 props.pill ? "rounded-full" : "rounded-md",
@@ -316,7 +319,9 @@ export function Toggle(props: { checked: boolean; onChange: (v: boolean) => void
       onClick={() => props.onChange(!props.checked)}
       class={[
         "flex h-[1.7rem] w-[2.9rem] items-center rounded-full p-[2.5px] transition-colors duration-200",
-        { "bg-primary": props.checked, "bg-secondary": !props.checked },
+        /* The off track is a well cut into whatever the toggle sits on - a
+           raised card in settings - so it cannot share that card's surface. */
+        { "bg-primary": props.checked, "bg-card": !props.checked },
       ]}
     >
       <span

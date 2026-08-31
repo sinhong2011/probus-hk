@@ -44,13 +44,13 @@ export function NotFound(props: { kind?: Missing }) {
       <div class="mt-6 flex items-center gap-2">
         <a
           {...useLinkProps({ to: "/" })}
-          class="mb-press flex h-10 items-center rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground"
+          class="app-press flex h-10 items-center rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground"
         >
           {t("goHome", lang())}
         </a>
         <a
           {...useLinkProps({ to: "/search" })}
-          class="mb-press flex h-10 items-center gap-2 rounded-xl bg-secondary px-4 text-[0.88rem] font-bold text-foreground"
+          class="app-press flex h-10 items-center gap-2 rounded-xl bg-secondary px-4 text-[0.88rem] font-bold text-foreground"
         >
           <SearchIcon size={14} />
           {t("search", lang())}

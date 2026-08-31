@@ -78,7 +78,7 @@ export function swapTheme(next: ThemeChoice, from?: { x: number; y: number }) {
    * The class turns it off for exactly this transition and no other.
    */
   const root = document.documentElement;
-  root.classList.add("mb-theme-swap");
+  root.classList.add("app-theme-swap");
 
   const transition = doc.startViewTransition(apply);
   const origin = from ?? { x: window.innerWidth / 2, y: 0 };
@@ -124,7 +124,7 @@ export function swapTheme(next: ThemeChoice, from?: { x: number; y: number }) {
 
   void transition.finished
     .catch(() => undefined)
-    .finally(() => root.classList.remove("mb-theme-swap"));
+    .finally(() => root.classList.remove("app-theme-swap"));
 }
 
 /** Where a click landed, for the wipe to start from. */

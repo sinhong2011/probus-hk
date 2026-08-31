@@ -17,11 +17,12 @@ import { settings } from "~/stores/settings";
  */
 const RULE = "left-[3.75rem]";
 /*
- * Time, then the notice, and on a wide window the routes it names in a column
- * of their own down the right. The prose keeps a readable measure whatever the
- * window does - a paragraph of the department's own wording set 1,300px wide is
- * one the eye loses its place in - so the space goes to the routes instead,
- * which is what a rider scans this feed for.
+ * Time, then the notice. On a wide window the third track is empty on
+ * purpose: it caps the prose at a readable measure - a paragraph of the
+ * department's own wording set 1,300px wide is one the eye loses its place
+ * in - without pinning the feed to a centred column. Everything a notice
+ * says, the route chips included, stays inside the prose track where it
+ * reads as one statement.
  */
 const COLUMNS =
   "grid-cols-[3.75rem_minmax(0,1fr)] xl:grid-cols-[3.75rem_minmax(0,58rem)_minmax(0,1fr)]";
@@ -77,7 +78,7 @@ export default function Notices() {
               type="button"
               aria-label={t("refresh", lang())}
               onClick={reload}
-              class="mb-press flex size-8 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+              class="app-press flex size-8 items-center justify-center rounded-full bg-secondary text-muted-foreground"
             >
               <RefreshIcon size={15} />
             </button>
@@ -168,7 +169,7 @@ function NoticeRow(props: { notice: Notice; lang: Lang; first: boolean }) {
        * every row was a second answer to a question the line had answered -
        * and it cut the line in half on its way across.
        */
-      class={[`relative grid ${COLUMNS} motion-safe:mb-rise`, props.first ? "pb-4" : "py-4"]}
+      class={[`relative grid ${COLUMNS} motion-safe:app-rise`, props.first ? "pb-4" : "py-4"]}
     >
       {/*
        * When it was said, in the margin. A notice with no time on it cannot be
@@ -224,27 +225,29 @@ function NoticeRow(props: { notice: Notice; lang: Lang; first: boolean }) {
           </p>
         </Show>
 
+        {/* The routes a notice names, right under its prose at every width.
+            These chips are part of what the notice says; a column of their
+            own on a wide window set them a thousand pixels adrift of the only
+            notice they belonged to, floating in space nothing else used. */}
+        <Show when={routes().length > 0}>
+          <div class="flex flex-wrap items-start gap-1.5 pt-0.5">
+            <span class="text-[0.75rem] font-semibold leading-5 text-faint-foreground">
+              {t("affectsRoutes", props.lang)}
+            </span>
+            <For each={routes()}>
+              {(route) => (
+                <span class="rounded-md bg-secondary px-1.5 py-0.5 text-[0.75rem] font-bold leading-4 text-muted-foreground">
+                  {route}
+                </span>
+              )}
+            </For>
+          </div>
+        </Show>
+
         <Show when={ago()}>
           <span class="text-[0.75rem] font-medium text-faint-foreground">{ago()}</span>
         </Show>
       </div>
-
-      {/* Under the notice on a phone, beside it on a wide window - the same
-          block either way, moved by the grid rather than rendered twice. */}
-      <Show when={routes().length > 0}>
-        <div class="col-start-2 flex flex-wrap items-start gap-1.5 pl-4 pt-2 xl:col-start-3 xl:pl-8 xl:pt-0">
-          <span class="text-[0.75rem] font-semibold leading-5 text-faint-foreground">
-            {t("affectsRoutes", props.lang)}
-          </span>
-          <For each={routes()}>
-            {(route) => (
-              <span class="rounded-md bg-secondary px-1.5 py-0.5 text-[0.75rem] font-bold leading-4 text-muted-foreground">
-                {route}
-              </span>
-            )}
-          </For>
-        </div>
-      </Show>
     </article>
   );
 }

@@ -19,6 +19,6 @@ test("waiting looks like waiting, not like no service", async ({ page }) => {
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
 
   // "No service" is a lie while the answer is still in flight.
-  expect(await page.locator(".mb-shimmer").count()).toBeGreaterThan(0);
+  expect(await page.locator(".app-shimmer").count()).toBeGreaterThan(0);
   await expect(page.getByText("暫無班次").first()).toBeHidden();
 });

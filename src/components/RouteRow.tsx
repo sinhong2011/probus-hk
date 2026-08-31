@@ -45,7 +45,7 @@ export function RouteLine(props: LineProps) {
   return (
     <a
       {...useLinkProps(routeLink(props.route.key))}
-      class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
     >
       <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
 

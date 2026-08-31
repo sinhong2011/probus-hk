@@ -144,7 +144,7 @@ test("switching halves does not replay the page entrance", async ({ page }) => {
   await shell.evaluate((el) => {
     (window as unknown as { __replays: number }).__replays = 0;
     new MutationObserver(() => {
-      if (el.classList.contains("mb-page-in"))
+      if (el.classList.contains("app-page-in"))
         (window as unknown as { __replays: number }).__replays += 1;
     }).observe(el, { attributes: true, attributeFilter: ["class"] });
   });

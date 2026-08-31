@@ -32,7 +32,7 @@ const serwist = new Serwist({
     {
       matcher: ({ url }) => url.hostname === "data.hkbus.app",
       handler: new StaleWhileRevalidate({
-        cacheName: "mb-route-db",
+        cacheName: "app-route-db",
         plugins: [new ExpirationPlugin({ maxEntries: 4, maxAgeSeconds: 7 * 24 * 60 * 60 })],
       }),
     },
@@ -46,7 +46,7 @@ const serwist = new Serwist({
     {
       matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname === "/rail-fares.json",
       handler: new StaleWhileRevalidate({
-        cacheName: "mb-rail-fares",
+        cacheName: "app-rail-fares",
         plugins: [new ExpirationPlugin({ maxEntries: 2, maxAgeSeconds: 30 * 24 * 60 * 60 })],
       }),
     },
@@ -62,7 +62,7 @@ const serwist = new Serwist({
         url.hostname === "rt.data.gov.hk" ||
         url.hostname === "data.etagmb.gov.hk",
       handler: new NetworkFirst({
-        cacheName: "mb-eta",
+        cacheName: "app-eta",
         networkTimeoutSeconds: 6,
         plugins: [new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 120 })],
       }),
@@ -72,7 +72,7 @@ const serwist = new Serwist({
     {
       matcher: ({ url }) => url.hostname === "hkbus.github.io",
       handler: new CacheFirst({
-        cacheName: "mb-waypoints",
+        cacheName: "app-waypoints",
         plugins: [new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })],
       }),
     },
@@ -81,7 +81,7 @@ const serwist = new Serwist({
     {
       matcher: ({ url }) => url.hostname.endsWith("basemaps.cartocdn.com"),
       handler: new CacheFirst({
-        cacheName: "mb-tiles",
+        cacheName: "app-tiles",
         plugins: [new ExpirationPlugin({ maxEntries: 600, maxAgeSeconds: 30 * 24 * 60 * 60 })],
       }),
     },

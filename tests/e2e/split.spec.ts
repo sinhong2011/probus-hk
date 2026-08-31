@@ -13,14 +13,19 @@ test("the list pane scrolls, the page does not", async ({ browser }) => {
   await page.goto(ROUTE);
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
 
+  // The nearest app-scroll ancestor: the utility is what says "this scrolls"
+  // now that the pane no longer carries a literal overflow-y-auto class.
   const pane = page
     .locator("[data-stop-seq]")
     .first()
-    .locator("xpath=ancestor::div[contains(@class,'overflow-y-auto')][1]");
-  const before = await pane.evaluate((el) => ({
-    top: el.scrollTop,
-    over: el.scrollHeight > el.clientHeight,
-  }));
+    .locator("xpath=ancestor::div[contains(@class,'app-scroll')][1]");
+  // The page may already have jumped the list to the nearest stop - a race
+  // this test kept losing. The assertion is that the pane scrolls, not where
+  // the app left it, so it starts from the top either way.
+  const before = await pane.evaluate((el) => {
+    el.scrollTo(0, 0);
+    return { top: el.scrollTop, over: el.scrollHeight > el.clientHeight };
+  });
   await pane.evaluate((el) => el.scrollBy(0, 600));
   const after = await pane.evaluate((el) => el.scrollTop);
 
@@ -53,7 +58,7 @@ test("jumping to a stop scrolls the list, not the card around it", async ({ brow
   await expect(page.locator(`[data-stop-seq="${last}"]`)).toBeInViewport();
 
   const box = await rows.first().evaluate((row) => {
-    const list = row.closest(".mb-scroll") as HTMLElement;
+    const list = row.closest(".app-scroll") as HTMLElement;
     const card = list.parentElement as HTMLElement;
     return {
       card: card.scrollTop,

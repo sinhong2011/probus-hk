@@ -58,7 +58,7 @@ export function Alert(props: {
            read - the difference between Kobalte's alert and a status region. */
             role={warn() ? "alert" : "status"}
             class={[
-              "flex items-center gap-2 rounded-lg py-1.5 pl-2.5 pr-1 text-[0.75rem] font-medium leading-snug motion-safe:mb-rise",
+              "flex items-center gap-2 rounded-lg py-1.5 pl-2.5 pr-1 text-[0.75rem] font-medium leading-snug motion-safe:app-rise",
               /* A hint sits on the page's own grey, a step quieter than a card and
              with no frame, so it reads as a note in the margin. A warning gets
              its own colour, because a warning has to be seen. */
@@ -81,7 +81,7 @@ export function Alert(props: {
                  control and not a stray glyph; the hit area is the row's full
                  height, a finger's rather than the disc's. */
                   class={[
-                    "mb-press -my-1.5 flex size-6 shrink-0 items-center justify-center rounded-full transition-colors duration-state",
+                    "app-press -my-1.5 flex size-6 shrink-0 items-center justify-center rounded-full transition-colors duration-state",
                     warn()
                       ? "bg-warning/15 text-warning hover:bg-warning/25"
                       : "bg-card text-faint-foreground shadow-card hover:text-foreground active:bg-background",

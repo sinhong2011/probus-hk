@@ -74,7 +74,7 @@ export function StopSheet(props: {
                   props.onClose();
                 }}
                 class={[
-                  "mb-press flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-state",
+                  "app-press flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-state",
                   { "bg-primary-muted": picked() },
                 ]}
               >
