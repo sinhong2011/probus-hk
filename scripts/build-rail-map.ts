@@ -45,13 +45,17 @@ type Point = [number, number];
  * Hand-set positions, one square per hop, x east and y south.
  *
  * The y axis is banded so the regions cannot collide: the New Territories have
- * 0-20, Kowloon 22-35, the harbour 36-44, Hong Kong Island 46 and below. An
+ * 0-20, Kowloon 22-33, the harbour 34-36, Hong Kong Island 37 and below. An
  * earlier layout left Tai Wai two squares from Mong Kok, a ten-kilometre error
- * and the kind the eye catches at a glance.
+ * and the kind the eye catches at a glance. The harbour band is narrow on
+ * purpose: it is one crossing, not a region, and drawn any wider the Tsuen Wan
+ * line's dive to Admiralty - the shortest of the three tunnels - was the
+ * longest stroke on the map, and East Rail could not reach Exhibition Centre
+ * on the straight slant the printed map draws it on.
  *
  * The shape follows the railway's own map where it can: East Rail runs the
  * border row along the top and turns down after University onto the spine at
- * x=34; Nathan Road is a pair of parallel verticals at x=30; the Kwun Tong
+ * x=35; Nathan Road is a pair of parallel verticals at x=30; the Kwun Tong
  * line runs east along a row and turns down a column; the Island line runs
  * the north shore and turns south after Sai Wan Ho; Tseung Kwan O rises from
  * Quarry Bay and turns in to Yau Tong; West Kowloon is a column of its own,
@@ -62,18 +66,31 @@ const ANCHORS: Record<string, Point> = {
   // East Rail: the border towns along the top row, the way the railway's own
   // map has them - Lo Wu at the row's west end, Lok Ma Chau on a sub-row
   // below it reaching further west - then a wide curve down after University
-  // onto the spine at x=34, past the Racecourse loop and on to Hung Hom.
-  // Exhibition Centre turns in to Admiralty.
+  // onto the spine at x=35, past the Racecourse loop and down to Mong Kok
+  // East. Hung Hom does not stand on that spine: the railway's own map runs
+  // the column a station's width east of it and turns off below Mong Kok
+  // East, so the line comes in to Hung Hom on the slant, alongside Tuen Ma.
+  // Ho Man Tin sits east of the column and Hung Hom west of it, each about a
+  // square off, which is the spacing the printed map gives them. The slant
+  // carries on past Hung Hom and across the water to Exhibition Centre, which
+  // stands out in it on Hong Kong station's own row, the way the railway's own
+  // map levels the pair, and turns in to Admiralty from there.
   LOW: [22, 2],
   SHS: [24, 2],
   LMC: [20, 4],
   UNI: [32, 2],
-  FOT: [34, 12],
-  TAW: [34, 16],
-  KOT: [34, 24],
-  MKK: [34, 26],
+  FOT: [35, 10],
+  TAW: [35, 16],
+  KOT: [35, 24],
+  MKK: [35, 26],
   HUH: [34, 32],
-  EXC: [34, 40],
+  // Exhibition Centre stands where the slant out of Hung Hom reaches the
+  // water: East Rail leaves Mong Kok East's column, crosses Ho Man Tin's row
+  // and runs one unbroken diagonal through Hung Hom and on to the harbour
+  // station, which is how the railway's own map draws that whole stretch.
+  // Everything else here follows from that line - Wan Chai stands under it,
+  // and Admiralty a station west along the shore.
+  EXC: [31, 35],
 
   // Tsuen Wan line: one flat row west, then straight down Nathan Road, which
   // the Kwun Tong line joins at Prince Edward from Shek Kip Mei.
@@ -92,35 +109,55 @@ const ANCHORS: Record<string, Point> = {
   JOR: [30, 30.5],
   TST: [30, 32],
 
-  // Hong Kong Island: one straight rule along the north shore, set far enough
-  // south that a real coastline fits in the water between it and Kowloon, and
-  // turning south after Sai Wan Ho the way the shore does.
-  KET: [16, 46],
+  // Hong Kong Island: one straight rule along the north shore, set a channel
+  // south of Kowloon and turning south after Sai Wan Ho the way the shore
+  // does. The channel is as wide as the railway's own map makes it and no
+  // wider, which is narrower than it once was here: East Rail crosses it on
+  // the slant out of Hung Hom and Exhibition Centre stands in it, so it is no
+  // longer empty water whose only job is to be read as water.
+  //
+  // Kennedy Town to Wan Chai is one even row of two-and-a-half squares a
+  // station, the spacing the printed map keeps the whole way along the shore.
+  // Admiralty used to stand four squares off Central because it was pinned
+  // under Nathan Road; it is a station's width from Central on the railway's
+  // own map, and the Tsuen Wan line reaches it by stepping west at the end
+  // rather than by dropping straight down.
+  KET: [16, 37],
   // Central stands directly under Hong Kong station, as the railway's own
   // map stacks the pair, with the walkway a straight vertical between them.
-  CEN: [26, 46],
-  ADM: [30, 46],
-  NOP: [45, 46],
-  QUB: [49, 46],
-  SWH: [54, 46],
-  SKW: [57, 49],
-  CHW: [57, 55],
-  OCP: [30, 49],
-  WCH: [30, 52],
-  LET: [28, 54],
-  SOH: [24, 54],
+  CEN: [26, 37],
+  ADM: [28.5, 37],
+  // Wan Chai stands directly under Exhibition Centre, as the railway's own
+  // map stacks them - the harbour station and the shore station on one
+  // column - and Exhibition Centre in turn stands under East Tsim Sha Tsui,
+  // the three of them one column across the water, which is where the
+  // printed map puts them and what lets East Rail run in straight.
+  WAC: [31, 37],
+  NOP: [45, 37],
+  QUB: [49, 37],
+  SWH: [54, 37],
+  SKW: [57, 40],
+  CHW: [57, 46],
+  OCP: [30, 40],
+  WCH: [30, 43],
+  LET: [28, 45],
+  SOH: [24, 45],
 
   // Kowloon east: the Kwun Tong row shares the Tsuen Wan line's y=24 - on
   // the railway's own map Tsuen Wan to Sham Shui Po and Shek Kip Mei to Choi
   // Hung stand on one horizontal rule - then turns down a column at x=49 and
-  // comes in to Yau Tong; Tuen Ma drops from Diamond Hill down x=41.5 and
-  // turns west along y=30 into Ho Man Tin. Tseung Kwan O sits at the end of
-  // the row, and its two branches fan out east of it to one further column -
-  // up to Hang Hau and Po Lam, down to LOHAS Park - the way the railway's own
-  // map splays them.
+  // comes in to Yau Tong; Tuen Ma drops from Diamond Hill down x=41.5 to Kai
+  // Tak, then leaves the column on a long 45-degree run down through Sung
+  // Wong Toi and To Kwa Wan before it flattens into Ho Man Tin's row - the
+  // way the railway's own map draws that stretch, one slant across the old
+  // airport rather than a square corner east of the station. Tseung Kwan O
+  // sits at the end of the row, and its two branches fan out east of it to
+  // one further column - up to Hang Hau and Po Lam, down to LOHAS Park - the
+  // way the railway's own map splays them.
   HOM: [36, 30],
-  WHA: [38, 32],
-  TKW: [41.5, 28.5],
+  WHA: [38, 31],
+  TKW: [39.5, 29],
+  SUW: [40.5, 28],
   KAT: [41.5, 25.5],
   DIH: [41.5, 24],
   HIK: [37.5, 16],
@@ -153,8 +190,17 @@ const ANCHORS: Record<string, Point> = {
   KSR: [8, 16],
   TWW: [10, 22],
   NAC: [22, 28],
-  AUS: [26, 32],
-  ETS: [32, 34],
+  // Austin stands on the West Kowloon diagonal itself, where the railway's
+  // own map has it - the slant runs down from Nam Cheong through the station
+  // and only flattens there, into the row that carries it east to East Tsim
+  // Sha Tsui. Set a square short of the slant it was a station beside the
+  // line rather than on it, and Kowloon, which stands level with it across
+  // the walkway, was dragged up with it.
+  AUS: [27, 33],
+  // East Tsim Sha Tsui stands a square east of Nathan Road and directly over
+  // Exhibition Centre, the way the printed map columns the two across the
+  // water.
+  ETS: [31, 33],
   CKT: [38, 12],
   CIO: [38, 6],
   SHM: [41, 4],
@@ -241,8 +287,8 @@ const ANCHORS: Record<string, Point> = {
   // railway's own map draws that U-turn, and drawn straight the airport
   // looked like one more station on a row.
   TSY: [10, 32],
-  KOW: [22, 34],
-  HOK: [26, 44],
+  KOW: [22, 33],
+  HOK: [26, 35],
   SUN: [6, 36],
   TUC: [2, 40],
   DIS: [8, 38],
@@ -276,11 +322,27 @@ const BENDS: Record<`${string}>${string}`, Point[]> = {
   "KSR>TWW": [[8, 20]],
   // University to Fo Tan: the border row turns down onto the spine, the wide
   // curve the railway's own map draws east of the campus.
-  "UNI>FOT": [[34, 2]],
-  // Exhibition Centre to Admiralty: East Rail turns in off its spine.
-  "EXC>ADM": [[34, 42]],
+  "UNI>FOT": [[35, 2]],
+  // Mong Kok East to Hung Hom: the spine runs on past Ho Man Tin's row and
+  // only then turns off it, west onto the slant Tuen Ma is already taking
+  // into Hung Hom - the two arrive as a pair, which `TOGETHER` in the layout
+  // holds apart. Straight down the column instead, the station stood on the
+  // spine and East Rail met Tuen Ma at a crossing rather than beside it.
+  "MKK>HUH": [[35, 31]],
+  // Tai Wai to Che Kung Temple: out on the diagonal, then up the Ma On Shan
+  // column for the last square, so the branch arrives at the station pointing
+  // north rather than turning on it.
+  "TAW>CKT": [[38, 13]],
+  // Exhibition Centre to Admiralty: the slant out of Hung Hom runs straight
+  // on through the harbour station and only turns at the shore, a half square
+  // short of Admiralty, so the whole crossing from Mong Kok East's column to
+  // the terminus is one line with one corner in it - which is how the
+  // railway's own map draws it. The corner is that close to the station
+  // because a longer flat run in would lie along the Island line's own row
+  // and hide it; at half a square the curve swallows the straight.
+  "EXC>ADM": [[29, 37]],
   // Sai Wan Ho to Shau Kei Wan: the Island line turns south.
-  "SWH>SKW": [[57, 46]],
+  "SWH>SKW": [[57, 37]],
   // Quarry Bay to Yau Tong: straight up out of the harbour in Lam Tin's own
   // column, then a wide sweep east into the junction - the railway's map has
   // the Kwun Tong line curl in from above and this line from below, two
@@ -296,12 +358,29 @@ const BENDS: Record<`${string}>${string}`, Point[]> = {
   // Tsuen Wan West to Mei Foo: along the parallel row over the Tsuen Wan
   // line, then down through Mei Foo's capsule towards Nam Cheong.
   "MEF>TWW": [[22, 22]],
-  // Austin to East Tsim Sha Tsui: off the diagonal onto the Hung Hom row.
-  "AUS>ETS": [[28, 34]],
+  // Nam Cheong to Austin runs straight down the West Kowloon diagonal now
+  // that Austin stands on it, and Austin to East Tsim Sha Tsui straight along
+  // the row it turns onto - so neither pair carries an elbow any more. The
+  // row is the one Austin shares with Kowloon, which stands level with it on
+  // the railway's own map, either side of the high-speed terminus between
+  // them.
+  //
+  // East Tsim Sha Tsui to Hung Hom: east along that row, then onto the slant
+  // East Rail is taking up out of the harbour, which the two lines ride into
+  // the station together - `TOGETHER` in the layout holds them apart.
+  "ETS>HUH": [[33, 33]],
   // Hong Kong to Kowloon: west along the harbour, then one right angle up
   // the West Kowloon column - Olympic and Nam Cheong stacked above - the
   // way the railway's own map turns it, not a diagonal slip across the water.
-  "HOK>KOW": [[22, 44]],
+  "HOK>KOW": [[22, 35]],
+  // Tsim Sha Tsui to Admiralty: straight down Nathan Road's column across the
+  // water, passing east of Admiralty the way the railway's own map has it,
+  // then west along the shore into the station - the last piece riding the
+  // Island line's own track, which is what `EXTENDED` is for.
+  "TST>ADM": [[30, 37]],
+  // Admiralty to Ocean Park: south out of the terminus, then the diagonal
+  // that carries the line onto the Wong Chuk Hang column.
+  "ADM>OCP": [[28.5, 38.5]],
   // Kowloon Bay to Ngau Tau Kok: the row becomes a column.
   "KOB>NTK": [[49, 24]],
   // Hin Keng to Diamond Hill: down the diagonal as before, then straight on
@@ -313,14 +392,31 @@ const BENDS: Record<`${string}>${string}`, Point[]> = {
   "SSP>PRE": [[30, 24]],
   "SKM>PRE": [[30, 24]],
   // Yau Ma Tei to Ho Man Tin: the green keeps to Nathan Road past the
-  // capsule, and only then peels off east, over East Rail - so the fork
-  // sits below the station, not across it.
+  // capsule, and only then peels off east, over East Rail - so the fork sits
+  // below the station, not across it. It turns onto Ho Man Tin's own row and
+  // holds it all the way in, which is what makes the station read as a stop
+  // on the Kwun Tong line with a stub hanging off it: turning a square short
+  // and arriving on the slant, the line only crossed Tuen Ma there. The turn
+  // is chamfered rather than square because the row runs level with Jordan's
+  // own square and a corner set down in it would have stood on the station.
   "YMT>HOM": [
-    [30, 29.5],
-    [35.5, 29.5],
+    [30, 29],
+    [31, 30],
   ],
-  // Ho Man Tin to To Kwa Wan: east, then up the Kai Tak column.
-  "HOM>TKW": [[41.5, 30]],
+  // Ho Man Tin to To Kwa Wan: east along the station's own row, then up onto
+  // the slant that carries the line to Sung Wong Toi and on towards Kai Tak.
+  "HOM>TKW": [[38.5, 30]],
+  // Ho Man Tin to Whampoa: the stub drops clear of Ho Man Tin's row and runs
+  // flat into the terminus, so Whampoa stands a little below the junction and
+  // two squares east of it - where the railway's own map puts it, well above
+  // Hung Hom. Drawn as one long 45-degree run it reached Hung Hom's own row,
+  // and a two-station branch read as far the longer journey of the pair. The
+  // slant comes first because east out of Ho Man Tin is Tuen Ma's, and two
+  // lines leaving one station the same way have nothing to hold them apart.
+  "HOM>WHA": [[37, 31]],
+  // Sung Wong Toi to Kai Tak: off the slant onto the Kai Tak column, so the
+  // line arrives at the station pointing north into Diamond Hill.
+  "SUW>KAT": [[41.5, 27]],
   // City One to Shek Mun: the Ma On Shan column becomes the top row.
   "CIO>SHM": [[38, 4]],
   // Kowloon to Tsing Yi: the Express and the Tung Chung line are one physical
@@ -331,7 +427,7 @@ const BENDS: Record<`${string}>${string}`, Point[]> = {
   // rather than inventing a straight run across the harbour that no train
   // makes.
   "KOW>TSY": [
-    [21, 33],
+    [21, 32],
     [21, 28],
     [17, 24],
     [10, 31],
@@ -423,24 +519,32 @@ const LIGHT_RAIL_SHAPE: Point[][] = [
 ];
 
 /**
- * The Racecourse loop, which the route database does not know: no timetabled
+ * The Racecourse spur, which the route database does not know: no timetabled
  * service calls there - trains run round it on race days only - so it can
  * never fall out of the stop sequences the way every other station does. The
  * railway's map still draws it, dotted, as a bulge off East Rail that leaves
- * the line below Fo Tan and rejoins above it, and a rider who knows the
- * network would miss it. So it is drawn the same way here: a dashed loop in
+ * the line above Fo Tan and rejoins below it, and a rider who knows the
+ * network would miss it. So it is drawn the same way here: a dashed arc in
  * East Rail's colour with one marker on it, decoration rather than a station,
  * because a station with no data behind it would be a button that does
- * nothing. The loop begins and ends on the spine between Fo Tan and its
- * neighbours; the marker sits on the loop's flat eastern side.
+ * nothing.
+ *
+ * The arc is a half-circle struck from Fo Tan itself, so the bulge is the
+ * station's own radius and the marker lands level with it on the due-east
+ * point. Drawn as a flat-sided box beside the line instead, the two names sat
+ * at different heights and the shape read as a siding rather than the loop it
+ * is. Fo Tan sits where it does to give the arc its room: an even three
+ * squares to Sha Tin, where it used to stand two, which left no space for a
+ * foot to touch down clear of the next station's marker.
  */
-const RACECOURSE_LOOP: Point[] = [
-  [34, 13],
-  [35, 12],
-  [35, 10],
-  [34, 9],
+const RACECOURSE_R = 1.5;
+const RACECOURSE_CENTRE: Point = ANCHORS.FOT!;
+const RACECOURSE: Point = [RACECOURSE_CENTRE[0] + RACECOURSE_R, RACECOURSE_CENTRE[1]];
+/** Where the arc touches back down on the spine, above Fo Tan and below it. */
+const RACECOURSE_FEET: Point[] = [
+  [RACECOURSE_CENTRE[0], RACECOURSE_CENTRE[1] - RACECOURSE_R],
+  [RACECOURSE_CENTRE[0], RACECOURSE_CENTRE[1] + RACECOURSE_R],
 ];
-const RACECOURSE: Point = [35, 11];
 
 /** Nothing may sit closer than this to anything else, in squares. */
 const CLEARANCE = 1.4;
@@ -450,8 +554,17 @@ const CLEARANCE = 1.4;
  * fifteen, and spacing it like a railway would make it a third of the map.
  */
 const LIGHT_RAIL_CLEARANCE = 0.7;
-/** Nor this close to a station on another landmass: that gap is water. */
-const CHANNEL = 3.5;
+/**
+ * Nor this close to a station on another landmass: that gap is water.
+ *
+ * Two squares, which is what the railway's own map leaves between East Tsim
+ * Sha Tsui and Exhibition Centre - the narrowest the harbour gets on it. It
+ * used to be three and a half here, from when the channel was empty and its
+ * whole job was to be read as water; now East Rail crosses it on the slant
+ * and a station stands in it, and holding the old figure would have pushed
+ * the shore so far south that the crossing could not stay straight.
+ */
+const CHANNEL = 2;
 /** An elbow this close to a station that is not one of its own ends is on it. */
 const ELBOW_CLEARANCE = 1;
 
@@ -783,22 +896,22 @@ for (const shape of LIGHT_RAIL_SHAPE) {
   }
 }
 
-for (let i = 1; i < RACECOURSE_LOOP.length; i++) {
-  if (!octilinear(RACECOURSE_LOOP[i - 1]!, RACECOURSE_LOOP[i]!))
-    failures.push(
-      `racecourse leg ${RACECOURSE_LOOP[i - 1]} - ${RACECOURSE_LOOP[i]} is off the grid`,
-    );
-}
-if (
-  !RACECOURSE_LOOP.slice(0, -1).some((p, i) => {
-    const q = RACECOURSE_LOOP[i + 1]!;
-    const cross = (q[0] - p[0]) * (RACECOURSE[1] - p[1]) - (q[1] - p[1]) * (RACECOURSE[0] - p[0]);
-    const along = (q[0] - p[0]) * (RACECOURSE[0] - p[0]) + (q[1] - p[1]) * (RACECOURSE[1] - p[1]);
-    const length = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
-    return cross === 0 && along >= 0 && along <= length;
-  })
-) {
-  failures.push(`racecourse marker ${RACECOURSE} is off its own loop`);
+/*
+ * The arc has to clear everything but the station it is struck from. Its two
+ * feet land on the spine, so they are held to an elbow's clearance - they are
+ * track rejoining track - while the marker and the bulge itself are held to a
+ * station's, being things a rider reads.
+ */
+for (const [id, p] of at) {
+  if (id === "FOT") continue;
+  const toCentre = Math.hypot(p[0] - RACECOURSE_CENTRE[0], p[1] - RACECOURSE_CENTRE[1]);
+  if (p[0] >= RACECOURSE_CENTRE[0] && Math.abs(toCentre - RACECOURSE_R) < CLEARANCE)
+    failures.push(`the racecourse arc passes within ${CLEARANCE} of ${id}[${p}]`);
+  if (Math.hypot(p[0] - RACECOURSE[0], p[1] - RACECOURSE[1]) < CLEARANCE)
+    failures.push(`the racecourse marker ${RACECOURSE} sits on ${id}[${p}]`);
+  for (const foot of RACECOURSE_FEET)
+    if (Math.hypot(p[0] - foot[0], p[1] - foot[1]) < ELBOW_CLEARANCE)
+      failures.push(`the racecourse arc touches down on ${id}[${p}]`);
 }
 
 const never = ids.filter((id) => !at.has(id));
@@ -917,15 +1030,15 @@ const ts =
   LIGHT_RAIL_SHAPE.map((shape) => `  [${shape.map(point).join(", ")}],`).join("\n") +
   `\n];\n\n` +
   `/**\n` +
-  ` * The Racecourse loop, dashed off East Rail between Fo Tan's neighbours.\n` +
+  ` * The Racecourse spur, dashed off East Rail as a half-circle struck from\n` +
+  ` * Fo Tan - centre, radius, and the arc running east from the spine above\n` +
+  ` * the station round to the spine below it.\n` +
   ` * Decoration, not a station: no timetabled service calls there - trains\n` +
   ` * run round it on race days only - so the route database has nothing to\n` +
   ` * say about it, and a marker with no data behind it cannot be a button.\n` +
   ` */\n` +
-  `export const RACECOURSE_LOOP: [number, number][] = [\n` +
-  RACECOURSE_LOOP.map((p) => `  ${point(p)},`).join("\n") +
-  `\n];\n\n` +
-  `/** Where the Racecourse marker and its name sit, on the loop's east side. */\n` +
+  `export const RACECOURSE_ARC = { x: ${RACECOURSE_CENTRE[0]}, y: ${RACECOURSE_CENTRE[1]}, r: ${RACECOURSE_R} };\n\n` +
+  `/** Where the Racecourse marker and its name sit: due east, level with Fo Tan. */\n` +
   `export const RACECOURSE: [number, number] = ${point(RACECOURSE)};\n`;
 
 writeFileSync(OUT, ts);

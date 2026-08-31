@@ -5,7 +5,7 @@ import {
   MAP_EDGES,
   MAP_STATIONS,
   RACECOURSE,
-  RACECOURSE_LOOP,
+  RACECOURSE_ARC,
 } from "~/data/railMap";
 
 /**
@@ -109,21 +109,26 @@ describe("the schematic map's geometry", () => {
    * by are asserted for it directly: legs on the grid, and the marker actually
    * on the loop it names.
    */
-  it("draws the racecourse loop on the grid, with its marker on it", () => {
-    const off = RACECOURSE_LOOP.filter(
-      (p, i) =>
-        i > 0 && skew(RACECOURSE_LOOP[i - 1]![0], RACECOURSE_LOOP[i - 1]![1], p[0], p[1]) > 0.5,
-    );
-    expect(off).toEqual([]);
+  it("strikes the racecourse arc from Fo Tan, with its marker level on it", () => {
+    // The arc is a half-circle centred on the station it bulges off, which is
+    // what puts the marker level with Fo Tan rather than above or below it.
+    const fot = byId.get("FOT")!;
+    expect([RACECOURSE_ARC.x, RACECOURSE_ARC.y]).toEqual([fot.x, fot.y]);
+    expect(RACECOURSE_ARC.r).toBeGreaterThan(0);
 
-    const onLoop = RACECOURSE_LOOP.slice(0, -1).some((p, i) => {
-      const q = RACECOURSE_LOOP[i + 1]!;
-      const cross = (q[0] - p[0]) * (RACECOURSE[1] - p[1]) - (q[1] - p[1]) * (RACECOURSE[0] - p[0]);
-      const along = (q[0] - p[0]) * (RACECOURSE[0] - p[0]) + (q[1] - p[1]) * (RACECOURSE[1] - p[1]);
-      const length = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
-      return cross === 0 && along >= 0 && along <= length;
-    });
-    expect(onLoop).toBe(true);
+    // Due east, on the arc: level with the centre, exactly a radius away.
+    expect(RACECOURSE[1]).toBe(RACECOURSE_ARC.y);
+    expect(
+      Math.hypot(RACECOURSE[0] - RACECOURSE_ARC.x, RACECOURSE[1] - RACECOURSE_ARC.y),
+    ).toBeCloseTo(RACECOURSE_ARC.r);
+
+    // Both feet land on the spine, and clear of the neighbours they land near.
+    for (const foot of [RACECOURSE_ARC.y - RACECOURSE_ARC.r, RACECOURSE_ARC.y + RACECOURSE_ARC.r]) {
+      const near = MAP_STATIONS.filter(
+        (s) => s.id !== "FOT" && Math.hypot(s.x - RACECOURSE_ARC.x, s.y - foot) < 1,
+      );
+      expect(near.map((s) => s.id)).toEqual([]);
+    }
   });
 
   it("gives every segment a length to draw", () => {

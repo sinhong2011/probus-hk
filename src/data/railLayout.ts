@@ -4,7 +4,7 @@ import {
   MAP_BENDS,
   MAP_EDGES,
   MAP_STATIONS,
-  RACECOURSE_LOOP,
+  RACECOURSE_ARC,
   type MapStation,
 } from "~/data/railMap";
 import { lineRank } from "~/data/rail";
@@ -249,6 +249,29 @@ const OFFSET_OF = new Map<string, number>();
 for (const seg of SEGMENTS) OFFSET_OF.set(`${seg.line}:${pairKey(seg.a.id, seg.b.id)}`, seg.offset);
 
 /**
+ * Track two lines ride together with no pair of stations bracketing it, which
+ * is the only kind of shared stretch `SEGMENTS` can find for itself.
+ *
+ * East Rail crosses the harbour on one unbroken slant from Mong Kok East's
+ * column to Exhibition Centre, and Tuen Ma joins it for the squares either
+ * side of Hung Hom - up from Ho Man Tin on one side, down from East Tsim Sha
+ * Tsui on the other. The railway's own map draws that as a pair of tracks,
+ * but nothing stands where they meet and part, so no pair of stations names
+ * the stretch. Set by hand instead, in the shape `EXTENDED` takes: the run,
+ * the end of it that rides the stretch, and how far off centre that end sits.
+ *
+ * East Rail keeps the centre and Tuen Ma steps a full width off it, rather
+ * than half each: the crossing is the longer, straighter line of the two, and
+ * on the printed map it is the one that stays true while the other bends onto
+ * it and away again.
+ */
+const TOGETHER: [string, { junction: string; offset: number }][] = [
+  ["TML:HOM:HUH", { junction: "HUH", offset: -1 }],
+  ["TML:ETS:HUH", { junction: "HUH", offset: -1 }],
+];
+for (const [run, rides] of TOGETHER) EXTENDED.set(run, rides);
+
+/**
  * Which ways the track leaves each station, as unit vectors - one per line per
  * segment, towards the first elbow where there is one and the next station
  * where there is not. The elbow matters: a line that leaves Kowloon Bay
@@ -327,18 +350,21 @@ function chainsOf(code: string): MapStation[][] {
 
 /**
  * A chain as the points its path goes through - stations and the elbows
- * between them - with the offset each leg carries for the stretch it is on.
+ * between them - with the offset each leg carries for the stretch it is on,
+ * and which of the points a station stands on.
  * A leg that runs straight into a shared stretch carries the stretch's offset
  * on the piece that touches the junction, so its curve lands on its own track.
  */
 function chainGeometry(
   code: string,
   stations: MapStation[],
-): { points: Point[]; shifts: number[] } {
+): { points: Point[]; shifts: number[]; at: (MapStation | null)[] } {
   const points: Point[] = [];
   const shifts: number[] = [];
+  const at: (MapStation | null)[] = [];
   stations.forEach((station, i) => {
     points.push({ x: station.x, y: station.y });
+    at.push(station);
     const next = stations[i + 1];
     if (!next) return;
     const pair = pairKey(station.id, next.id);
@@ -350,8 +376,9 @@ function chainGeometry(
     else if (extended?.junction === station.id) legShifts[0] = extended.offset;
     points.push(...elbows);
     shifts.push(...legShifts);
+    for (const _ of elbows) at.push(null);
   });
-  return { points, shifts };
+  return { points, shifts, at };
 }
 
 export const CHAINS = Object.keys(MAP_EDGES).flatMap((code) =>
@@ -362,17 +389,27 @@ export const CHAINS = Object.keys(MAP_EDGES).flatMap((code) =>
  * Every straight piece of track on the map, for keeping names off it. A leg
  * runs between two consecutive points of a chain, elbows included.
  */
+/** How many straight pieces the Racecourse arc is treated as, for names. */
+const RACECOURSE_CHORDS = 6;
+
 const LEGS: { a: Point; b: Point; tram: boolean }[] = [
   ...CHAINS.flatMap((chain) =>
     chain.points
       .slice(0, -1)
       .map((a, i) => ({ a, b: chain.points[i + 1]!, tram: chain.code === LIGHT_RAIL })),
   ),
-  // The Racecourse loop is track too, as far as a name is concerned: Fo Tan's
-  // name flipping east would sit on it.
-  ...RACECOURSE_LOOP.slice(0, -1).map(([x, y], i) => {
-    const [bx, by] = RACECOURSE_LOOP[i + 1]!;
-    return { a: { x, y }, b: { x: bx, y: by }, tram: false };
+  // The Racecourse arc is track too, as far as a name is concerned: Fo Tan's
+  // name flipping east would sit on it. Chords are enough to keep a name off
+  // a curve - a name is a rectangle, and the arc never leaves their hull.
+  ...Array.from({ length: RACECOURSE_CHORDS }, (_, i) => {
+    const at = (n: number) => {
+      const angle = -Math.PI / 2 + (Math.PI * n) / RACECOURSE_CHORDS;
+      return {
+        x: RACECOURSE_ARC.x + Math.cos(angle) * RACECOURSE_ARC.r,
+        y: RACECOURSE_ARC.y + Math.sin(angle) * RACECOURSE_ARC.r,
+      };
+    };
+    return { a: at(i), b: at(i + 1), tram: false };
   }),
 ];
 
@@ -394,16 +431,42 @@ const towards = (from: Point, to: Point, by: number): Point => {
   return { x: from.x + (dx / d) * by, y: from.y + (dy / d) * by };
 };
 
-/** How far back from a corner its curve begins: the radius, or half a leg. */
-const cutAt = (before: Point, corner: Point, after: Point, radius: number) =>
+/**
+ * How far the curve leaves the corner it turns, per unit of cut.
+ *
+ * The curve is a quadratic with the corner as its control point, so it passes
+ * through the midpoint of enter and leave pulled halfway to the corner - which
+ * lands it this fraction of the cut away from the corner itself, along the
+ * bisector. A right angle strays furthest; the shallower the turn, the closer
+ * the curve keeps to its vertex.
+ */
+const strayPerCut = (before: Point, corner: Point, after: Point): number => {
+  const b = towards(corner, before, 1);
+  const a = towards(corner, after, 1);
+  return Math.hypot(b.x + a.x - 2 * corner.x, b.y + a.y - 2 * corner.y) / 4;
+};
+
+/**
+ * How far back from a corner its curve begins: the radius, or half a leg, or
+ * as much as the corner may stray from what stands on it.
+ *
+ * That last one is what keeps a station on its own line. A cut of nothing is
+ * a mitre and a cut of the full radius is a curve that misses its vertex, so
+ * a station standing on a bend asks for the widest curve that still passes
+ * through its marker - which an interchange capsule grants almost in full,
+ * and a plain bead pulls in tight, the way a printed map draws a line turning
+ * at a small station.
+ */
+const cutAt = (before: Point, corner: Point, after: Point, radius: number, stray: number) =>
   Math.min(
     radius,
     Math.hypot(corner.x - before.x, corner.y - before.y) / 2,
     Math.hypot(after.x - corner.x, after.y - corner.y) / 2,
+    stray / (strayPerCut(before, corner, after) || 1),
   );
 
-const bend = (before: Point, corner: Point, after: Point, radius: number) => {
-  const cut = cutAt(before, corner, after, radius);
+const bend = (before: Point, corner: Point, after: Point, radius: number, stray: number) => {
+  const cut = cutAt(before, corner, after, radius, stray);
   const enter = towards(corner, before, cut);
   const leave = towards(corner, after, cut);
   return ` L ${enter.x} ${enter.y} Q ${corner.x} ${corner.y} ${leave.x} ${leave.y}`;
@@ -416,12 +479,16 @@ const bend = (before: Point, corner: Point, after: Point, radius: number) => {
  * through the corner itself as a quadratic curve, which is the shape a drawn
  * railway uses. The cut is never more than half a leg, so two corners on a
  * short segment cannot eat each other and turn the line inside out.
+ *
+ * `strays` says, per point, how far the curve may leave it - an elbow has
+ * nothing standing on it and passes `Infinity`, a station passes the reach of
+ * its own marker. Omitted, nothing is held.
  */
-export function roundedPath(points: Point[], radius: number): string {
+export function roundedPath(points: Point[], radius: number, strays?: number[]): string {
   if (points.length < 2) return "";
   let d = `M ${points[0]!.x} ${points[0]!.y}`;
   for (let i = 1; i < points.length - 1; i++) {
-    d += bend(points[i - 1]!, points[i]!, points[i + 1]!, radius);
+    d += bend(points[i - 1]!, points[i]!, points[i + 1]!, radius, strays?.[i] ?? Infinity);
   }
   const end = points[points.length - 1]!;
   return `${d} L ${end.x} ${end.y}`;
@@ -497,6 +564,14 @@ export const TWIN = new Set(["SHS", "TKO"]);
 /** How many marks a station's marker carries: bars, circles, or one bead. */
 export const slotsOf = (station: MapStation): number =>
   TWIN.has(station.id) ? 2 : station.lines.length;
+
+/**
+ * How far a line turning at a station may stray from it, in pixels: half the
+ * reach of the marker it has to stay inside. Declared here rather than beside
+ * the curve that reads it, because it is a fact about the marker sizes above.
+ */
+export const strayOf = (station: MapStation): number =>
+  (slotsOf(station) > 1 ? ((slotsOf(station) - 1) * BAR_GAP + CAPSULE) / 2 : BEAD_R) / 2;
 
 /**
  * Which way to lay the capsule: across the axis most of the track runs on.
@@ -614,6 +689,40 @@ function textWidth(text: string, size: number): number {
     else w += 0.52 * size;
   }
   return w;
+}
+
+/**
+ * Lines that carry their names on one side of the track for their whole run,
+ * as the railway's own map does: the Island line hangs its names under the
+ * north shore, the Kwun Tong line stands its own above the row. Both are long
+ * horizontal rules through the busiest part of the map, and a run of names
+ * that staggers over and under one of them reads as two rows of stations
+ * rather than one line - which is the reason a printed map picks a side and
+ * keeps it. Elsewhere the costs below decide, which is right for a line that
+ * bends about: there is no one side to be on.
+ *
+ * -1 is above the track, 1 below.
+ */
+const HOUSE_SIDE = new Map<string, number>([
+  ["ISL", 1],
+  ["KTL", -1],
+]);
+
+/**
+ * The side a station's name belongs on by its line's rule, or 0 for none.
+ *
+ * Only where the track through it runs flat: above and below mean nothing on
+ * a column, and the Kwun Tong line spends Nathan Road and the run down to Yau
+ * Tong on one. There the free side is the better answer, as it always was.
+ */
+function houseSide(station: MapStation): number {
+  const directions = DIRECTIONS.get(station.id) ?? [];
+  if (directions.length === 0 || directions.some((d) => Math.abs(d.y) > 1e-6)) return 0;
+  for (const line of station.lines) {
+    const side = HOUSE_SIDE.get(line);
+    if (side) return side;
+  }
+  return 0;
 }
 
 /**
@@ -742,6 +851,7 @@ export function placeLabels(options: {
     const h2 = two ? STACK * k : 0;
     const clear = (which === "interchange" ? CAPSULE / 2 + 3 : BEAD_R + 4) * k;
     const prefer = freeSide(DIRECTIONS.get(station.id) ?? []);
+    const house = houseSide(station);
 
     let best: { placement: Placement; cost: number; box: Box } | null = null;
     for (const placement of PLACEMENTS) {
@@ -763,10 +873,19 @@ export function placeLabels(options: {
        * On a straight run the two sides across the line are the answer and
        * a diagonal is a poor third: it is the next station's room. At a
        * corner or an end, the free side is best and the side the track is on
-       * is worst, with everything else in between.
+       * is worst, with everything else in between. Where the line keeps its
+       * names to one side, that side is the run and the other is the whole
+       * width of the line away - dear enough that only a name with nowhere
+       * else at all crosses over, which is the point of having the rule.
        */
-      const along = placement.dx * prefer.x + placement.dy * prefer.y;
-      let cost = prefer.straight ? (1 - Math.abs(along)) * 4 : (1 - along) * 2;
+      const along = house
+        ? placement.dy * house
+        : placement.dx * prefer.x + placement.dy * prefer.y;
+      let cost = house
+        ? (1 - along) * 7
+        : prefer.straight
+          ? (1 - Math.abs(along)) * 4
+          : (1 - along) * 2;
       const why: string[] = [];
       for (const [id, other] of chosen) {
         if (id === station.id) continue;

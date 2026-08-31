@@ -6,7 +6,7 @@ import {
   MAP_EDGES,
   MAP_STATIONS,
   RACECOURSE,
-  RACECOURSE_LOOP,
+  RACECOURSE_ARC,
 } from "~/data/railMap";
 import {
   BAR_GAP,
@@ -40,6 +40,7 @@ import {
   offsetPoints,
   placeLabels,
   roundedPath,
+  strayOf,
   type Box,
 } from "~/data/railLayout";
 import { useDb } from "~/data/context";
@@ -456,8 +457,14 @@ export function RailDiagram(props: {
             {(chain) => {
               const tram = chain.code === LIGHT_RAIL;
               const dim = () => faded([chain.code]);
+              const strays = () =>
+                chain.at.map((station) => (station ? strayOf(station) * k() : Infinity));
               const d = () =>
-                roundedPath(offsetPoints(chain.points, chain.shifts, PAIR * k()), CORNER * k());
+                roundedPath(
+                  offsetPoints(chain.points, chain.shifts, PAIR * k()),
+                  CORNER * k(),
+                  strays(),
+                );
               const hidden = () => tram && !lightRailShown();
 
               return (
@@ -475,16 +482,20 @@ export function RailDiagram(props: {
             }}
           </For>
 
-          {/* The Racecourse loop: East Rail's race-days bulge round Fo Tan,
-              dashed because trains only sometimes do. The route database has
-              never heard of it - nothing timetabled calls there - so it is
-              drawn as the shape the railway's own map gives it rather than
-              as a station pretending to have data. */}
+          {/* The Racecourse spur: East Rail's race-days bulge round Fo Tan,
+              dashed because trains only sometimes do. A half-circle struck
+              from the station itself, so the marker on its due-east point
+              stands level with Fo Tan and the bulge is the station's own
+              radius. The route database has never heard of it - nothing
+              timetabled calls there - so it is drawn as the shape the
+              railway's own map gives it rather than as a station pretending
+              to have data. */}
           <path
-            d={roundedPath(
-              RACECOURSE_LOOP.map(([x, y]) => ({ x, y })),
-              CORNER * k(),
-            )}
+            d={
+              `M ${RACECOURSE_ARC.x} ${RACECOURSE_ARC.y - RACECOURSE_ARC.r}` +
+              ` A ${RACECOURSE_ARC.r} ${RACECOURSE_ARC.r} 0 0 1` +
+              ` ${RACECOURSE_ARC.x} ${RACECOURSE_ARC.y + RACECOURSE_ARC.r}`
+            }
             stroke={lineColour("EAL")}
             stroke-width={LINE * 0.75 * k()}
             stroke-dasharray={`${4.5 * k()} ${4 * k()}`}
