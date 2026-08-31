@@ -16,7 +16,7 @@ import {
   TrashIcon,
 } from "~/components/Icons";
 import { useDb, useDbMeta } from "~/data/context";
-import { describeDb, refreshRouteDb } from "~/data/db";
+import { clearRouteDb, describeDb, refreshRouteDb } from "~/data/db";
 import { clearEtaCache } from "~/data/eta";
 import { APP_VERSION, BUILD_SHA, REPO_URL } from "~/lib/build";
 import { formatRange } from "~/lib/geo";
@@ -156,6 +156,38 @@ export default function SettingsSheet() {
       await refreshRouteDb();
       // The database is read once at start-up, so a reload is the honest way to
       // adopt a newer copy rather than leaving half the app on stale data.
+      location.reload();
+    } catch {
+      setBusy(false);
+    }
+  };
+
+  /*
+   * Deleting the offline database is the one thing on this screen a rider
+   * cannot undo without a download, so it is asked twice: the first press arms
+   * the button, the second does it. Ten seconds is long enough to read the
+   * second ask and short enough that a panel left open does not keep a live
+   * delete under the thumb.
+   */
+  const [armedDelete, setArmedDelete] = createSignal(false, { ownedWrite: true });
+  let disarm: number | undefined;
+
+  const arm = () => {
+    setArmedDelete(true);
+    window.clearTimeout(disarm);
+    disarm = window.setTimeout(() => setArmedDelete(false), 10_000);
+  };
+
+  const wipe = async () => {
+    window.clearTimeout(disarm);
+    setArmedDelete(false);
+    setBusy(true);
+    try {
+      await clearRouteDb();
+      toast.show(t("deleteOfflineDone", lang()), t("routeDatabase", lang()));
+      // Every screen is still holding the copy this just deleted from disk,
+      // and the database is read once at start-up - the same reason "update
+      // now" reloads rather than trying to swap it under the running app.
       location.reload();
     } catch {
       setBusy(false);
@@ -394,13 +426,29 @@ export default function SettingsSheet() {
                     </span>
                     {t("updateNow", lang())}
                   </button>
+                  {/* Destructive, so it says so in the one colour this app
+                      reserves for it, and it asks twice. The second ask is the
+                      button itself widening into the words - the next step on
+                      the row, where every other state in this app shows it,
+                      rather than a dialog thrown over the panel. It disarms on
+                      its own, because an armed delete a rider walked away from
+                      must not still be armed when they come back. */}
                   <button
                     type="button"
-                    aria-label="clear cache"
-                    onClick={() => clearEtaCache()}
-                    class="flex size-10 items-center justify-center rounded-lg bg-card text-subtle-foreground"
+                    aria-label={
+                      armedDelete() ? t("deleteOfflineConfirm", lang()) : t("deleteOffline", lang())
+                    }
+                    disabled={busy()}
+                    onClick={() => (armedDelete() ? void wipe() : arm())}
+                    class={[
+                      "flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg text-destructive transition-[width,background-color] duration-state disabled:opacity-50",
+                      armedDelete()
+                        ? "bg-destructive/12 px-3.5 text-[0.88rem] font-bold"
+                        : "size-10 bg-card",
+                    ]}
                   >
                     <TrashIcon size={16} />
+                    <Show when={armedDelete()}>{t("deleteOfflineConfirm", lang())}</Show>
                   </button>
                 </div>
               </div>

@@ -328,6 +328,20 @@ export async function refreshRouteDb(): Promise<CachedDb> {
   return download(null);
 }
 
+/**
+ * Drops the cached copy, so the next start downloads the database again.
+ *
+ * The store rather than the whole IndexedDB: the connection is shared and
+ * long-lived, and deleting the database under it would block on this tab's own
+ * open handle. The caller is expected to reload - the app read the database
+ * once at start-up, and every screen is still holding the copy this just
+ * deleted from disk.
+ */
+export async function clearRouteDb(): Promise<void> {
+  const store = await idb();
+  await store.delete("kv", STORE_KEY);
+}
+
 /** Rough size of the cached payload, for display in settings. */
 export function describeDb(db: RouteDb): { routes: number; stops: number } {
   return {
