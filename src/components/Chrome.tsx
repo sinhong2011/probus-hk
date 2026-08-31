@@ -3,7 +3,7 @@ import type { JSX } from "@solidjs/web";
 import type { IconProps } from "./Icons";
 import { SlidingPill } from "./SlidingPill";
 import type { Bilingual } from "~/data/types";
-import { pick, stopCode, type Lang } from "~/lib/i18n";
+import { pick, stopCode, t, type Lang } from "~/lib/i18n";
 
 /**
  * The pole code printed on the stop itself - "WT916".
@@ -109,6 +109,23 @@ export function FareTag(props: { children: JSX.Element }) {
   return (
     <span class="tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.59rem] font-bold text-muted-foreground">
       {props.children}
+    </span>
+  );
+}
+
+/**
+ * Marks a special-pattern entry apart from the main service it shadows.
+ *
+ * The route database keys every service pattern separately, and a variant
+ * that starts and ends where the main one does reads as its exact double -
+ * same number, same ends, same fare. This is the one word that tells them
+ * apart, worn by every pattern that is not the main one, as the reference
+ * app wears it.
+ */
+export function SpecialTag(props: { lang: Lang }) {
+  return (
+    <span class="shrink-0 self-center rounded bg-warning/12 px-1 py-px text-[0.66rem] font-bold leading-[1.5] text-warning">
+      {t("specialDepartures", props.lang)}
     </span>
   );
 }

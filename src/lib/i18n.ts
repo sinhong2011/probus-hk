@@ -335,6 +335,10 @@ const MESSAGES = {
   linesHere: m.lines_here,
   serviceNotice: m.service_notice,
   noticeFromOperator: m.notice_from_operator,
+  trafficCamera: m.traffic_camera,
+  cameraFailed: m.camera_failed,
+  cameraSource: m.camera_source,
+  specialDepartures: m.special_departures,
 } as const satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof MESSAGES;

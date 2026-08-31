@@ -14,6 +14,13 @@ import { t, type Lang } from "~/lib/i18n";
 import { whenIdleAfter } from "~/lib/idle";
 import { useInView } from "~/lib/inView";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
+import {
+  TRAFFIC_REFRESH_MS,
+  fetchTrafficSpeeds,
+  segmentsAlong,
+  trafficLevel,
+  trafficShapes,
+} from "~/data/traffic";
 import { measureOf, spreadMetres } from "~/data/placement";
 import type { VehicleFeed } from "~/data/useVehicles";
 import type { Company, KeyedRoute, StopEntry } from "~/data/types";
@@ -37,6 +44,7 @@ const SHEET_LOW = 0.26;
 const SHEET_TALL = 0.9;
 
 const SRC_LINE = "app-route";
+const SRC_TRAFFIC = "app-traffic";
 const SRC_STOPS = "app-stops";
 const SRC_ME = "app-me";
 const SRC_WALK = "app-walk";
@@ -1589,6 +1597,119 @@ export function RouteMap(props: {
       // who is reading is worse than leaving the map where they put it.
       if (target && !instance.getBounds().contains(target)) {
         instance.easeTo({ center: target, duration: 420 });
+      }
+    },
+  );
+
+  /*
+   * How the roads under this route are moving, painted on the line itself.
+   *
+   * The department's detectors cover the strategic network, so a route
+   * colours through its trunk-road middle and stays quiet on the estate
+   * streets at its ends. Free flow is not drawn at all - the layer marks
+   * trouble - and the ribbon rides on top of the route line inside a casing
+   * of the map's own surface, so a red stretch reads as the road's state and
+   * never blurs into an operator whose brand is the same red.
+   */
+  const roadgoing = () =>
+    props.route.co.some((co) => kindOf(co) === "bus" || kindOf(co) === "minibus");
+
+  const [trafficSpeeds, setTrafficSpeeds] = createSignal<Map<number, number> | null>(null);
+
+  /** The links riding this route's corridor, cut once per drawn shape. */
+  const corridor = createMemo(() => {
+    // Only the published geometry is a corridor; the straight hops the map
+    // falls back to would sweep up roads the bus never touches.
+    const lines = shape();
+    const links = roadgoing() ? trafficShapes() : null;
+    if (!lines || !links) return null;
+    return segmentsAlong(lines, links);
+  });
+
+  createEffect(
+    () => Boolean(map()) && frameInView() && roadgoing(),
+    (watching) => {
+      if (!watching) return;
+      let alive = true;
+      const poll = () => {
+        void fetchTrafficSpeeds().then((speeds) => {
+          if (alive && speeds) setTrafficSpeeds(speeds);
+        });
+      };
+      poll();
+      const timer = setInterval(poll, TRAFFIC_REFRESH_MS);
+      return () => {
+        alive = false;
+        clearInterval(timer);
+      };
+    },
+  );
+
+  createEffect(
+    () => ({
+      instance: map(),
+      ids: corridor(),
+      speeds: trafficSpeeds(),
+      dark: prefersDark(settings.theme()),
+    }),
+    ({ instance, ids, speeds, dark }) => {
+      // The route layers own the stacking order; nothing to ride on yet.
+      if (!instance || !instance.getLayer("app-route-line")) return;
+
+      const links = trafficShapes();
+      const features: GeoJSON.Feature[] = [];
+      for (const id of ids ?? []) {
+        const speed = speeds?.get(id);
+        const level = speed === undefined ? null : trafficLevel(speed);
+        if (!level) continue;
+        for (const line of links?.get(id) ?? []) {
+          features.push({
+            type: "Feature",
+            properties: { level },
+            geometry: { type: "LineString", coordinates: line },
+          });
+        }
+      }
+
+      const surface = dark ? "#0c0f14" : "#ffffff";
+      const slow = dark ? "#fbbf24" : "#f59e0b";
+      const congested = dark ? "#ff5a5a" : "#e02020";
+      const colour = ["match", ["get", "level"], "congested", congested, slow] as never;
+
+      upsertSource(instance, SRC_TRAFFIC, { type: "FeatureCollection", features });
+
+      if (!instance.getLayer("app-traffic-line")) {
+        // Above the route line, below its arrows - part of the line, not of
+        // the road labels and stops above it.
+        instance.addLayer(
+          {
+            id: "app-traffic-casing",
+            type: "line",
+            source: SRC_TRAFFIC,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": surface,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 16, 9],
+            },
+          },
+          "app-route-arrows",
+        );
+        instance.addLayer(
+          {
+            id: "app-traffic-line",
+            type: "line",
+            source: SRC_TRAFFIC,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": colour,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 16, 5],
+            },
+          },
+          "app-route-arrows",
+        );
+      } else {
+        instance.setPaintProperty("app-traffic-casing", "line-color", surface);
+        instance.setPaintProperty("app-traffic-line", "line-color", colour);
       }
     },
   );
