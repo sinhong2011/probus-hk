@@ -1062,8 +1062,16 @@ function Categories(props: {
           words would, and the words were costing a line of a screen whose job
           is the list underneath. The chip at the end of the row is where 睇晒
           went. */}
-      <div class="hidden lg:block">
-        <SectionLabel trailing={viewAll()}>{t("categories", props.lang)}</SectionLabel>
+      {/* Not `SectionLabel`: that one ranges its trailing slot on the label's
+          baseline, which is right for a word or a count and wrong for a
+          control - the chip stands a good deal taller than the type, so
+          baselines left the name riding at the top of the row. Centred, they
+          read as one line. */}
+      <div class="hidden items-center justify-between gap-3 lg:flex">
+        <span class="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
+          {t("categories", props.lang)}
+        </span>
+        {viewAll()}
       </div>
 
       {/* Six of them, three across and two down at every wide width. Sized
