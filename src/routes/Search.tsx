@@ -914,7 +914,7 @@ function Categories(props: { lang: Lang; class?: string }) {
           The two rows share whatever height the dial beside them takes, so
           the block ends level with the keypad's panel rather than stopping
           halfway down and leaving a hand's width of nothing under it. */}
-      <div class="app-scroll -mx-3.5 flex gap-2 overflow-x-auto px-3.5 lg:mx-0 lg:grid lg:grow lg:grid-cols-3 lg:grid-rows-2 lg:gap-4 lg:overflow-visible lg:px-0">
+      <div class="app-scroll -mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:grid lg:grow lg:grid-cols-3 lg:grid-rows-2 lg:gap-4 lg:overflow-visible lg:px-0">
         <For each={SHOWN_CATEGORIES}>
           {(item) => (
             /* A chip on a phone, a tile on a desktop. On the tile the glyph
@@ -924,23 +924,23 @@ function Categories(props: { lang: Lang; class?: string }) {
                empty card. */
             <a
               {...useLinkProps(browseLink(item.id))}
-              class="app-press flex shrink-0 items-center gap-2 rounded-full bg-card py-1.5 pl-1.5 pr-3.5 shadow-card lg:items-stretch lg:gap-3 lg:rounded-xl lg:p-3.5"
+              class="app-press flex shrink-0 items-center gap-1.5 rounded-full bg-card py-1 pl-1 pr-2.5 shadow-card lg:items-stretch lg:gap-3 lg:rounded-xl lg:p-3.5"
             >
               <span class="flex min-w-0 items-center gap-2 lg:grow lg:flex-col lg:items-stretch lg:justify-between lg:gap-1.5">
                 {/* The glyph in the category's own colour, on a wash of it -
                     the coloured bar this replaces marked the tile without
                     saying anything about what was in it. */}
                 <span
-                  class="flex size-8 shrink-0 items-center justify-center rounded-full lg:size-9 lg:rounded-lg"
+                  class="flex size-7 shrink-0 items-center justify-center rounded-full lg:size-9 lg:rounded-lg"
                   style={{
                     background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
                     color: item.accent,
                   }}
                 >
-                  <CategoryIcon id={item.id} size={17} />
+                  <CategoryIcon id={item.id} size={15} />
                 </span>
                 <span class="flex flex-col gap-1">
-                  <span class="whitespace-nowrap text-[0.81rem] font-bold text-foreground lg:whitespace-normal lg:text-[0.88rem]">
+                  <span class="whitespace-nowrap text-[0.75rem] font-bold text-foreground lg:whitespace-normal lg:text-[0.88rem]">
                     {pick(item.name, props.lang)}
                   </span>
                   {/* The line of examples is what a wide tile has room for; a
