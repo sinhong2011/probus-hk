@@ -222,11 +222,17 @@ test("draws the bus on the rail between the stops it is between", async ({ page 
 });
 
 test("states the ends of the service day when neither end is near", async ({ page }) => {
-  // 14:00, when the same fact is a line of reference rather than a warning.
+  // 14:00, when the same fact is a line of reference rather than a warning -
+  // and a line of reference is what the timetable dialog is for. The page
+  // itself keeps only the exception worth interrupting for, so at two in the
+  // afternoon it says nothing about the span and asking it to is asking for
+  // the warning to be permanent.
   await page.clock.setFixedTime(new Date("2026-08-29T06:00:00Z"));
   await page.goto(`/route/${KMB_1}`);
+  await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 15_000 });
 
-  await expect(page.getByText("首班 05:35 · 尾班 23:40")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "路線資料" }).click();
+  await expect(page.getByRole("dialog").getByText("首班 05:35 · 尾班 23:40")).toBeVisible();
 });
 
 test("shows the route, its operator and its whole stop list", async ({ page }) => {
