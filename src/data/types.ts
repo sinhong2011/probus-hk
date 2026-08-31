@@ -93,4 +93,10 @@ export interface Eta {
   platform?: string;
   /** Light rail runs one- and two-car trains; the short ones fill up. */
   cars?: number;
+  /**
+   * Where this train is going, as the operator's station code. A bus on a
+   * route goes where the route goes; a train on a line may turn short of its
+   * end or take the other branch, and the feed says so per train.
+   */
+  dest?: string;
 }

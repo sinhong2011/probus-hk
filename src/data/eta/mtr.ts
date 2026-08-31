@@ -46,7 +46,15 @@ export async function fetchMtrRailEta(q: EtaQuery): Promise<Eta[]> {
     .flatMap((t) => {
       const at = parseHkTime(t.time);
       if (!at) return [];
-      return [{ at, source: "live" as const, co: q.co, platform: t.plat || undefined }];
+      return [
+        {
+          at,
+          source: "live" as const,
+          co: q.co,
+          platform: t.plat || undefined,
+          dest: t.dest || undefined,
+        },
+      ];
     });
 }
 

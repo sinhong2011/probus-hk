@@ -194,7 +194,7 @@ export function EtaCountdown(props: {
                     <div class="flex items-center gap-[5px]">
                       <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
                       <span
-                        class="size-[7px] rounded-full bg-warning motion-safe:animate-[mb-pulse_1.6s_ease-in-out_infinite]"
+                        class="size-[7px] rounded-full bg-warning motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]"
                         style={{
                           "box-shadow":
                             "0 0 0 3px color-mix(in srgb, var(--warning) 16%, transparent)",
@@ -292,43 +292,53 @@ export function EtaCountdown(props: {
               looking at the countdown already. What kind of answer it is -
               a timetable estimate rather than a reported bus - reads on the
               same line, under the number it qualifies. */}
-          <Show when={wordBelow() || (props.clock && leadAt())}>
-            <span class="-mt-px flex items-baseline gap-1">
-              <Show when={wordBelow()}>
-                <span class="text-[0.69rem] font-semibold text-faint-foreground">
-                  {t("scheduled", props.lang)}
+          {/*
+           * One line under the number for what qualifies it - the clock time,
+           * and on a railway the platform. Stacked, the open row of a station
+           * ran three lines deep on the right against one line of name on the
+           * left, and the difference read as a hole in the row.
+           */}
+          <Show when={wordBelow() || (props.clock && leadAt()) || rail()}>
+            <span class="-mt-px flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+              <Show when={wordBelow() || (props.clock && leadAt())}>
+                <span class="flex items-baseline gap-1">
+                  <Show when={wordBelow()}>
+                    <span class="text-[0.69rem] font-semibold text-faint-foreground">
+                      {t("scheduled", props.lang)}
+                    </span>
+                  </Show>
+                  <Show when={props.clock && leadAt()}>
+                    {(at) => (
+                      <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                        {clockTime(at())}
+                      </span>
+                    )}
+                  </Show>
                 </span>
               </Show>
-              <Show when={props.clock && leadAt()}>
-                {(at) => (
-                  <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                    {clockTime(at())}
+
+              {/*
+               * Where to stand. A rail arrival is not answered by a number of minutes
+               * alone - the platform is the rest of the answer, and it was being
+               * thrown away by the adapter that already parsed it.
+               */}
+              <Show when={rail()}>
+                {(info) => (
+                  <span class="flex items-center gap-1 rounded-full bg-secondary px-1.5 py-px text-[0.69rem] font-bold text-muted-foreground">
+                    <span class="tnum">
+                      {t("platform", props.lang)} {info().platform}
+                    </span>
+                    <Show when={info().cars}>
+                      {(cars) => (
+                        <span class="tnum text-faint-foreground">
+                          · {cars()} {t("cars", props.lang)}
+                        </span>
+                      )}
+                    </Show>
                   </span>
                 )}
               </Show>
             </span>
-          </Show>
-
-          {/*
-           * Where to stand. A rail arrival is not answered by a number of minutes
-           * alone - the platform is the rest of the answer, and it was being
-           * thrown away by the adapter that already parsed it.
-           */}
-          <Show when={rail()}>
-            {(info) => (
-              <span class="flex items-center gap-1 rounded-full bg-secondary px-1.5 py-px text-[0.69rem] font-bold text-muted-foreground">
-                <span class="tnum">
-                  {t("platform", props.lang)} {info().platform}
-                </span>
-                <Show when={info().cars}>
-                  {(cars) => (
-                    <span class="tnum text-faint-foreground">
-                      · {cars()} {t("cars", props.lang)}
-                    </span>
-                  )}
-                </Show>
-              </span>
-            )}
           </Show>
         </div>
       </Show>
