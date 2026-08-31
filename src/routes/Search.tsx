@@ -4,10 +4,12 @@ import { Card, EmptyState, FareTag, Hairline, SectionLabel, StopCode } from "~/c
 import { SplitPage } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
+import { Drawer } from "~/components/Drawer";
 import {
   BackspaceIcon,
   ChevronRightIcon,
   CloseIcon,
+  DialpadIcon,
   SearchIcon,
   TrashIcon,
 } from "~/components/Icons";
@@ -304,6 +306,12 @@ export default function Search() {
     />
   );
 
+  /* The phone's dial rides in a sheet of its own: up when the screen opens,
+     because dialling a number is what this screen is for, and pushed down
+     when the rider wants the list - the sheet replaces the tab bar as the
+     thing the thumb is using, the way the app's other sheets do. */
+  const [dialOpen, setDialOpen] = createSignal(true);
+
   return (
     <SplitPage
       /* On the recent tab the pane's height is handed to the content: the
@@ -313,25 +321,22 @@ export default function Search() {
          list each - for them the pane scrolling is the right thing. */
       mainFills={shownTab() === "recent"}
       dock={
-        /* Always there, and nothing on the screen can put a keyboard over it:
-           the dial is how a route number is typed here, and the field above
-           it never asks the phone for a keyboard of its own. It used to, and a
-           dial that vanished the moment you touched the field was a dial you
-           could not trust to be where your thumb left it. A floating sheet
-           rather than a slab welded to the bottom: the keys are thumb-sized
-           and centred, and a full-bleed surface left stranded margins on a
-           tablet. It rises into place with the page - the one thing on the
-           screen that is not content, arriving as the fixture it is. */
-        <div class="app-rise px-3 pb-2">
-          {/* The drawer's surface, not the card's: the dock floats over list
-              cards cut from the card tone, and on the dark theme a card on a
-              card has no edge. On the drawer ground the keys step up in the
-              drawer's raised tone - the same two steps every sheet takes -
-              and the light theme's drawer is white, so nothing moves there. */}
-          <div class="mx-auto w-full max-w-[27rem] rounded-2xl bg-drawer p-3 shadow-card">
-            {keypad(false)}
+        /* With the dial's sheet away, the way back to it: one glass button
+           above the tab bar, where the thumb just left. It only exists while
+           the sheet is down, so the dock measures nothing the rest of the
+           time and the list keeps its room. */
+        <Show when={!dialOpen()}>
+          <div class="app-rise flex justify-end px-4 pb-3">
+            <button
+              type="button"
+              aria-label={t("routeNumber", lang())}
+              onClick={() => setDialOpen(true)}
+              class="app-press app-glass flex size-12 items-center justify-center rounded-full text-foreground"
+            >
+              <DialpadIcon size={20} />
+            </button>
           </div>
-        </div>
+        </Show>
       }
       aside={
         <>
@@ -505,6 +510,22 @@ export default function Search() {
           </Show>
         </Show>
       </div>
+      {/* The dial itself, in the house sheet: handle, drag, and the drawer
+          ground its keys step up from. Non-modal, so the list above it stays
+          live, and dismissible - pushed down it is gone until the dock's
+          button asks for it back. A phone matter only: a wide window keeps
+          the dial in its panel. */}
+      <Show when={!wide()}>
+        <Drawer
+          open={dialOpen()}
+          onClose={() => setDialOpen(false)}
+          flush
+          scroll={false}
+          label={t("routeNumber", lang())}
+        >
+          <div class="mx-auto w-full max-w-[27rem] px-4 pb-2 pt-1">{keypad(false)}</div>
+        </Drawer>
+      </Show>
     </SplitPage>
   );
 }

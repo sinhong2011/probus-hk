@@ -12,6 +12,7 @@ import IconExpand from "~icons/lineicons/expand-square-4";
 import IconFlag from "~icons/lineicons/flag-1";
 import IconFunnel from "~icons/lineicons/funnel-1";
 import IconGithub from "~icons/lineicons/github";
+import IconGridAlt from "~icons/lineicons/grid-alt";
 import IconLayers from "~icons/lineicons/layers-1";
 import IconLayout from "~icons/lineicons/layout-9";
 import IconMap from "~icons/lineicons/map";
@@ -70,6 +71,7 @@ function wrap(Component: IconComponent) {
   };
 }
 
+export const DialpadIcon = wrap(IconGridAlt as IconComponent);
 export const PinIcon = wrap(IconMapMarker as IconComponent);
 export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
