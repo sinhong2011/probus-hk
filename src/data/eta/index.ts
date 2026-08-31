@@ -1,5 +1,5 @@
-import type { Company, Eta, RouteDb } from "~/data/types";
-import { scheduledEta } from "~/data/schedule";
+import type { Company, Eta, KeyedRoute, RouteDb } from "~/data/types";
+import { lastRunGone, scheduledEta } from "~/data/schedule";
 import { fetchKmbEta } from "./kmb";
 import { fetchCtbEta } from "./ctb";
 import { fetchNlbEta } from "./nlb";
@@ -39,8 +39,30 @@ export async function fetchEta(db: RouteDb, q: EtaQuery, limit = 3): Promise<Eta
   const answered = await operatorEta(q, limit);
   if (answered.length > 0) return answered;
 
-  // Nothing from the feed: fall back to the published timetable, clearly marked.
-  return scheduledEta(db, q.route, q.seq, limit);
+  // Nothing from the feed: fall back to the published timetable, clearly
+  // marked - unless the day's last one has already left, when the timetable
+  // has nothing honest left to say. See `timetableStandsIn`.
+  return timetableStandsIn(db, q.route) ? scheduledEta(db, q.route, q.seq, limit) : [];
+}
+
+/**
+ * Whether the timetable may still answer for a silent feed.
+ *
+ * All day it may: a projection is about a service that repeats, so a rider who
+ * arrives to find it a few minutes out is waiting for the next one either way.
+ * Once the day's last bus has left its terminus it may not. From that moment
+ * the timetable is guessing at one particular vehicle, spread evenly over a
+ * route it never runs evenly - on 104 the estimate had the 23:50 departure
+ * four minutes from a stop the operator's feed had already watched it pass -
+ * and being wrong no longer costs a wait, it costs the last bus. If one is
+ * genuinely still coming the operator says so, and a feed that has gone quiet
+ * after the last departure is the strongest evidence there is that nothing is.
+ *
+ * Which is what KMB's own app and hkbus both do at that hour: say nothing
+ * rather than a number. The rider is told 尾班車已過 instead.
+ */
+function timetableStandsIn(db: RouteDb, route: KeyedRoute): boolean {
+  return !lastRunGone(db, route);
 }
 
 /** One operator's feed answer alone, with no timetable standing in for it. */
@@ -87,5 +109,5 @@ export async function fetchEtaAllOperators(
   }
   if (out.length > 0) return out.slice(0, limit);
 
-  return scheduledEta(db, base.route, base.seq, limit);
+  return timetableStandsIn(db, base.route) ? scheduledEta(db, base.route, base.seq, limit) : [];
 }

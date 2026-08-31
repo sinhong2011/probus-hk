@@ -1,7 +1,7 @@
 import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
 import { useDb } from "~/data/context";
-import { lastRunPassed } from "~/data/schedule";
+import { lastRunGone } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
 import { concessionFare, fareAt } from "~/lib/format";
@@ -51,7 +51,7 @@ export function RouteLine(props: LineProps) {
      passes rather than on a reload. */
   const over = () => {
     now();
-    return lastRunPassed(db(), props.route, props.seq);
+    return lastRunGone(db(), props.route);
   };
 
   return (

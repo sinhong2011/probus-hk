@@ -37,7 +37,7 @@ import { useInView } from "~/lib/inView";
 import { reverseRoute, routeAt, routeStops } from "~/data/db";
 import { lineName, lineRank, stationLines } from "~/data/rail";
 import { railFare } from "~/data/railFares";
-import { lastRunPassed, rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
+import { lastRunGone, rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import { useVehicles } from "~/data/useVehicles";
@@ -1636,7 +1636,7 @@ export default function RouteDetail() {
   /**
    * Whether the day's last bus has already gone past a given stop - the
    * difference between 暫無班次 and 尾班車已過, which are the same silence and
-   * different news. The timetable answers it (see `lastRunPassed`), and a live
+   * different news. The timetable answers it (see `lastRunGone`), and a live
    * sighting of the last run further up the line overrules it.
    *
    * `now()` is read so the row turns over on the clock rather than on a
@@ -1646,7 +1646,7 @@ export default function RouteDetail() {
     now();
     const r = route();
     if (!r) return false;
-    return seq < lastRunSeq() || lastRunPassed(db(), r, seq);
+    return seq < lastRunSeq() || lastRunGone(db(), r);
   };
 
   /** Whether two neighbouring stops are under the same notice. */

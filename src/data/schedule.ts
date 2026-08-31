@@ -315,26 +315,31 @@ export function serviceSpan(
 }
 
 /**
- * Has the day's last one already gone past this stop?
+ * Has the day's last one already left?
  *
  * "暫無班次" and "尾班車已過" are the same silence and different news: the
  * first is a wait, the second is a taxi. Nothing in an empty feed tells the
- * two apart - the timetable does. The last one sets off `untilLast` minutes
- * from now and takes the rest of the road to reach this stop, so past that it
- * is gone from here even while it is still carrying people further up the
- * line.
+ * two apart - the timetable does.
  *
- * Before the day's first departure the answer is yes at every stop: last
- * night's run has finished everywhere and nothing is coming until morning.
+ * The line is drawn at the last *departure*, not at the moment that bus would
+ * reach a particular stop. The evenly-spread estimate is not good enough to
+ * promise anybody a ride on one specific vehicle: if it is genuinely still
+ * coming, the operator's feed says so, and a stop with a live answer shows the
+ * live answer whatever this returns. A stop with no answer after the last one
+ * has set off is a stop where the honest reading of the silence is that
+ * nothing is coming - and being wrong the other way strands somebody at a
+ * kerb at one in the morning.
+ *
+ * Before the day's first departure the answer is yes as well: last night's run
+ * has finished and nothing is coming until the morning.
  *
  * A route with no published timetable answers no - silence about a route is
  * not evidence that its day is over.
  */
-export function lastRunPassed(db: RouteDb, route: KeyedRoute, seq: number): boolean {
+export function lastRunGone(db: RouteDb, route: KeyedRoute): boolean {
   const span = serviceSpan(db, route);
   if (!span) return false;
-  if (span.untilFirst > 0) return true;
-  return span.untilLast + travelMinutes(route, seq) < 0;
+  return span.untilFirst > 0 || span.untilLast < 0;
 }
 
 /** The ends of one service day, in that day's own clock. */
