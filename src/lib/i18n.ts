@@ -182,6 +182,8 @@ const MESSAGES = {
   oneChange: m.one_change,
   changeHere: m.change_here,
   wholeJourney: m.whole_journey,
+  useThisStop: m.use_this_stop,
+  noStopNearPin: m.no_stop_near_pin,
   noJourneys: m.no_journeys,
   noJourneysHint: m.no_journeys_hint,
   noNotices: m.no_notices,

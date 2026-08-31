@@ -65,7 +65,12 @@ const endpointSearch = (search: Record<string, unknown>) => {
 const planRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/plan",
-  validateSearch: endpointSearch,
+  // The ends, and which of the answers is the one being read - the first if
+  // unsaid, so only a deliberate second choice marks the address.
+  validateSearch: (search: Record<string, unknown>) => {
+    const j = asCount(search.j);
+    return { ...endpointSearch(search), ...(j !== undefined && j > 0 ? { j } : {}) };
+  },
   component: lazyScreen(() => import("~/routes/Plan")),
 });
 

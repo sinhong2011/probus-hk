@@ -132,6 +132,8 @@
   "one_change": "One change",
   "change_here": "Change",
   "whole_journey": "About",
+  "use_this_stop": "Use this stop",
+  "no_stop_near_pin": "No stop around here",
   "no_journeys": "No journeys found",
   "no_journeys_hint": "Try a wider walking range, or a nearer stop",
   "no_notices": "No service notices",
