@@ -309,4 +309,20 @@ describe("searchStops ranking", () => {
     // and the quiet pole lost to its busier neighbour.
     expect(searchStops(coded, "白虹樓")[0]?.stopId).toBe("QUIET");
   });
+
+  /*
+   * One Chinese character is a word. The minimum was a flat two, so "白" -
+   * which is most of the way to 白田, 白石角 or 白虹樓, and the whole of what a
+   * rider types before the second character arrives - answered nothing at all.
+   */
+  it("answers a single Chinese character", () => {
+    expect(searchStops(coded, "白").length).toBeGreaterThan(0);
+  });
+
+  /* Latin script keeps the two-letter floor: "a" is in half the stops in Hong
+     Kong and answers nothing worth reading. */
+  it("still waits for a second letter of Latin script", () => {
+    expect(searchStops(named, "a")).toEqual([]);
+    expect(searchStops(named, "ad").length).toBeGreaterThan(0);
+  });
 });

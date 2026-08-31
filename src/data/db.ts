@@ -394,9 +394,23 @@ export interface StopMatch {
  * typing "彌敦道" should surface the major interchange before a quiet kerb of
  * the same name.
  */
+/**
+ * Whether a query is long enough to search names with.
+ *
+ * Two characters of Latin script: one letter is in half the stops in Hong Kong
+ * and answers nothing. One character of Chinese, because one Chinese character
+ * is a word - 白 is 白田, 白石角, 白沙灣, and a rider who has typed it has
+ * already said something specific. A flat minimum of two returned nothing at
+ * all for the single character, which is most of what anyone types on the way
+ * to a Chinese place name.
+ */
+function longEnough(q: string): boolean {
+  return q.length >= (/[\u3400-\u9fff]/.test(q) ? 1 : 2);
+}
+
 export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[] {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
+  if (!longEnough(q)) return [];
 
   const index = stopIndex(db);
   const out: (StopMatch & { rank: number })[] = [];
@@ -449,7 +463,7 @@ export function searchStops(db: RouteDb, query: string, limit = 12): StopMatch[]
 /** Routes whose origin or destination contains the query, in either language. */
 export function searchDestinations(db: RouteDb, query: string, limit = 20): KeyedRoute[] {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
+  if (!longEnough(q)) return [];
 
   const seen = new Set<string>();
   const out: KeyedRoute[] = [];
