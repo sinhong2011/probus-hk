@@ -1,11 +1,16 @@
-import { AttributionControl, Map as MlMap, type GeoJSONSource } from "maplibre-gl";
+import { Map as MlMap, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
 import { For, createEffect, createSignal } from "solid-js";
 import { Card } from "~/components/Chrome";
 import { Drawer, DrawerHeader } from "~/components/Drawer";
 import { t } from "~/lib/i18n";
-import { MAP_PRIMARY as PRIMARY, MAP_STYLES as STYLES, prefersDark } from "~/lib/mapKit";
+import {
+  MAP_PRIMARY as PRIMARY,
+  MAP_STYLES as STYLES,
+  addFoldedAttribution,
+  prefersDark,
+} from "~/lib/mapKit";
 import { boundingBox, formatRange, type LatLng } from "~/lib/geo";
 import { createWide } from "~/lib/wide";
 import { geo } from "~/stores/geolocation";
@@ -58,12 +63,33 @@ function pointData(at: LatLng): FeatureCollection {
   };
 }
 
-export default function RangeSheet() {
+export default function RangeSheet(props: {
+  /**
+   * Rendered inside the settings drawer, as a sheet stacked on it. The shell
+   * mounts a second, un-nested copy for the nearby header, which has no
+   * drawer to stack on; both are mounted at once and `sheets.rangeNested()`
+   * decides which of them the open belongs to.
+   */
+  nested?: boolean;
+}) {
   const lang = settings.lang;
   const wide = createWide();
   const [map, setMap] = createSignal<MlMap | null>(null, { ownedWrite: true });
 
-  let container!: HTMLDivElement;
+  /** This copy's open, not the store's: the other copy stays shut. */
+  const open = () => sheets.rangeOpen() && sheets.rangeNested() === !!props.nested;
+
+  /*
+   * A signal rather than a bare `let`: the map is built when the sheet opens,
+   * not when it mounts, and the drawer's portal does not necessarily have its
+   * content in the document by then - a plain ref read at that moment can
+   * still be undefined, which MapLibre reports as "'container' must be a
+   * String or HTMLElement". Read as a signal, the effect simply waits for the
+   * node and runs again when it arrives, whichever order the two happen in.
+   */
+  const [container, setContainer] = createSignal<HTMLDivElement | null>(null, {
+    ownedWrite: true,
+  });
 
   /*
    * The notch the thumb rests on: the nearest step to whatever is persisted,
@@ -82,18 +108,21 @@ export default function RangeSheet() {
   const here = () => geo.position() ?? FALLBACK;
 
   /*
-   * The map lives as long as the sheet's code does and is remade only when
-   * the theme changes under it - the same lifecycle as the route map's, and
-   * the same split-effect shape Solid 2 wants: reads first, work untracked,
-   * cleanup returned.
+   * The map lives as long as this copy is open, and is remade when the theme
+   * changes under it - the split-effect shape Solid 2 wants: reads first,
+   * work untracked, cleanup returned. Tied to the open rather than to the
+   * mount because there are two copies of this sheet in the tree and only one
+   * of them is ever showing; a map built on mount would mean two live
+   * MapLibre instances for a sheet the rider may never open.
    */
   createEffect(
-    () => prefersDark(settings.theme()),
-    (dark) => {
+    () => ({ node: container(), dark: open() ? prefersDark(settings.theme()) : null }),
+    ({ node, dark }) => {
+      if (!node || dark === null) return;
       const at = here();
       const colour = dark ? PRIMARY.dark : PRIMARY.light;
       const instance = new MlMap({
-        container,
+        container: node,
         style: dark ? STYLES.dark : STYLES.light,
         center: [at.lng, at.lat],
         zoom: 14,
@@ -103,7 +132,7 @@ export default function RangeSheet() {
         attributionControl: false,
         fadeDuration: 0,
       });
-      instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
+      addFoldedAttribution(instance);
 
       instance.on("load", () => {
         instance.addSource(SRC_RANGE, {
@@ -139,7 +168,20 @@ export default function RangeSheet() {
         setMap(instance);
       });
 
+      /*
+       * The sheet is built at the moment it opens, which on a phone is the
+       * moment its height starts animating up from nothing: MapLibre reads
+       * the container once, gets a box of no height, and paints a grey panel
+       * that never recovers. The observer is what tells it the sheet has
+       * finished arriving - a single resize on load only holds where the
+       * drawer is full-height from the first frame, which the side one is
+       * and the bottom one is not.
+       */
+      const observer = new ResizeObserver(() => instance.resize());
+      observer.observe(node);
+
       return () => {
+        observer.disconnect();
         setMap(null);
         instance.remove();
       };
@@ -154,12 +196,12 @@ export default function RangeSheet() {
   createEffect(
     () => ({
       instance: map(),
-      open: sheets.rangeOpen(),
+      shown: open(),
       radius: settings.radiusM(),
       at: here(),
     }),
-    ({ instance, open, radius, at }) => {
-      if (!instance || !open) return;
+    ({ instance, shown, radius, at }) => {
+      if (!instance || !shown) return;
       (instance.getSource(SRC_RANGE) as GeoJSONSource | undefined)?.setData(circleData(at, radius));
       (instance.getSource(SRC_ME) as GeoJSONSource | undefined)?.setData(pointData(at));
 
@@ -184,8 +226,9 @@ export default function RangeSheet() {
 
   return (
     <Drawer
-      open={sheets.rangeOpen()}
+      open={open()}
       onClose={() => sheets.closeRange()}
+      nested={props.nested}
       modal
       side={wide() ? "right" : "bottom"}
       scroll={false}
@@ -200,7 +243,7 @@ export default function RangeSheet() {
 
       <div class="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6">
         <div
-          ref={container}
+          ref={setContainer}
           class="h-[44vh] shrink-0 overflow-hidden rounded-xl bg-secondary lg:h-auto lg:min-h-0 lg:flex-1"
         />
 

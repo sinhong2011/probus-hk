@@ -28,6 +28,15 @@ const [settingsWanted, setSettingsWanted] = createSignal(false, { ownedWrite: tr
 const [rangeOpen, setRangeOpen] = createSignal(false, { ownedWrite: true });
 const [rangeWanted, setRangeWanted] = createSignal(false, { ownedWrite: true });
 
+/*
+ * Which of the two range sheets the open belongs to. Asked for from settings
+ * it is a drawer stacked on that drawer, and it has to be rendered inside it
+ * to be one - a nested root reads its parent from context. Asked for from the
+ * nearby header there is no drawer to stack on, so that one is a sheet of its
+ * own, mounted at the shell. Both stay mounted; this says which one answers.
+ */
+const [rangeNested, setRangeNested] = createSignal(false, { ownedWrite: true });
+
 export const sheets = {
   settingsOpen,
   settingsWanted,
@@ -45,11 +54,23 @@ export const sheets = {
 
   rangeOpen,
   rangeWanted,
+  rangeNested,
 
+  /** From the nearby header, where there is no drawer under it: its own sheet. */
   openRange() {
-    // One sheet at a time: asked for from settings, it takes settings' place.
     setSettingsOpen(false);
     setMoreOpen(false);
+    setRangeNested(false);
+    setRangeWanted(true);
+    setRangeOpen(true);
+  },
+  /*
+   * From the settings drawer: the map stacks on it rather than replacing it,
+   * so settings recedes instead of leaving, and closing the map puts the
+   * rider back on the row they opened it from with the panel still up.
+   */
+  openRangeInSettings() {
+    setRangeNested(true);
     setRangeWanted(true);
     setRangeOpen(true);
   },

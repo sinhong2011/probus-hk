@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { enUS, zhHK } from "date-fns/locale";
-import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, lazy } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { Card, Hairline, SectionLabel, Segmented, Toggle } from "~/components/Chrome";
 import { AppMark } from "~/components/AppMark";
@@ -33,6 +33,14 @@ import {
 import { alerts } from "~/stores/alerts";
 import { sheets } from "~/stores/sheets";
 import { toast } from "~/stores/toast";
+
+/*
+ * Inside this drawer rather than beside it: a nested root reads the drawer it
+ * stacks on from context, so the range sheet has to live in this one's tree to
+ * be able to push it back. The same lazy chunk the shell's un-nested copy
+ * loads - one import, whichever way in the rider takes.
+ */
+const RangeSheet = lazy(() => import("./RangeSheet"));
 
 function Row(props: { title: string; subtitle?: string; children: unknown }) {
   return (
@@ -259,12 +267,14 @@ export default function SettingsSheet() {
               </Row>
               <Hairline />
               {/* Chosen on a map rather than from presets, so the row is a
-                  door to the range sheet - which takes this drawer's place,
-                  the way settings itself takes the "more" menu's. */}
+                  door to the range sheet - which stacks on this drawer rather
+                  than replacing it: settings pushes back the way a drawer
+                  does under one of its own, and closing the map returns to
+                  this row with the panel still up. */}
               <Row title={t("radius", lang())}>
                 <button
                   type="button"
-                  onClick={() => sheets.openRange()}
+                  onClick={() => sheets.openRangeInSettings()}
                   class="app-press flex h-8 items-center gap-1 rounded-full bg-card px-3.5 text-[0.81rem] font-bold text-muted-foreground"
                 >
                   <span class="tnum">{formatRange(settings.radiusM())}</span>
@@ -542,6 +552,13 @@ export default function SettingsSheet() {
           </Section>
         </div>
       </div>
+
+      {/* The map opened from the range row, stacked on this drawer. A sibling
+          of the scroller and inside the same root, which is what makes it a
+          nested drawer rather than a second one over the top. */}
+      <Show when={sheets.rangeWanted()} keyed>
+        <RangeSheet nested />
+      </Show>
     </Drawer>
   );
 }
