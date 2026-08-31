@@ -40,3 +40,11 @@ export function walkMinutes(metres: number): number {
 export function formatDistance(metres: number): string {
   return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`;
 }
+
+/**
+ * A chosen search range, said as a rider would say it: "400 m", "2 km",
+ * "2.5 km" - never "2.0 km", which is a measurement, not a choice.
+ */
+export function formatRange(metres: number): string {
+  return metres < 1000 ? `${Math.round(metres)} m` : `${metres / 1000} km`;
+}

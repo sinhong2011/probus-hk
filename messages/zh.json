@@ -34,6 +34,8 @@
   "theme_dark": "深色",
   "refresh": "更新頻率",
   "radius": "搜尋範圍",
+  "search_range": "自訂搜尋範圍",
+  "search_range_hint": "「附近」會列出圈入面嘅車站，個圈以你企嘅位置做中心",
   "show_scheduled": "顯示預定班次",
   "reduce_motion": "減少動態效果",
   "offline_data": "離線資料",

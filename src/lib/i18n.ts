@@ -51,6 +51,8 @@ const MESSAGES = {
   themeDark: m.theme_dark,
   refresh: m.refresh,
   radius: m.radius,
+  searchRange: m.search_range,
+  searchRangeHint: m.search_range_hint,
   showScheduled: m.show_scheduled,
   reduceMotion: m.reduce_motion,
   offlineData: m.offline_data,

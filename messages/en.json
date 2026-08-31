@@ -34,6 +34,8 @@
   "theme_dark": "Dark",
   "refresh": "Refresh",
   "radius": "Search radius",
+  "search_range": "Custom search range",
+  "search_range_hint": "Nearby lists the stops inside this circle, drawn around where you are standing",
   "show_scheduled": "Show scheduled",
   "reduce_motion": "Reduce motion",
   "offline_data": "Offline data",

@@ -65,17 +65,17 @@ test("changing the search radius takes effect and survives a reload", async ({ p
   await page.goto("/");
   await expect(stopLinks(page).first()).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: "200 m" }).click();
-  await expect(page.getByRole("button", { name: "200 m" })).toHaveAttribute("aria-pressed", "true");
+  // The header wears the current range; tapping it opens the range sheet.
+  await page.getByRole("button", { name: /400 m/ }).click();
+  await expect(page.getByText("自訂搜尋範圍")).toBeVisible();
 
+  // Every notch of the slider is also a button.
+  await page.getByRole("button", { name: "200 m", exact: true }).click();
+  await expect(page.getByRole("slider")).toHaveAttribute("aria-valuetext", "200 m");
+
+  await page.keyboard.press("Escape");
   await page.reload();
-  await expect(page.getByRole("button", { name: "200 m" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-    {
-      timeout: 15_000,
-    },
-  );
+  await expect(page.getByRole("button", { name: /200 m/ })).toBeVisible({ timeout: 15_000 });
 });
 
 test("falls back to the timetable when every arrival feed is down", async ({ page }) => {

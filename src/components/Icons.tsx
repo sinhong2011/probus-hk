@@ -185,3 +185,30 @@ export function ExternalIcon(props: IconProps): JSX.Element {
 export const SystemIcon = wrap(IconMonitor as IconComponent);
 export const SunIcon = wrap(IconSun as IconComponent);
 export const MoonIcon = wrap(IconNight as IconComponent);
+
+/**
+ * A search range: the circle around you, with you at the middle of it.
+ * Drawn here because Lineicons has rulers and crosshairs but nothing that
+ * reads as "this far around me" at twelve pixels.
+ */
+export function RadiusIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <circle cx="12" cy="12" r="8.25" stroke-dasharray="3.1 3.36" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
