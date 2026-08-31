@@ -3,9 +3,11 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  redirect,
 } from "@tanstack/solid-router";
 import { NotFound } from "~/routes/NotFound";
 import { Root } from "~/routes/Root";
+import { sheets } from "~/stores/sheets";
 
 /*
  * Every screen is its own chunk. A rider who opens the app to see when the next
@@ -125,10 +127,18 @@ const savedRoute = createRoute({
   component: lazyScreen(() => import("~/routes/Saved")),
 });
 
+/*
+ * Settings is a drawer over the screen rather than a screen, but the address
+ * it used to have keeps working: a bookmark, a shared link or an old test
+ * lands on the home screen with the drawer already open.
+ */
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
-  component: lazyScreen(() => import("~/routes/Settings")),
+  beforeLoad: () => {
+    sheets.openSettings();
+    throw redirect({ to: "/" });
+  },
 });
 
 const routeDetailRoute = createRoute({

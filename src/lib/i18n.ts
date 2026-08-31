@@ -25,6 +25,7 @@ const MESSAGES = {
   searchRoutes: m.search_routes,
   saved: m.saved,
   settings: m.settings,
+  more: m.more,
   pinned: m.pinned,
   nearbyStops: m.nearby_stops,
   routesHere: m.routes_here,

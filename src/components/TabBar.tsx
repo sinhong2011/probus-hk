@@ -1,5 +1,6 @@
 import { useLinkProps, useLocation, useNavigate } from "@tanstack/solid-router";
-import { For, Show, createEffect, getOwner, runWithOwner } from "solid-js";
+import { For, Show, createEffect, getOwner, lazy, runWithOwner } from "solid-js";
+import { Loading } from "@solidjs/web";
 import type { JSX } from "@solidjs/web";
 import { t, type Lang, type MessageKey } from "~/lib/i18n";
 import { trail } from "~/stores/trail";
@@ -13,10 +14,13 @@ import {
 } from "~/lib/tanstack/hotkeys";
 import { AppMark } from "./AppMark";
 import { Segmented } from "./Chrome";
+import { MoreSheet } from "./MoreSheet";
 import { SlidingPill } from "./SlidingPill";
+import { sheets } from "~/stores/sheets";
 import {
   BookmarkIcon,
   MegaphoneIcon,
+  MoreIcon,
   PinIcon,
   SearchIcon,
   MoonIcon,
@@ -40,8 +44,8 @@ const SEARCH_SHORTCUT = formatForDisplay(SEARCH_KEY);
 /** The tab at this position in the navigation is reached with this key. */
 const tabKey = (index: number): RegisterableHotkey => `Alt+${index + 1}` as RegisterableHotkey;
 
-/** The six places the navigation itself can take you, and nowhere else. */
-type TabPath = "/" | "/saved" | "/search" | "/rail" | "/notices" | "/settings";
+/** The places the navigation itself can take you, and nowhere else. */
+type TabPath = "/" | "/saved" | "/search" | "/rail" | "/notices";
 
 interface Destination {
   href: TabPath;
@@ -61,10 +65,17 @@ const TABS: Destination[] = [
 /** The sidebar lists these; search is the box above them, not a row in them. */
 const SIDEBAR_TABS = TABS.filter((tab) => tab.href !== "/search");
 
-const SETTINGS: Destination = { href: "/settings", label: "settings", Icon: SettingsIcon };
+/**
+ * A thumb reaches five things comfortably at the foot of a phone, and the bar
+ * was asking it to reach six. The screens a rider lives in keep their tabs;
+ * the railway and the notices ride behind "more", with settings.
+ */
+const PHONE_TABS = TABS.filter((tab) => tab.href !== "/rail" && tab.href !== "/notices");
 
-/** Every destination in the order the keys count them: ⌥1 is nearby, ⌥6 is settings. */
-const REACHABLE: Destination[] = [...TABS, SETTINGS];
+/** The settings drawer's code, fetched the first time it is asked for. */
+const SettingsSheet = lazy(() => import("./SettingsSheet"));
+/** The search-range sheet carries the map library, so it too waits its turn. */
+const RangeSheet = lazy(() => import("./RangeSheet"));
 
 /**
  * A bottom bar on a phone; a sidebar on a desktop.
@@ -90,17 +101,32 @@ export function TabBar(props: { lang: Lang }) {
    * the browser's own tabs and it will not give them up.
    */
   const navigate = useNavigate();
-  createHotkeys(
-    REACHABLE.map((tab, index) => ({
+  createHotkeys([
+    ...TABS.map((tab, index) => ({
       hotkey: tabKey(index),
       callback: () => void navigate({ to: tab.href }),
     })),
-  );
+    // ⌥6 still reaches settings, which is now a sheet rather than a place.
+    { hotkey: tabKey(TABS.length), callback: () => sheets.openSettings() },
+  ]);
 
   return (
     <>
       <PhoneBar lang={props.lang} isActive={isActive} />
       <Sidebar lang={props.lang} isActive={isActive} />
+      <MoreSheet lang={props.lang} />
+      {/* Not mounted until first asked for: the drawer's code is its own
+          chunk, and a session that never opens settings never fetches it. */}
+      <Show when={sheets.settingsWanted()} keyed>
+        <Loading fallback={null}>
+          <SettingsSheet />
+        </Loading>
+      </Show>
+      <Show when={sheets.rangeWanted()} keyed>
+        <Loading fallback={null}>
+          <RangeSheet />
+        </Loading>
+      </Show>
     </>
   );
 }
@@ -120,12 +146,23 @@ function current(el: HTMLAnchorElement, active: () => boolean, owner = getOwner(
 }
 
 function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
-  const items = () => [...TABS, SETTINGS];
+  /* "More" owns whatever it holds: the sheet while it is up, and the railway
+     or notices screens whose tabs it swallowed. */
+  const moreActive = () =>
+    sheets.moreOpen() || props.isActive("/rail") || props.isActive("/notices");
+  /* While one of the app's own sheets is up the bar withdraws below the edge:
+     the sheet replaces it as the thing the thumb is using, and a dimmed bar
+     peeking around a scrim only says "you cannot press this". */
+  const sheetUp = () => sheets.moreOpen() || sheets.settingsOpen();
 
   return (
     <nav
       aria-label={t("navigation", props.lang)}
-      class="pb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden"
+      class={[
+        "pb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden",
+        "transition-transform duration-state ease-[var(--ease-spring)]",
+        { "translate-y-full": sheetUp() },
+      ]}
       style={{
         background: "color-mix(in srgb, var(--background) 94%, transparent)",
         "backdrop-filter": "blur(18px)",
@@ -135,7 +172,7 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
       }}
     >
       <div class="mx-auto flex w-full max-w-[46rem] items-start gap-0.5">
-        <For each={items()}>
+        <For each={PHONE_TABS}>
           {(tab) => (
             <a
               {...useLinkProps({
@@ -146,7 +183,7 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
                 )(getOwner()),
               })}
               class={[
-                "mb-press relative flex h-12 min-w-0 flex-1 flex-col items-center justify-start gap-[5px] transition-colors duration-state",
+                "app-press relative flex h-12 min-w-0 flex-1 flex-col items-center justify-start gap-[5px] transition-colors duration-state",
                 {
                   "text-primary": props.isActive(tab.href),
                   "text-subtle-foreground": !props.isActive(tab.href),
@@ -175,6 +212,32 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
             </a>
           )}
         </For>
+
+        <button
+          type="button"
+          onClick={() => sheets.openMore()}
+          aria-expanded={sheets.moreOpen() ? "true" : "false"}
+          aria-current={moreActive() ? "page" : "false"}
+          class={[
+            "app-press relative flex h-12 min-w-0 flex-1 flex-col items-center justify-start gap-[5px] transition-colors duration-state",
+            {
+              "text-primary": moreActive(),
+              "text-subtle-foreground": !moreActive(),
+            },
+          ]}
+        >
+          <span
+            class={[
+              "flex items-center justify-center rounded-xl transition-transform duration-state ease-[var(--ease-spring)]",
+              { "scale-110": moreActive() },
+            ]}
+          >
+            <MoreIcon size={19} />
+          </span>
+          <span class={["truncate text-[0.69rem]", moreActive() ? "font-bold" : "font-semibold"]}>
+            {t("more", props.lang)}
+          </span>
+        </button>
       </div>
     </nav>
   );
@@ -209,14 +272,14 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
   return (
     <nav
       aria-label={t("navigation", props.lang)}
-      class="fixed inset-y-3 left-3 z-30 hidden flex-col rounded-2xl border border-border bg-card p-3 shadow-card transition-[width] duration-state ease-[var(--ease-spring)] lg:flex"
+      class="fixed inset-y-3 left-3 z-30 hidden flex-col rounded-2xl bg-card p-3 shadow-card transition-[width] duration-state ease-[var(--ease-spring)] lg:flex"
       style={{ width: open() ? "15rem" : "4.5rem" }}
     >
       <div class={["flex items-center gap-2.5", { "flex-col gap-2": !open() }]}>
         <a
           {...useLinkProps({ to: "/" })}
           aria-label={t("appName", props.lang)}
-          class="mb-press flex shrink-0 items-center gap-2.5 rounded-xl px-0.5 py-1"
+          class="app-press flex shrink-0 items-center gap-2.5 rounded-xl px-0.5 py-1"
         >
           <AppMark size={26} />
           <Show when={open()}>
@@ -231,7 +294,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
           onClick={() => settings.setRailOpen(!open())}
           aria-label={t(open() ? "collapseNav" : "expandNav", props.lang)}
           class={[
-            "mb-press flex size-8 shrink-0 items-center justify-center rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground",
+            "app-press flex size-8 shrink-0 items-center justify-center rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground",
             { "ml-auto": open() },
           ]}
         >
@@ -251,7 +314,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
           })(getOwner()),
         })}
         class={[
-          "mb-press mt-3 flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border transition-colors",
+          "app-press mt-3 flex h-9 shrink-0 items-center gap-2 rounded-lg transition-colors",
           {
             "bg-primary-muted text-primary": searching(),
             "bg-secondary text-subtle-foreground hover:text-foreground": !searching(),
@@ -265,13 +328,13 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
           <span class="min-w-0 grow truncate text-left text-[0.88rem] font-semibold">
             {t("searchRoutes", props.lang)}
           </span>
-          <kbd class="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 text-[0.75rem] font-bold text-faint-foreground">
+          <kbd class="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[0.75rem] font-bold text-faint-foreground">
             {SEARCH_SHORTCUT}
           </kbd>
         </Show>
       </a>
 
-      <div class="mb-scroll relative mt-4 flex min-h-0 grow flex-col gap-1 overflow-y-auto">
+      <div class="app-scroll relative mt-4 flex min-h-0 grow flex-col gap-1 overflow-y-auto">
         <Show when={open()}>
           <span class="px-3 pb-1 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-faint-foreground">
             {t("navigation", props.lang)}
@@ -296,7 +359,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
                 lang={props.lang}
                 isActive={props.isActive}
                 open={open()}
-                shortcut={formatForDisplay(tabKey(REACHABLE.indexOf(tab)))}
+                shortcut={formatForDisplay(tabKey(TABS.indexOf(tab)))}
               />
             )}
           </For>
@@ -304,13 +367,10 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
       </div>
 
       <div class="flex shrink-0 flex-col gap-1 pt-3">
-        <Row
-          tab={SETTINGS}
+        <SettingsRow
           lang={props.lang}
-          isActive={props.isActive}
           open={open()}
-          shortcut={formatForDisplay(tabKey(REACHABLE.indexOf(SETTINGS)))}
-          quiet
+          shortcut={formatForDisplay(tabKey(TABS.length))}
         />
 
         <div class="my-1 h-px bg-border" />
@@ -324,7 +384,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
           type="button"
           onClick={() => settings.setLang(props.lang === "zh" ? "en" : "zh")}
           class={[
-            "mb-press flex h-10 items-center gap-2.5 rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground",
+            "app-press flex h-10 items-center gap-2.5 rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground",
             { "justify-center px-0": !open(), "px-2.5": open() },
           ]}
         >
@@ -386,7 +446,7 @@ function ThemeSwitch(props: { lang: Lang; open: boolean }) {
           title={t("theme", props.lang)}
           aria-label={`${t("theme", props.lang)} · ${t(chosen().label, props.lang)}`}
           onClick={(event) => swapTheme(next().value, pointerOrigin(event))}
-          class="mb-press flex h-10 items-center justify-center rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          class="app-press flex h-10 items-center justify-center rounded-lg text-subtle-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           {chosen().Icon({ size: 16 })}
         </button>
@@ -433,7 +493,7 @@ function Row(props: {
       data-pill-active={active() && !props.quiet ? "true" : "false"}
       title={props.open ? undefined : t(props.tab.label, props.lang)}
       class={[
-        "mb-press relative z-10 flex h-10 shrink-0 items-center gap-2.5 rounded-lg transition-colors duration-state",
+        "app-press relative z-10 flex h-10 shrink-0 items-center gap-2.5 rounded-lg transition-colors duration-state",
         {
           "text-primary": active(),
           "text-subtle-foreground hover:bg-secondary hover:text-foreground": !active(),
@@ -456,11 +516,53 @@ function Row(props: {
           {t(props.tab.label, props.lang)}
         </span>
         <Show when={props.shortcut}>
-          <kbd class="shrink-0 rounded border border-border bg-card px-1.5 py-0.5 text-[0.69rem] font-bold text-faint-foreground">
+          <kbd class="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[0.69rem] font-bold text-faint-foreground">
             {props.shortcut}
           </kbd>
         </Show>
       </Show>
     </a>
+  );
+}
+
+/**
+ * The settings row: dressed as its neighbours are, but a button, because
+ * settings is a drawer over the screen rather than a place the router goes.
+ */
+function SettingsRow(props: { lang: Lang; open: boolean; shortcut: string }) {
+  const active = () => sheets.settingsOpen();
+
+  return (
+    <button
+      type="button"
+      onClick={() => sheets.openSettings()}
+      title={props.open ? undefined : t("settings", props.lang)}
+      class={[
+        "app-press relative z-10 flex h-10 shrink-0 items-center gap-2.5 rounded-lg transition-colors duration-state",
+        {
+          "bg-primary-muted text-primary": active(),
+          "text-subtle-foreground hover:bg-secondary hover:text-foreground": !active(),
+          "justify-center px-0": !props.open,
+          "px-2.5": props.open,
+        },
+      ]}
+    >
+      <span class="flex shrink-0 items-center justify-center">
+        <SettingsIcon size={19} />
+      </span>
+      <Show when={props.open}>
+        <span
+          class={[
+            "min-w-0 grow truncate text-left text-[0.88rem]",
+            { "font-bold": active(), "font-semibold": !active() },
+          ]}
+        >
+          {t("settings", props.lang)}
+        </span>
+        <kbd class="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[0.69rem] font-bold text-faint-foreground">
+          {props.shortcut}
+        </kbd>
+      </Show>
+    </button>
   );
 }

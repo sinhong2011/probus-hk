@@ -74,6 +74,8 @@ export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
 export const BookmarkIcon = wrap(IconBookmark as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
+/** The rest of the navigation, behind one tab on a phone. */
+export const MoreIcon = wrap(IconMenu as IconComponent);
 export const ChevronLeftIcon = wrap(IconChevronLeft as IconComponent);
 export const ChevronRightIcon = wrap(IconChevronRight as IconComponent);
 export const RefreshIcon = wrap(IconReload as IconComponent);

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("switches the whole interface to English and back", async ({ page }) => {
-  await expect(page.getByText("設定").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("radio", { name: "EN" }).click();
   await expect(page.getByRole("radio", { name: "EN" })).toHaveAttribute("aria-checked", "true");
@@ -67,7 +67,7 @@ test("refresh interval is a real choice that sticks", async ({ page }) => {
   await page.getByRole("radio", { name: "10s" }).click();
   await expect(page.getByRole("radio", { name: "10s" })).toHaveAttribute("aria-checked", "true");
 
-  await page.reload();
+  await page.goto("/settings");
   await expect(page.getByRole("radio", { name: "10s" })).toHaveAttribute("aria-checked", "true", {
     timeout: 10_000,
   });
