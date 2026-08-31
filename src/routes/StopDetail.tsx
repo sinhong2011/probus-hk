@@ -2,7 +2,6 @@ import { useParams } from "@tanstack/solid-router";
 import { uniqBy } from "es-toolkit";
 import { For, Show, createMemo } from "solid-js";
 import { Chip, EmptyState, SectionLabel, StopCode } from "~/components/Chrome";
-import { Trail } from "~/components/Breadcrumb";
 import { Page, RowCard, Section } from "~/components/Layout";
 import { WalkIcon } from "~/components/Icons";
 import { RouteLine } from "~/components/RouteRow";
@@ -58,8 +57,6 @@ export default function StopDetail() {
 
   return (
     <Page>
-      <Trail />
-
       <Show when={stop()} fallback={<NotFound kind="stop" />}>
         {(entry) => (
           <>

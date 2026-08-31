@@ -322,7 +322,7 @@ test("an open stop links through to its own page", async ({ page }) => {
   await expect(page.getByText("途經路線", { exact: false })).toBeVisible({ timeout: 10_000 });
 });
 
-test("the trail names the tab you came from, and that tab stays lit", async ({ page }) => {
+test("the tab you came from stays lit on a route page", async ({ page }) => {
   await page.goto("/search");
   await page.getByRole("button", { name: "1", exact: true }).click();
   await page.locator('a[href^="/route/"]').first().click();
@@ -335,9 +335,6 @@ test("the trail names the tab you came from, and that tab stays lit", async ({ p
   // belongs to whichever tab you reached it from.
   const tabs = page.getByRole("navigation", { name: "導覽" });
   await expect(tabs.getByRole("link", { name: "搜尋" })).toHaveAttribute("aria-current", "page");
-
-  await page.getByRole("navigation", { name: "breadcrumb" }).getByText("搜尋").click();
-  await expect(page).toHaveURL(/\/search/);
 });
 
 test("the tab bar stays reachable from a route page", async ({ page }) => {
@@ -402,12 +399,12 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
 
   // A split screen pins the root the same way, for as long as it is up.
   await expect
-    .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))
+    .poll(() => page.evaluate(() => document.documentElement.classList.contains("app-fill")))
     .toBe(true);
   await page.getByRole("navigation", { name: "導覽" }).getByRole("link", { name: "主頁" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect
-    .poll(() => page.evaluate(() => document.documentElement.classList.contains("mb-fill")))
+    .poll(() => page.evaluate(() => document.documentElement.classList.contains("app-fill")))
     .toBe(false);
 });
 

@@ -1,7 +1,6 @@
 import { useLinkProps, useParams } from "@tanstack/solid-router";
 import { For, Show, createMemo } from "solid-js";
 import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
-import { Trail } from "~/components/Breadcrumb";
 import { Page, RowCard, Section } from "~/components/Layout";
 import { ChevronRightIcon, SortIcon } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
@@ -83,7 +82,7 @@ export default function Browse() {
               {(item) => (
                 <a
                   {...useLinkProps(browseLink(item.id))}
-                  class="mb-press flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-3.5 shadow-card motion-safe:mb-rise"
+                  class="app-press flex flex-col justify-between gap-3 rounded-xl bg-card p-3.5 shadow-card motion-safe:app-rise"
                 >
                   <span
                     class="h-1 w-8 rounded-full"
@@ -110,11 +109,7 @@ export default function Browse() {
     >
       {(chosen) => (
         <Page>
-          <ScreenTitle
-            lead={<Trail extra={[{ href: "/browse", label: t("categories", lang()) }]} />}
-            title={pick(chosen().name, lang())}
-            subtitle={pick(chosen().hint, lang())}
-          />
+          <ScreenTitle title={pick(chosen().name, lang())} subtitle={pick(chosen().hint, lang())} />
 
           <CategoryTable routes={routes()} lang={lang()} />
         </Page>
@@ -178,7 +173,7 @@ function CategoryTable(props: { routes: KeyedRoute[]; lang: Lang }) {
                   aria-pressed={on() ? "true" : "false"}
                   onClick={() => table.getColumn(sort.id)?.toggleSorting()}
                   class={[
-                    "mb-press flex h-8 items-center gap-1 rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
+                    "app-press flex h-8 items-center gap-1 rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
                     {
                       "bg-primary text-primary-foreground": on(),
                       "bg-secondary text-muted-foreground hover:text-foreground": !on(),
@@ -211,7 +206,7 @@ function RouteRowItem(props: { route: KeyedRoute; lang: Lang }) {
   return (
     <a
       {...useLinkProps(routeLink(props.route.key))}
-      class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
     >
       <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
       <div class="flex min-w-0 grow flex-col gap-0.5">

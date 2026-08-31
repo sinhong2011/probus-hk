@@ -22,6 +22,12 @@ import type { RouteDb } from "~/data/types";
  * on a cold open.
  */
 export function Breadcrumb(props: { crumbs: Crumb[] }) {
+  const location = useLocation();
+  /* A crumb for the screen you are on - the last one, where a trail carries
+     it - is the place, not a way back to it: said in the foreground and
+     without the press. */
+  const here = (crumb: Crumb) => crumb.href === location().pathname;
+
   return (
     <nav aria-label="breadcrumb" class="flex min-w-0 items-center gap-1">
       <For each={props.crumbs}>
@@ -35,7 +41,14 @@ export function Breadcrumb(props: { crumbs: Crumb[] }) {
 
             <a
               {...useLinkProps(pathLink(crumb.href))}
-              class="mb-press flex h-8 min-w-0 shrink items-center gap-1 rounded-full bg-secondary pl-2 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground motion-safe:mb-rise"
+              aria-current={here(crumb) ? "page" : undefined}
+              class={[
+                "flex h-8 min-w-0 shrink items-center gap-1 rounded-full bg-secondary pl-2 pr-3 text-[0.81rem] font-bold transition-colors duration-state motion-safe:app-rise",
+                {
+                  "text-foreground": here(crumb),
+                  "app-press text-muted-foreground active:text-foreground": !here(crumb),
+                },
+              ]}
             >
               <Show when={index() === 0}>
                 <span class="shrink-0">

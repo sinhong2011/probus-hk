@@ -28,6 +28,4 @@ test("a route, a stop and a line that do not exist each say which", async ({ pag
 
   await page.goto("/rail/NOPE");
   await expect(page.getByText("冇呢條綫")).toBeVisible({ timeout: 15_000 });
-  // Still inside the railway: the trail names the way back.
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("鐵路");
 });

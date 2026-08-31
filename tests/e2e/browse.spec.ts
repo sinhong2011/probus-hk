@@ -43,18 +43,3 @@ test("a category with nothing in it says so plainly", async ({ page }) => {
   await page.goto("/browse/crossBoundary");
   await expect(page.getByText("揾唔到呢條路線")).toBeVisible({ timeout: 10_000 });
 });
-
-test("the trail names the way back out of a category", async ({ page }) => {
-  await page.goto("/browse");
-  await page.locator('a[href^="/browse/"]').first().click();
-  await expect(
-    page.locator('a[href^="/route/"]').first().or(page.getByText("揾唔到呢條路線")),
-  ).toBeVisible({
-    timeout: 10_000,
-  });
-
-  // The crumb names where it goes, so it works on a cold open too - unlike a
-  // history-based back, which has nothing to pop.
-  await page.getByRole("navigation", { name: "breadcrumb" }).getByText("路線分類").click();
-  await expect(page).toHaveURL(/\/browse$/);
-});
