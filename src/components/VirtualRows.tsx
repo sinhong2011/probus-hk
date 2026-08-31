@@ -147,9 +147,27 @@ export function VirtualRows<T>(props: {
         {(item) => (
           <div
             data-index={item.index}
-            // After the attributes are on: the measurer reads the index off
-            // the element, and a ref runs before the element is dressed.
-            ref={(el) => queueMicrotask(() => virtualizer.measureElement(el))}
+            /* Measured when the row actually has a size, not once on a
+               microtask. A row born inside a sheet or a switching screen is
+               created before it is in the document, and a measurement taken
+               there is 0 - which the virtualiser cached, so a one-route
+               recent list stood zero pixels tall and its row lay over the
+               categories under it. The observer's first report arrives once
+               the row is laid out, and it keeps the measurement honest if
+               the row later changes size. It reads the index off the
+               element, so it must observe only after the attributes are on -
+               which holds here, since nothing fires before layout. */
+            ref={(el) => {
+              if (typeof ResizeObserver === "undefined") {
+                queueMicrotask(() => virtualizer.measureElement(el));
+                return;
+              }
+              const watcher = new ResizeObserver(() => {
+                if (el.isConnected) virtualizer.measureElement(el);
+              });
+              watcher.observe(el);
+              onCleanup(() => watcher.disconnect());
+            }}
             class="absolute left-0 top-0 w-full"
             style={{ transform: `translateY(${item.start - margin()}px)` }}
           >
@@ -163,7 +181,7 @@ export function VirtualRows<T>(props: {
                 row, and a whole list of rows springing in from four-fifths
                 size made the search screen shudder on every visit. */}
             <div
-              class={{ "motion-safe:mb-rise": arriving() }}
+              class={{ "motion-safe:app-rise": arriving() }}
               style={{ "animation-delay": `${Math.min(item.index - first(), 8) * 24}ms` }}
             >
               {props.children(props.items[item.index] as T, item.index)}
