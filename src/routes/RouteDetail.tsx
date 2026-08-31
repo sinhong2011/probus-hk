@@ -10,7 +10,6 @@ import {
   StopCode,
 } from "~/components/Chrome";
 import { Alert } from "~/components/Alert";
-import { Trail } from "~/components/Breadcrumb";
 import { AlertSheet } from "~/components/AlertSheet";
 import { GroupSheet } from "~/components/GroupSheet";
 import { Modal } from "~/components/Modal";
@@ -21,14 +20,14 @@ import {
   AlarmIcon,
   BookmarkIcon,
   BusIcon,
-  ChevronRightIcon,
   CloseIcon,
   ExchangeIcon,
   FlagIcon,
   InfoIcon,
   MegaphoneIcon,
   ShareIcon,
-  WalkIcon,
+  StarFillIcon,
+  StarIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { NotFound } from "~/routes/NotFound";
@@ -36,6 +35,8 @@ import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { useInView } from "~/lib/inView";
 import { reverseRoute, routeAt, routeStops } from "~/data/db";
+import { lineName, lineRank, stationLines } from "~/data/rail";
+import { railFare } from "~/data/railFares";
 import { rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
@@ -50,9 +51,9 @@ import {
   serviceNotice,
 } from "~/lib/format";
 import { now } from "~/stores/clock";
-import { distanceM, walkMinutes } from "~/lib/geo";
+import { distanceM } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { operatorLabel } from "~/lib/operators";
+import { operatorLabel, plateStyle } from "~/lib/operators";
 import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
@@ -110,26 +111,9 @@ function daysLabel(flags: string, lang: Lang): string {
  */
 function Timetable(props: { db: RouteDb; route: KeyedRoute; lang: Lang }) {
   const groups = createMemo(() => routeTimetable(props.db, props.route));
-  const span = createMemo(() => serviceSpan(props.db, props.route));
 
   return (
     <div class="flex flex-col gap-3">
-      {/* The two ends first: most visits to a timetable are one of these two
-          questions, and neither should need reading a table to answer. */}
-      <Show when={span()}>
-        {(hours) => (
-          <div class="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
-            <span class="tnum text-[0.81rem] font-bold text-foreground">
-              {t("firstBus", props.lang)} {hours().first}
-            </span>
-            <span class="text-faint-foreground">·</span>
-            <span class="tnum text-[0.81rem] font-bold text-foreground">
-              {t("lastBus", props.lang)} {hours().last}
-            </span>
-          </div>
-        )}
-      </Show>
-
       <Show
         when={groups().length > 0}
         fallback={
@@ -202,7 +186,14 @@ function RideBand(props: {
             stopIdByCo: stopIdsFor(props.route, props.boardSeq),
           }
         : null,
-    1,
+    /*
+     * Three, not one. A feed keeps reporting a bus for a while after it has
+     * left, and with one arrival asked for that bus was the whole answer: the
+     * band added the ride to a departure already behind it and, since that
+     * time is a minute or so ago, read as "now plus the ride" - the wait for
+     * the bus that is actually coming had been left out.
+     */
+    3,
   );
 
   /*
@@ -223,12 +214,19 @@ function RideBand(props: {
     },
   );
 
-  /** When the bus that is coming would put you at the other end. */
+  /**
+   * When the bus that is coming would put you at the other end.
+   *
+   * The bus that is coming, not the first one the feed lists: departed buses
+   * are dropped the way the countdown drops them, on the same clock, so the
+   * estimate rolls on to the next bus the moment the one before it has gone.
+   */
   const arriveAt = createMemo(() => {
     const ride = shownRide();
-    const next = etas()?.[0]?.at.getTime();
-    if (!ride || next === undefined) return null;
-    return new Date(next + ride.minutes * 60_000);
+    const at = now();
+    const next = etas()?.find((eta) => countdown(eta, at).kind !== "gone");
+    if (!ride || !next) return null;
+    return new Date(next.at.getTime() + ride.minutes * 60_000);
   });
 
   const armed = () =>
@@ -259,7 +257,10 @@ function RideBand(props: {
   };
 
   return (
-    <Card class="border-primary-border">
+    /* Not a `Card`: the band floats over the stop list, which is itself a
+       card, so the same surface vanished into it - this is a step above, with
+       the shadow a floating thing owes the rows it covers. */
+    <div class="overflow-hidden rounded-xl bg-secondary shadow-xl">
       <div class="flex items-center gap-2.5 px-3.5 py-2.5">
         {/* The flag sits in its own disc rather than loose against the text:
             a lone glyph beside a line of type read as a form field, which is
@@ -300,7 +301,7 @@ function RideBand(props: {
           aria-label={t("clearTrip", props.lang)}
           title={t("clearTrip", props.lang)}
           onClick={props.onClear}
-          class="mb-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground"
         >
           <CloseIcon size={12} />
         </button>
@@ -318,14 +319,14 @@ function RideBand(props: {
               </Chip>
               <Show when={ride().fare}>
                 {(fare) => (
-                  <Chip class="shrink-0">
+                  <Chip tone="card" class="shrink-0">
                     <span class="tnum">{fare()}</span>
                   </Chip>
                 )}
               </Show>
               <Show when={arriveAt()}>
                 {(at) => (
-                  <Chip class="shrink-0">
+                  <Chip tone="card" class="shrink-0">
                     <span class="tnum">
                       {t("arriveAbout", props.lang)} {clockTime(at())}
                     </span>
@@ -340,10 +341,10 @@ function RideBand(props: {
                 aria-pressed={armed() ? "true" : "false"}
                 onClick={remind}
                 class={[
-                  "mb-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
+                  "app-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
                   {
                     "bg-primary text-primary-foreground": armed(),
-                    "bg-secondary text-muted-foreground": !armed(),
+                    "bg-card text-muted-foreground": !armed(),
                   },
                 ]}
               >
@@ -356,7 +357,7 @@ function RideBand(props: {
           )}
         </Show>
       </Reveal>
-    </Card>
+    </div>
   );
 }
 
@@ -416,7 +417,7 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
                 // A frame apart, so the pair reads as arriving in order rather
                 // than as one block appearing.
                 style={{ "animation-delay": `${index * 45}ms` }}
-                class="mb-pop flex items-baseline gap-1.5"
+                class="app-pop flex items-baseline gap-1.5"
               >
                 {/* Right-aligned, so a tilde or a second digit pushes the
                     number out to the left and the units stay in line. */}
@@ -547,6 +548,17 @@ function StopRow(props: {
   noticeBelow: boolean;
   /** Buses on their way from this stop to the next. */
   buses: RailBus[];
+  /**
+   * The other lines through this station, in the network map's order. Empty
+   * on a bus route, and at a station with nothing to change to.
+   */
+  interchanges: string[];
+  /**
+   * The station the ride boards at, once a rail ride has one and this stop
+   * is down the line from it - the two ends a rail fare is priced between.
+   * A bus fare belongs to one stop; a rail fare belongs to a pair.
+   */
+  fareFrom: string | null;
 }) {
   /*
    * Arrivals are the reason the list exists, so every row asks for them - but
@@ -617,7 +629,37 @@ function StopRow(props: {
   const nameParts = () => splitStopName(stripStopCode(pick(props.stop.name, props.lang)));
   const fare = () => fareAt(props.route.fares, props.seq);
   const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
+  const db = useDb();
+  /*
+   * Where the next train is going. The line's terminus is on the plate at the
+   * top of the page, but a train is not a line: at the end of the day and on
+   * a branch it turns short, and a rider bound for 寶琳 wants to know that the
+   * one coming is for 康城 before they are on it. Said on the open row, where
+   * the rider is reading this station's trains; set in the warning colour
+   * when it is not the terminus, because that is the case it exists for.
+   */
+  const nextDest = createMemo(() => {
+    if (!props.open || props.route.co[0] !== "mtr") return null;
+    const code = etas()?.find((eta) => eta.dest)?.dest;
+    const name = code ? db().stopList[code]?.name : undefined;
+    if (!name) return null;
+    const terminus = props.route.dest;
+    const short = name.zh !== terminus.zh && name.en.toLowerCase() !== terminus.en.toLowerCase();
+    return { name, short };
+  });
   const fareChanged = () => fare() !== null && fare() !== fareAt(props.route.fares, props.seq - 1);
+  /*
+   * What riding from the boarding station to this one costs. Asked only on
+   * the rows where the rider is deciding about this station - open, chosen as
+   * the end, or offered as one - because the table is a quarter of a megabyte
+   * fetched on the first ask, and forty rows asking at once is one fetch but
+   * forty answers appearing together.
+   */
+  const rideFare = createMemo(() =>
+    props.fareFrom && (props.open || props.picking || props.role === "alight")
+      ? railFare(props.fareFrom, props.stopId)
+      : null,
+  );
 
   return (
     <div
@@ -651,7 +693,7 @@ function StopRow(props: {
           onClick={() => (props.picking ? props.onAlight() : props.onToggle())}
           aria-expanded={props.picking ? undefined : props.open ? "true" : "false"}
           aria-label={`${props.seq}. ${stripStopCode(pick(props.stop.name, props.lang))}`}
-          class="mb-tap absolute inset-0"
+          class="app-tap absolute inset-0"
         />
 
         {/*
@@ -836,7 +878,7 @@ function StopRow(props: {
                   aria-label={`${t("serviceNotice", props.lang)}: ${pick(text(), props.lang)}`}
                   data-notice={props.noticeAbove ? "continued" : "start"}
                   class={[
-                    "mb-press pointer-events-auto flex shrink-0 items-center gap-1 rounded-full bg-warning/12 py-px text-[0.69rem] font-bold leading-[1.4] text-warning",
+                    "app-press pointer-events-auto flex shrink-0 items-center gap-1 rounded-full bg-warning/12 py-px text-[0.69rem] font-bold leading-[1.4] text-warning",
                     props.noticeAbove ? "px-1" : "max-w-[40%] px-1.5",
                   ]}
                 >
@@ -852,7 +894,7 @@ function StopRow(props: {
             {/* Which end of the ride this is, in words. A filled dot on the
                 rail is a mark; only the word says what the mark means. */}
             <Show when={props.role === "board" || props.role === "alight"}>
-              <span class="mb-pop shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[0.69rem] font-bold text-primary-foreground">
+              <span class="app-pop shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[0.69rem] font-bold text-primary-foreground">
                 {props.role === "board"
                   ? t("boardLabel", props.lang)
                   : t("alightLabel", props.lang)}
@@ -900,6 +942,87 @@ function StopRow(props: {
               </Show>
             </span>
           </Show>
+
+          {/*
+           * Where a rider can change lines, as the colours they know the lines
+           * by - the way the network map and the line screen say it. On every
+           * row rather than only the open one: an interchange is the fact
+           * about a station a rider scans a line for, and it is what tells
+           * 旺角 from 太子 when both are two minutes away.
+           */}
+          {/* The open row has the room and the attention to say the line's
+              name; down the list the code carries it in the space the name
+              column can spare. */}
+          <Show when={props.interchanges.length > 0}>
+            <span
+              data-rail-interchange
+              class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground"
+            >
+              <span class="shrink-0">{t("changeHere", props.lang)}</span>
+              <For each={props.interchanges}>
+                {(code) => (
+                  <span
+                    class="flex h-[1.05rem] shrink-0 items-center rounded px-1 text-[0.69rem] font-extrabold tracking-[0.01em]"
+                    style={{
+                      background: plateStyle(["mtr"], code).background,
+                      color: plateStyle(["mtr"], code).color,
+                    }}
+                  >
+                    {props.open ? pick(lineName(code), props.lang) : code}
+                  </span>
+                )}
+              </For>
+            </span>
+          </Show>
+
+          <Show when={nextDest()}>
+            {(next) => (
+              <span
+                data-rail-next-dest={next().short ? "short" : "terminus"}
+                class={[
+                  "mt-1.5 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold",
+                  next().short ? "text-warning" : "text-subtle-foreground",
+                ]}
+              >
+                <BusIcon size={11} />
+                <span class="truncate">
+                  {t("towards", props.lang)} {stripStopCode(pick(next().name, props.lang))}
+                </span>
+              </span>
+            )}
+          </Show>
+
+          {/* The rail fare, in the same shape as the bus one above - two
+              amounts wearing tags - but priced from the station the rider
+              boards at, because that is the only way a rail fare exists. */}
+          <Show when={rideFare()}>
+            {(f) => (
+              <span
+                data-rail-stop-fare
+                class="mt-2 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground"
+              >
+                <Show when={f().octopus}>
+                  {(amount) => (
+                    <>
+                      <span class="shrink-0">{t("fareOctopusAdult", props.lang)}</span>
+                      <FareTag>{amount()}</FareTag>
+                    </>
+                  )}
+                </Show>
+                <Show when={f().single}>
+                  {(amount) => (
+                    <>
+                      <Show when={f().octopus}>
+                        <span class="shrink-0">·</span>
+                      </Show>
+                      <span class="truncate">{t("fareSingleTicket", props.lang)}</span>
+                      <FareTag>{amount()}</FareTag>
+                    </>
+                  )}
+                </Show>
+              </span>
+            )}
+          </Show>
         </div>
 
         {/*
@@ -945,7 +1068,7 @@ function StopRow(props: {
               rows all changing at once. Capped, or the far end of a long route
               would still be arriving after the rider has chosen. */}
           <span
-            class="mb-pop pointer-events-none relative flex h-8 shrink-0 items-center gap-1.5 self-center rounded-lg border border-primary-border bg-primary-muted px-2.5 text-[0.81rem] font-bold text-primary"
+            class="app-pop pointer-events-none relative flex h-8 shrink-0 items-center gap-1.5 self-center rounded-lg bg-primary-muted px-2.5 text-[0.81rem] font-bold text-primary"
             style={{ "animation-delay": `${Math.min(props.pickOrder * 22, 220)}ms` }}
           >
             <FlagIcon size={13} />
@@ -1029,7 +1152,7 @@ function StopRow(props: {
               title={boardLabel()}
               aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
               class={[
-                "mb-press mr-auto flex h-7 min-w-0 items-center gap-1 rounded-lg px-2 text-[0.81rem] font-bold transition-colors duration-state",
+                "app-press mr-auto flex h-6 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[0.75rem] font-bold transition-colors duration-state lg:h-7 lg:px-2 lg:text-[0.81rem]",
                 {
                   "bg-primary text-primary-foreground hover:bg-primary/90":
                     props.role === "board" || props.role === "alight",
@@ -1038,7 +1161,7 @@ function StopRow(props: {
                 },
               ]}
             >
-              <FlagIcon size={14} />
+              <FlagIcon size={12} />
               <span class="truncate">{flagText()}</span>
             </button>
 
@@ -1067,7 +1190,7 @@ function StopRow(props: {
                 });
               }}
               class={[
-                "mb-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
+                "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
                   "text-primary": pinned(),
                   "text-subtle-foreground hover:text-foreground": !pinned(),
@@ -1086,7 +1209,7 @@ function StopRow(props: {
               aria-pressed={alerted() ? "true" : "false"}
               onClick={props.onAlert}
               class={[
-                "mb-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
+                "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
                   "text-primary": alerted(),
                   "text-subtle-foreground hover:text-foreground": !alerted(),
@@ -1101,7 +1224,7 @@ function StopRow(props: {
               aria-label={t("share", props.lang)}
               title={t("share", props.lang)}
               onClick={props.onShare}
-              class="mb-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
             >
               <ShareIcon size={16} />
             </button>
@@ -1110,7 +1233,7 @@ function StopRow(props: {
               {...useLinkProps(stopLink(props.stopId))}
               aria-label={t("openStop", props.lang)}
               title={t("openStop", props.lang)}
-              class="mb-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
             >
               {/* Not a chevron: the other three icons do something to this
                   stop, and this one is what else there is to know about it. */}
@@ -1167,7 +1290,37 @@ export default function RouteDetail() {
     return r ? reverseRoute(db(), r) : undefined;
   });
 
-  const [openSeq, setOpenSeq] = createSignal<number | null>(null);
+  /*
+   * The stop the rider picked, told apart from the stop they are standing
+   * near. The two used to share one slot, which dressed the app's guess up
+   * as the rider's choice: the map ringed the nearest stop as if it had been
+   * tapped, and the URL could not say whether anyone had chosen anything.
+   * Only a pick is ever the map's ring or the URL's `stop`; "closed" is a
+   * pick too - the rider shutting the row the app opened for them.
+   */
+  const [pickedSeq, setPickedSeq] = createSignal<number | "closed" | null>(null);
+  /** The open row: the rider's pick, or failing that the stop they stand at. */
+  const openSeq = (): number | null => {
+    const picked = pickedSeq();
+    if (picked === "closed") return null;
+    if (picked !== null) return picked;
+    return nearestIndex() >= 0 ? nearestIndex() + 1 : null;
+  };
+  /*
+   * A pick, made anywhere - a row, the map, a link - lands in the URL, so a
+   * reload keeps it and it can be sent to someone. Replaced, not pushed:
+   * reading down a route stop by stop should not wind up a page of history
+   * per stop on the way back out.
+   */
+  const pickStop = (seq: number | "closed" | null) => {
+    setPickedSeq(seq);
+    void navigate({
+      to: "/route/$key",
+      params: { key: params().key },
+      search: (prev) => ({ ...prev, stop: typeof seq === "number" ? seq : undefined }),
+      replace: true,
+    });
+  };
   /*
    * The timetable is a dialog over the whole of a phone's screen, so it lives
    * in the URL the way the opened-out map does: back closes it, a reload comes
@@ -1338,6 +1491,33 @@ export default function RouteDetail() {
     return bestDistance <= 1000 ? best : -1;
   });
 
+  /** Any bookmark kept on this route, whichever stop it was kept at. */
+  const routeSaved = createMemo(() => {
+    const key = route()?.key;
+    return key !== undefined && saved.items().some((item) => item.routeKey === key);
+  });
+
+  /**
+   * Star the route. Not a new kind of keeping: it saves the route at the
+   * stop you are nearest - its first stop when there is no position - so the
+   * Saved screen's groups, live ranking and alerts all apply unchanged.
+   * Un-starring removes every bookmark kept on this route.
+   */
+  const toggleStar = () => {
+    const r = route();
+    if (!r) return;
+    if (routeSaved()) {
+      for (const item of saved.items().filter((i) => i.routeKey === r.key)) {
+        saved.remove(item.id);
+      }
+      return;
+    }
+    const index = nearestIndex() >= 0 ? nearestIndex() : 0;
+    const entry = stops()[index];
+    if (!entry) return;
+    askGroup({ routeKey: r.key, co: r.co[0] ?? "kmb", stopId: entry.id, seq: index + 1 });
+  };
+
   // A different route is a different list; nothing a row said carries over.
   createEffect(
     () => route()?.key,
@@ -1345,13 +1525,6 @@ export default function RouteDetail() {
       setNoticeKeys(new Map());
     },
   );
-
-  const nearestDistance = createMemo(() => {
-    const here = position();
-    const index = nearestIndex();
-    const entry = index >= 0 ? stops()[index] : undefined;
-    return here && entry ? distanceM(here, entry.stop.location) : null;
-  });
 
   /**
    * What each row says the operator says about it, by stop. Rows fetch their
@@ -1374,14 +1547,6 @@ export default function RouteDetail() {
   const sameNotice = (a: number, b: number) => {
     const key = noticeKeys().get(a);
     return key !== undefined && key === noticeKeys().get(b);
-  };
-
-  /** The buses between `seq` and the stop after it, and how far along. */
-  const busesAfter = (seq: number): RailBus[] => {
-    const at = now();
-    return (vehicles()?.vehicles ?? [])
-      .filter((bus) => bus.nextSeq === seq + 1)
-      .map((bus) => ({ id: bus.id, fraction: progressOf(bus, at) - seq }));
   };
 
   /**
@@ -1451,6 +1616,55 @@ export default function RouteDetail() {
     };
   });
 
+  /**
+   * The buses between each stop and the next, and how far along - one map per
+   * clock tick rather than a filter per row. Written as row props, so every
+   * row's `buses` re-evaluated on every tick; on the many routes with nothing
+   * live that was forty fresh empty arrays a second, each waking its row's
+   * scope to diff nothing against nothing. Rows without a bus now share one
+   * frozen empty array and stay asleep until a bus actually reaches them.
+   *
+   * Declared after `vehicles`, which it closes over: a memo's first run is
+   * not always deferred - created inside a navigation's transition it runs at
+   * once - and above the declaration that run was a ReferenceError only a
+   * client-side navigation could hit.
+   */
+  const busesBySeq = createMemo(() => {
+    const list = vehicles()?.vehicles;
+    if (!list || list.length === 0) return null;
+    const at = now();
+    const by = new Map<number, RailBus[]>();
+    for (const bus of list) {
+      const seq = bus.nextSeq - 1;
+      const entry = { id: bus.id, fraction: progressOf(bus, at) - seq };
+      const bucket = by.get(seq);
+      if (bucket) bucket.push(entry);
+      else by.set(seq, [entry]);
+    }
+    return by;
+  });
+  const NO_BUSES: RailBus[] = [];
+  const busesAfter = (seq: number): RailBus[] => busesBySeq()?.get(seq) ?? NO_BUSES;
+
+  /** Which lines call at each station, for a rail route; nothing for a bus. */
+  const interchangeIndex = createMemo(() => (route()?.co[0] === "mtr" ? stationLines(db()) : null));
+  const interchangesAt = (stopId: string): string[] => {
+    const r = route();
+    const index = interchangeIndex();
+    if (!r || !index) return [];
+    return (index.get(stopId) ?? [])
+      .filter((code) => code !== r.route)
+      .sort((a, b) => lineRank(a) - lineRank(b));
+  };
+
+  /** The station a rail ride boards at, for a stop down the line from it. */
+  const fareFromFor = (seq: number): string | null => {
+    const r = route();
+    const on = boardSeq();
+    if (!r || r.co[0] !== "mtr" || on === null || seq <= on) return null;
+    return stops()[on - 1]?.id ?? null;
+  };
+
   /** The ride, once both ends are known: how long, how much, and by when. */
   const ride = createMemo(() => {
     const r = route();
@@ -1475,7 +1689,13 @@ export default function RouteDetail() {
       board: board.stop,
       alight: alight.stop,
       minutes: live ? Math.round(live(on, off) / 60) : rideMinutes(r, on, off),
-      fare: formatFare(fareAt(r.fares, on) ?? undefined),
+      // The railway prices a pair of stations, not a boarding stop, so its
+      // fare comes from its own table - Octopus, which is what the bus fare
+      // beside it is too.
+      fare:
+        r.co[0] === "mtr"
+          ? (railFare(board.id, alight.id)?.octopus ?? null)
+          : formatFare(fareAt(r.fares, on) ?? undefined),
     };
   });
 
@@ -1485,12 +1705,13 @@ export default function RouteDetail() {
    * still where it opened: once a rider has scrolled, moving the list under
    * them is worse than leaving them to find it.
    *
-   * And only until the rider opens a stop themselves. The first position fix
-   * can land a second or two after the page does, and closing the row someone
-   * has just tapped to open is the worst possible moment to be helpful.
+   * And only until the rider picks a stop themselves. The first position fix
+   * can land a second or two after the page does, and scrolling away from the
+   * row someone has just tapped is the worst possible moment to be helpful.
+   * The row itself opens on its own - the open row is derived from the pick
+   * and the position - so all that is left to do here is the scroll.
    */
   let jumped = false;
-  let chosen = false;
   /* The list's own scroller: the page is held to the window, so this is the
      only thing a rider can have scrolled. */
   let listPane!: HTMLDivElement;
@@ -1498,8 +1719,7 @@ export default function RouteDetail() {
   createEffect(
     () => nearestIndex(),
     (index) => {
-      if (index < 0 || chosen) return;
-      setOpenSeq(index + 1);
+      if (index < 0 || pickedSeq() !== null) return;
       if (jumped || (listPane?.scrollTop ?? 0) > 24) return;
       jumped = true;
       requestAnimationFrame(() => {
@@ -1524,8 +1744,7 @@ export default function RouteDetail() {
    * all, so that section opens too.
    */
   const openStop = (seq: number) => {
-    chosen = true;
-    setOpenSeq(seq);
+    pickStop(seq);
     requestAnimationFrame(() => {
       const row = document.querySelector(`[data-stop-seq="${seq}"]`);
       if (row) centerWhileItSettles(row);
@@ -1540,7 +1759,8 @@ export default function RouteDetail() {
     () => search().stop ?? Number.NaN,
     (seq) => {
       if (!Number.isInteger(seq) || seq < 1 || seq > stops().length) return;
-      chosen = true;
+      // The screen's own write comes back through here; nothing new to do.
+      if (seq === pickedSeq()) return;
       openStop(seq);
     },
   );
@@ -1571,12 +1791,11 @@ export default function RouteDetail() {
                   noticeAbove={sameNotice(seq() - 1, seq())}
                   noticeBelow={sameNotice(seq(), seq() + 1)}
                   buses={busesAfter(seq())}
+                  interchanges={interchangesAt(entry.id)}
+                  fareFrom={fareFromFor(seq())}
                   total={stops().length}
                   open={openSeq() === seq()}
-                  onToggle={() => {
-                    chosen = true;
-                    setOpenSeq((v) => (v === seq() ? null : seq()));
-                  }}
+                  onToggle={() => pickStop(openSeq() === seq() ? "closed" : seq())}
                   onAlert={() =>
                     askAlert(seq(), entry.id, stripStopCode(pick(entry.stop.name, lang())))
                   }
@@ -1617,12 +1836,7 @@ export default function RouteDetail() {
           wideAside
           aside={
             <>
-              {/* A real top bar rather than a button floated over the map: the map
-              may collapse if it cannot render, and nothing should be left
-              hanging over the content when it does. */}
-              <Trail />
-
-              <header class="flex items-center gap-3 lg:-mt-3 lg:-mb-2">
+              <header class="flex items-center gap-3 lg:-mb-2">
                 {/* The plate and the destination are what the page is, not a
                     control: making the whole row a button meant every stray tap
                     near the title opened a timetable nobody asked for. The two
@@ -1655,9 +1869,25 @@ export default function RouteDetail() {
                   aria-haspopup="dialog"
                   aria-label={t("routeInfo", lang())}
                   title={t("timetable", lang())}
-                  class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                  class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
                 >
                   <AlarmIcon size={16} />
+                </button>
+
+                {/* The route, kept: one tap from the place its name is. */}
+                <button
+                  type="button"
+                  onClick={toggleStar}
+                  aria-label={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
+                  title={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
+                  class={[
+                    "app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary",
+                    routeSaved() ? "text-primary" : "text-muted-foreground",
+                  ]}
+                >
+                  <Show when={routeSaved()} fallback={<StarIcon size={15} />}>
+                    <StarFillIcon size={15} />
+                  </Show>
                 </button>
 
                 {/* The other direction is a property of the route, so it sits
@@ -1669,7 +1899,7 @@ export default function RouteDetail() {
                       {...useLinkProps(routeLink(other().key))}
                       aria-label={t("reverse", lang())}
                       title={t("reverse", lang())}
-                      class="mb-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                      class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
                     >
                       <ExchangeIcon size={15} />
                     </a>
@@ -1683,6 +1913,29 @@ export default function RouteDetail() {
                 title={`${r().route} · ${t("timetable", lang())}`}
                 lang={lang()}
               >
+                {/* The figures that sat under the map: the span, and what
+                    the ride costs and takes. Opening the timetable is asking
+                    "when does it run" - this is the rest of that answer. */}
+                <div class="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                  <Show when={span()}>
+                    {(hours) => (
+                      <span class="tnum text-[0.81rem] font-bold text-foreground">
+                        {t("firstBus", lang())} {hours().first} · {t("lastBus", lang())}{" "}
+                        {hours().last}
+                      </span>
+                    )}
+                  </Show>
+                  <span class="tnum ml-auto flex shrink-0 items-baseline gap-1.5 text-[0.81rem] font-bold text-foreground">
+                    {[formatFare(r().fares?.[0]), `${stops().length} ${t("stops", lang())}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    <Show when={r().jt}>
+                      <span class="text-[0.75rem] font-medium text-subtle-foreground">
+                        {t("aboutMinutes", lang())} {r().jt} {t("minute", lang())}
+                      </span>
+                    </Show>
+                  </span>
+                </div>
                 <Timetable db={db()} route={r()} lang={lang()} />
               </Modal>
 
@@ -1764,45 +2017,41 @@ export default function RouteDetail() {
                   stops={stops()}
                   stopNames={stops().map((entry) => stripStopCode(pick(entry.stop.name, lang())))}
                   nearestIndex={nearestIndex() >= 0 ? nearestIndex() : undefined}
-                  selectedIndex={openSeq() !== null ? (openSeq() as number) - 1 : undefined}
+                  selectedIndex={
+                    typeof pickedSeq() === "number" ? (pickedSeq() as number) - 1 : undefined
+                  }
                   onSelectStop={(index) => openStop(index + 1)}
                   expanded={search().map === true}
                   onExpandedChange={setMapOpen}
                   feed={vehicles()}
                   me={position()}
-                  heightClass="h-[17rem] lg:h-auto lg:min-h-0 lg:flex-1"
+                  walkTarget={
+                    nearestIndex() >= 0 ? (stops()[nearestIndex()]?.stop.location ?? null) : null
+                  }
+                  /* Shorter on a phone: the map is a preview with an expand button, and
+                     the stop list under it is what the rider is here to read - at 17rem
+                     the map took two stops' worth of a small screen to say what it says
+                     at 14 (12 lost too much of the route's shape). Wide screens keep
+                     filling the column. */
+                  heightClass="h-[14rem] lg:h-auto lg:min-h-0 lg:flex-1"
                   lang={lang()}
                   unavailableLabel={t("mapUnavailable", lang())}
                   list={() => <StopList />}
                 />
 
                 {/*
-                 * What the ride costs, how long it takes, and when the route
-                 * stops running - one strip under the map rather than three
-                 * stacked rows, because the map is what this card is for and
-                 * these are the figures you check on the way past.
-                 *
-                 * The service span is the half that changes: a quiet line all
-                 * day, and a warning in the last hour, because that is the only
-                 * hour in which it changes what a rider does.
+                 * The figures - fare, stops, journey time, service span -
+                 * live in the timetable dialog now; the card keeps only the
+                 * exception worth interrupting for: the hour in which the
+                 * service day is against you - not started, about to end, or
+                 * already over. All quiet, no row.
                  */}
-                <div class="flex min-h-11 items-center gap-2.5 border-t border-border px-3.5 py-2">
-                  <Show when={span()}>
-                    {(hours) => (
-                      <Show
-                        when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}
-                        fallback={
-                          <span class="tnum min-w-0 truncate text-[0.81rem] font-semibold text-subtle-foreground">
-                            {t("firstBus", lang())} {hours().first} · {t("lastBus", lang())}{" "}
-                            {hours().last}
-                          </span>
-                        }
-                      >
+                <Show when={span()}>
+                  {(hours) => (
+                    <Show when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}>
+                      <div class="flex min-h-11 items-center gap-2.5 border-t border-border px-3.5 py-2">
                         <Chip tone="warn" class="min-w-0">
                           <AlarmIcon size={12} />
-                          {/* Three ways a service day can be against you: it has
-                              not started, it is about to end, or it ended while
-                              you were on your way to the stop. */}
                           <span class="tnum truncate">
                             <Show
                               when={hours().untilFirst <= 0}
@@ -1818,49 +2067,8 @@ export default function RouteDetail() {
                             </Show>
                           </span>
                         </Chip>
-                      </Show>
-                    )}
-                  </Show>
-
-                  <span class="tnum ml-auto flex shrink-0 items-baseline gap-1.5 text-[0.81rem] font-bold text-foreground">
-                    {[formatFare(r().fares?.[0]), `${stops().length} ${t("stops", lang())}`]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    {/* The journey time is the softest of the three: it is an
-                        estimate, and it never decides anything on its own. */}
-                    <Show when={r().jt}>
-                      <span class="text-[0.75rem] font-medium text-subtle-foreground">
-                        {t("aboutMinutes", lang())} {r().jt} {t("minute", lang())}
-                      </span>
+                      </div>
                     </Show>
-                  </span>
-                </div>
-
-                {/*
-                 * "You are here" answered nothing on its own - here is a whole
-                 * route. It names the stop it means, and takes you to it.
-                 */}
-                <Show when={nearestDistance() !== null && stops()[nearestIndex()]}>
-                  {(entry) => (
-                    <button
-                      type="button"
-                      onClick={() => openStop(nearestIndex() + 1)}
-                      class="mb-tap flex w-full items-center gap-2 border-t border-border px-3.5 py-3 text-left"
-                    >
-                      <Chip tone="accent">
-                        <WalkIcon size={12} />
-                        <span class="tnum truncate">
-                          {t("nearestStop", lang())} ·{" "}
-                          {stripStopCode(pick(entry().stop.name, lang()))}
-                          {" · "}
-                          {t("walk", lang())} {walkMinutes(nearestDistance() as number)}{" "}
-                          {t("minute", lang())}
-                        </span>
-                      </Chip>
-                      <span class="ml-auto shrink-0 text-faint-foreground">
-                        <ChevronRightIcon size={14} />
-                      </span>
-                    </button>
                   )}
                 </Show>
               </Card>
@@ -1880,8 +2088,9 @@ export default function RouteDetail() {
           </Alert>
 
           {/* The card is the frame; the rows move inside it, at every width. */}
+          {/* The card is the frame; the rows move inside it, at every width. */}
           <Card class="relative flex min-h-0 flex-1 flex-col">
-            <div ref={listPane} class="mb-scroll min-h-0 flex-1 overflow-y-auto">
+            <div ref={listPane} class="app-scroll min-h-0 flex-1">
               <StopList />
 
               {/* The card is the scroller, so this is where the list has to
@@ -1902,7 +2111,7 @@ export default function RouteDetail() {
                  */
                 <div class="pointer-events-none absolute inset-x-3 bottom-3 z-30">
                   <div
-                    class="mb-dock pointer-events-auto mx-auto w-full max-w-[42rem]"
+                    class="app-dock pointer-events-auto mx-auto w-full max-w-[42rem]"
                     data-open={bandOpen() ? "true" : "false"}
                   >
                     <RideBand
