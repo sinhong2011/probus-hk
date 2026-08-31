@@ -18,11 +18,15 @@ export interface VehicleTarget {
    */
   stops: LatLng[];
   /**
-   * Arrivals the page already has for one stop, for operators that answer only
-   * per stop. One stop's arrivals place the buses approaching that stop and
-   * nothing else - which is the question the rider is on the page to ask.
+   * Arrivals the page already has, by stop - the rows' own answers, which
+   * merge every operator on the route. The route feed only describes the
+   * operators that publish one, and on a joint route that is half the buses:
+   * a Citybus-tracked 606 was on every row of the list and nowhere on the
+   * map, because the map read only KMB's feed. Nothing is fetched for this -
+   * rows report what they were already asking, so coverage follows the rows
+   * a rider has actually had on screen, the same way notices do.
    */
-  atStop?: { seq: number; etas: Eta[] } | null;
+  atStops?: Map<number, Eta[]> | null;
 }
 
 /**
@@ -57,15 +61,6 @@ export interface VehicleFeed {
   ride: RideTime;
 }
 
-/**
- * Operators that will describe a whole route in one request. Citybus and the
- * NLB answer per stop only, so mapping their whole line would cost one request
- * per stop and the page deliberately does not - see `atStop`.
- */
-export function hasRouteFeed(route: KeyedRoute): boolean {
-  return route.co.some((co) => co === "kmb" || co === "gmb");
-}
-
 /** `null` is a failure; an empty table is an operator with nothing to say. */
 async function routeTable(route: KeyedRoute): Promise<EtaTable | null> {
   for (const co of route.co) {
@@ -86,8 +81,9 @@ const empty = (status: VehicleStatus, ride: RideTime): VehicleFeed => ({
  *
  * The estimate is only as good as the arrivals behind it, so this asks for
  * nothing the page was not already asking for: KMB's route feed is the same
- * cached URL every row on the page reads, and where there is no route feed the
- * arrivals for the open stop are reused rather than fetching more.
+ * cached URL every row on the page reads, and the rows' own per-stop answers
+ * are laid over it rather than fetching more - which is also where the
+ * operators without a route feed come from.
  *
  * `undefined` means the answer is still in flight, which is a different thing
  * from an empty feed - the same distinction `useEta` draws, and for the same
@@ -121,7 +117,24 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
 
     const table = await routeTable(t.route);
     if (!table) return empty("failed", base);
-    if (table.size === 0 && t.atStop) table.set(t.atStop.seq, t.atStop.etas);
+    /*
+     * The rows' arrivals, laid over the route feed's. The same bus can arrive
+     * from both paths - the feed directly, the row via its per-stop merge -
+     * so anything within a minute of an arrival already there is the same
+     * statement twice, exactly the window the row merge itself uses.
+     */
+    for (const [seq, etas] of t.atStops ?? []) {
+      const merged = [...(table.get(seq) ?? []), ...etas].sort(
+        (a, b) => a.at.getTime() - b.at.getTime(),
+      );
+      const kept: Eta[] = [];
+      for (const eta of merged) {
+        const last = kept[kept.length - 1];
+        if (last && eta.at.getTime() - last.at.getTime() < 60_000) continue;
+        kept.push(eta);
+      }
+      table.set(seq, kept);
+    }
 
     /*
      * Between a route whose buses have all finished for the night and one whose
@@ -171,21 +184,24 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
   });
 
   /*
-   * Where the operator only answers per stop, the open stop's arrivals are
-   * what moves the buses: when they change, place again. An effect rather
-   * than part of the key, so the change lands after the update that carried
-   * it, not inside it - and without cancelling a placement already under
-   * way. The arrivals usually land while the first placement is still being
-   * worked out, and cancelling it there handed the page a rejected promise
-   * in the middle of its own update, which in production spun the scheduler
-   * until it ran out of memory. The placement in flight finishes; the next
-   * one reads the new arrivals.
+   * The rows' arrivals are what moves the buses the route feed cannot see:
+   * when they change, place again. An effect rather than part of the key, so
+   * the change lands after the update that carried it, not inside it - and
+   * without cancelling a placement already under way. The arrivals usually
+   * land while the first placement is still being worked out, and cancelling
+   * it there handed the page a rejected promise in the middle of its own
+   * update, which in production spun the scheduler until it ran out of
+   * memory. The placement in flight finishes; the next one reads the new
+   * arrivals. Hashed by time, not identity: rows hand over fresh arrays
+   * every poll, and only the times changing is a reason to place again.
    */
   const arrivals = createMemo(() => {
     const t = target();
-    return t?.atStop
-      ? `${t.atStop.seq}:${t.atStop.etas.map((eta) => eta.at.getTime()).join(",")}`
-      : "";
+    if (!t?.atStops) return "";
+    return [...t.atStops]
+      .sort((a, b) => a[0] - b[0])
+      .map(([seq, etas]) => `${seq}:${etas.map((eta) => eta.at.getTime()).join(",")}`)
+      .join(";");
   });
   createEffect(
     () => arrivals(),

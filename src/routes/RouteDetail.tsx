@@ -40,7 +40,7 @@ import { railFare } from "~/data/railFares";
 import { rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
-import { hasRouteFeed, useVehicles } from "~/data/useVehicles";
+import { useVehicles } from "~/data/useVehicles";
 import { progressOf } from "~/data/vehicles";
 import {
   clockTime,
@@ -542,6 +542,13 @@ function StopRow(props: {
    * arrivals; the run is the page's to notice.
    */
   onNoticeChange: (key: string | undefined) => void;
+  /**
+   * Hands the row's arrivals to the page, which lays them over the route
+   * feed to place buses the feed alone cannot see - a joint route's other
+   * operator answers per stop only, and its buses were on every row and
+   * nowhere on the map.
+   */
+  onEtasChange: (etas: Eta[] | undefined) => void;
   /** The stop before carries the same notice: the rail above is part of it. */
   noticeAbove: boolean;
   /** The stop after carries the same notice: the rail below is part of it. */
@@ -626,6 +633,13 @@ function StopRow(props: {
     },
   );
   onCleanup(() => props.onNoticeChange(undefined));
+  createEffect(
+    () => etas(),
+    (list) => {
+      props.onEtasChange(list);
+    },
+  );
+  onCleanup(() => props.onEtasChange(undefined));
   const nameParts = () => splitStopName(stripStopCode(pick(props.stop.name, props.lang)));
   const fare = () => fareAt(props.route.fares, props.seq);
   const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
@@ -783,6 +797,12 @@ function StopRow(props: {
              * The lower segment is this stop's share of the gap; the next
              * row's fixed segment above its dot is the rest, and the offset
              * counts it so a bus about to arrive sits on the next stop.
+             *
+             * An opened row stretches its line, and the bus keeps its share
+             * of it: the line is the road between the two stops however tall
+             * the card, and a bus a minute from the next stop pinned near the
+             * top of an open card read as a different fact from the same bus
+             * hugging the dot once the card closed.
              */}
             <For each={props.buses}>
               {(bus) => (
@@ -1543,6 +1563,24 @@ export default function RouteDetail() {
       return map;
     });
   };
+
+  /**
+   * What each row's poll answered, by stop - every operator merged, which is
+   * more than the route feed knows on a joint route. Grown the same way as
+   * the notices above: a row reports while it is on screen, and the map's
+   * buses reach as far as the rows a rider has actually seen.
+   */
+  const [rowEtas, setRowEtas] = createSignal(new Map<number, Eta[]>(), {
+    equals: false,
+    ownedWrite: true,
+  });
+  const noteEtas = (seq: number, etas: Eta[] | undefined) => {
+    setRowEtas((map) => {
+      if (etas === undefined) map.delete(seq);
+      else map.set(seq, etas);
+      return map;
+    });
+  };
   /** Whether two neighbouring stops are under the same notice. */
   const sameNotice = (a: number, b: number) => {
     const key = noticeKeys().get(a);
@@ -1604,15 +1642,17 @@ export default function RouteDetail() {
 
     const seq = focusSeq();
     const etas = focusEtas();
+    /*
+     * The rows' answers, plus the focus stop's own - the one stop the page
+     * polls even when its row is off screen, which matters when the rider's
+     * stop is the only one anything is known about.
+     */
+    const atStops = new Map(rowEtas());
+    if (seq !== null && etas && etas.length > 0 && !atStops.has(seq)) atStops.set(seq, etas);
     return {
       route: r,
       stops: list.map((entry) => entry.stop.location),
-      /*
-       * Only where the operator will not describe a whole route: one stop's
-       * arrivals place the buses approaching that stop and nothing else, which
-       * is worth having when it is all there is and misleading when it is not.
-       */
-      atStop: !hasRouteFeed(r) && seq !== null && etas && etas.length > 0 ? { seq, etas } : null,
+      atStops,
     };
   });
 
@@ -1788,6 +1828,7 @@ export default function RouteDetail() {
                   isNearest={index() === nearestIndex()}
                   busAway={openSeq() === seq() ? stopsAway(seq()) : null}
                   onNoticeChange={(key) => noteNotice(seq(), key)}
+                  onEtasChange={(list) => noteEtas(seq(), list)}
                   noticeAbove={sameNotice(seq() - 1, seq())}
                   noticeBelow={sameNotice(seq(), seq() + 1)}
                   buses={busesAfter(seq())}
