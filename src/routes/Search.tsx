@@ -894,7 +894,7 @@ function Categories(props: { lang: Lang; class?: string }) {
     /* `min-w-0`: the strip below is a flex line of chips that do not shrink,
        and a grid column sized to `auto` would take their whole sum - which on
        a phone is twice the window, and the page slides sideways with it. */
-    <section class={`flex min-w-0 flex-col gap-2.5 ${props.class ?? ""}`}>
+    <section class={`flex min-w-0 flex-col gap-1.5 lg:gap-2.5 ${props.class ?? ""}`}>
       <SectionLabel
         trailing={
           <a {...useLinkProps({ to: "/browse" })} class="text-[0.75rem] font-bold text-primary">
@@ -924,23 +924,23 @@ function Categories(props: { lang: Lang; class?: string }) {
                empty card. */
             <a
               {...useLinkProps(browseLink(item.id))}
-              class="app-press flex shrink-0 items-center gap-1.5 rounded-full bg-card py-1 pl-1 pr-2.5 shadow-card lg:items-stretch lg:gap-3 lg:rounded-xl lg:p-3.5"
+              class="app-press flex shrink-0 items-center gap-1 rounded-full bg-card py-0.5 pl-0.5 pr-2 shadow-card lg:items-stretch lg:gap-3 lg:rounded-xl lg:p-3.5"
             >
               <span class="flex min-w-0 items-center gap-2 lg:grow lg:flex-col lg:items-stretch lg:justify-between lg:gap-1.5">
                 {/* The glyph in the category's own colour, on a wash of it -
                     the coloured bar this replaces marked the tile without
                     saying anything about what was in it. */}
                 <span
-                  class="flex size-7 shrink-0 items-center justify-center rounded-full lg:size-9 lg:rounded-lg"
+                  class="flex size-6 shrink-0 items-center justify-center rounded-full lg:size-9 lg:rounded-lg"
                   style={{
                     background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
                     color: item.accent,
                   }}
                 >
-                  <CategoryIcon id={item.id} size={15} />
+                  <CategoryIcon id={item.id} size={13} />
                 </span>
                 <span class="flex flex-col gap-1">
-                  <span class="whitespace-nowrap text-[0.75rem] font-bold text-foreground lg:whitespace-normal lg:text-[0.88rem]">
+                  <span class="whitespace-nowrap text-[0.69rem] font-bold text-foreground lg:whitespace-normal lg:text-[0.88rem]">
                     {pick(item.name, props.lang)}
                   </span>
                   {/* The line of examples is what a wide tile has room for; a

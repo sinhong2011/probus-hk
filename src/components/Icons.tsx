@@ -23,7 +23,6 @@ import IconExpand from "~icons/lineicons/expand-square-4";
 import IconFlag from "~icons/lineicons/flag-1";
 import IconFunnel from "~icons/lineicons/funnel-1";
 import IconGithub from "~icons/lineicons/github";
-import IconGridAlt from "~icons/lineicons/grid-alt";
 import IconLayers from "~icons/lineicons/layers-1";
 import IconLayout from "~icons/lineicons/layout-9";
 import IconMap from "~icons/lineicons/map";
@@ -82,7 +81,48 @@ function wrap(Component: IconComponent) {
   };
 }
 
-export const DialpadIcon = wrap(IconGridAlt as IconComponent);
+/**
+ * A phone's dial: nine keys and the zero under them.
+ *
+ * It used to be Lineicons' `grid-alt`, four rounded squares - which is the
+ * apps-grid every launcher on earth uses, and on the one button whose whole
+ * job is "bring the keypad back" it said "show me a grid of something". Ten
+ * dots in the shape of a dial says which keypad without a word, so it is drawn
+ * here rather than borrowed.
+ */
+export function DialpadIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  /* Three rows of three and the zero under them, squared off so the glyph
+     fills the same box every other icon in the set does. */
+  const dots = [
+    [5.4, 4.4],
+    [12, 4.4],
+    [18.6, 4.4],
+    [5.4, 10.2],
+    [12, 10.2],
+    [18.6, 10.2],
+    [5.4, 16],
+    [12, 16],
+    [18.6, 16],
+    [12, 21.8],
+  ] as const;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      {dots.map(([cx, cy]) => (
+        <circle cx={cx} cy={cy} r="2.05" />
+      ))}
+    </svg>
+  );
+}
 export const PinIcon = wrap(IconMapMarker as IconComponent);
 export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
