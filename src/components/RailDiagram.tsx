@@ -1,10 +1,20 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { LIGHT_RAIL, LIGHT_RAIL_SHAPE, MAP_EDGES, MAP_STATIONS } from "~/data/railMap";
+import {
+  LIGHT_RAIL,
+  LIGHT_RAIL_SHAPE,
+  MAP_EDGES,
+  MAP_STATIONS,
+  RACECOURSE,
+  RACECOURSE_LOOP,
+} from "~/data/railMap";
 import {
   BAR_GAP,
   BAR_H,
+  BAR_LINES,
   BAR_W,
+  TWIN_R,
+  slotsOf,
   BEAD_R,
   CAPSULE,
   CHAINS,
@@ -82,6 +92,14 @@ const LINKS: [string, string][] = [
   ["KOW", "AUS"],
   ["TST", "ETS"],
 ];
+
+/**
+ * Racecourse, by name. The one place on the diagram the route database cannot
+ * name: no timetabled service calls there, so it exists here as the railway's
+ * own map draws it - a dashed race-days loop off East Rail - and its name has
+ * to come from somewhere. This is that somewhere.
+ */
+const RACECOURSE_NAME = { zh: "馬場", en: "Racecourse" };
 
 /** The lines, in the order the railway's own map lists them. */
 const LEGEND = Object.keys(MAP_EDGES).sort((a, b) => lineRank(a) - lineRank(b));
@@ -456,6 +474,23 @@ export function RailDiagram(props: {
               );
             }}
           </For>
+
+          {/* The Racecourse loop: East Rail's race-days bulge round Fo Tan,
+              dashed because trains only sometimes do. The route database has
+              never heard of it - nothing timetabled calls there - so it is
+              drawn as the shape the railway's own map gives it rather than
+              as a station pretending to have data. */}
+          <path
+            d={roundedPath(
+              RACECOURSE_LOOP.map(([x, y]) => ({ x, y })),
+              CORNER * k(),
+            )}
+            stroke={lineColour("EAL")}
+            stroke-width={LINE * 0.75 * k()}
+            stroke-dasharray={`${4.5 * k()} ${4 * k()}`}
+            class="pointer-events-none transition-opacity duration-reveal"
+            opacity={faded(["EAL"]) ? 0.22 : 1}
+          />
         </g>
 
         {/* Under the markers so their capsules cap its ends. */}
@@ -487,10 +522,57 @@ export function RailDiagram(props: {
           </For>
         </g>
 
+        {/* Racecourse's marker and name. Not a station the app can answer for
+            - no data stands behind it - so it is inert, and its name waits
+            for the zoom where the gap it lives in can hold the word. */}
+        <g
+          aria-hidden="true"
+          class="pointer-events-none transition-opacity duration-reveal"
+          opacity={faded(["EAL"]) ? 0.22 : 1}
+        >
+          <circle
+            cx={RACECOURSE[0]}
+            cy={RACECOURSE[1]}
+            r={BEAD_R * 0.85 * k()}
+            class="fill-card stroke-foreground"
+            stroke-width={2 * k()}
+          />
+          <Show when={bilingual()}>
+            <text
+              x={RACECOURSE[0] + (BEAD_R + 4) * k()}
+              y={RACECOURSE[1]}
+              text-anchor="start"
+              dominant-baseline="middle"
+              font-size={String(NAME_SIZE.station * k())}
+              class="fill-muted-foreground font-semibold"
+              stroke="var(--card)"
+              stroke-width={3.5 * k()}
+              style={{ "paint-order": "stroke" }}
+              stroke-linejoin="round"
+            >
+              {pick(RACECOURSE_NAME, props.lang)}
+            </text>
+            <text
+              x={RACECOURSE[0] + (BEAD_R + 4) * k()}
+              y={RACECOURSE[1] + STACK * k()}
+              text-anchor="start"
+              dominant-baseline="middle"
+              font-size={String(OTHER_SIZE.station * k())}
+              class="fill-muted-foreground font-medium"
+              stroke="var(--card)"
+              stroke-width={3 * k()}
+              style={{ "paint-order": "stroke" }}
+              stroke-linejoin="round"
+            >
+              {pick(RACECOURSE_NAME, props.lang === "zh" ? "en" : "zh")}
+            </text>
+          </Show>
+        </g>
+
         <g>
           <For each={MAP_STATIONS}>
             {(station) => {
-              const interchange = () => station.lines.length > 1;
+              const interchange = () => slotsOf(station) > 1;
               const chosen = () => props.selected === station.id;
               const tram = isLightRailOnly(station);
               /* Hidden tram stops are hidden to the pointer too, or a tap on
@@ -499,7 +581,7 @@ export function RailDiagram(props: {
               const side = () => placement().get(station.id) ?? PLACEMENTS[0]!;
 
               const angle = capsuleAngle(DIRECTIONS.get(station.id) ?? []);
-              const capsuleLength = () => ((station.lines.length - 1) * BAR_GAP + CAPSULE) * k();
+              const capsuleLength = () => ((slotsOf(station) - 1) * BAR_GAP + CAPSULE) * k();
               /** How far the name has to clear the marker. */
               const clear = () => (interchange() ? CAPSULE / 2 + 3 : BEAD_R + 4) * k();
               const two = () => (tram ? lightRailBilingual() : bilingual());
@@ -577,23 +659,48 @@ export function RailDiagram(props: {
                         class="fill-card stroke-foreground"
                         stroke-width={1.6 * k()}
                       />
-                      <For each={station.lines}>
-                        {(code, i) => (
-                          <rect
-                            x={station.x - (BAR_W / 2) * k()}
-                            y={
-                              station.y -
-                              capsuleLength() / 2 +
-                              (CAPSULE / 2 - BAR_H / 2) * k() +
-                              i() * BAR_GAP * k()
-                            }
-                            width={BAR_W * k()}
-                            height={BAR_H * k()}
-                            rx={(BAR_H / 2) * k()}
-                            fill={lineColour(code)}
-                          />
-                        )}
-                      </For>
+                      <Show
+                        when={station.lines.length > 1}
+                        fallback={
+                          /* A branch interchange: one line twice over, so a
+                             white circle per branch, the way the railway's
+                             own map marks Sheung Shui and Tseung Kwan O. */
+                          <For each={[0, 1]}>
+                            {(i) => (
+                              <circle
+                                cx={station.x}
+                                cy={
+                                  station.y -
+                                  capsuleLength() / 2 +
+                                  (CAPSULE / 2) * k() +
+                                  i * BAR_GAP * k()
+                                }
+                                r={TWIN_R * k()}
+                                class="fill-card stroke-foreground"
+                                stroke-width={1.8 * k()}
+                              />
+                            )}
+                          </For>
+                        }
+                      >
+                        <For each={BAR_LINES.get(station.id) ?? station.lines}>
+                          {(code, i) => (
+                            <rect
+                              x={station.x - (BAR_W / 2) * k()}
+                              y={
+                                station.y -
+                                capsuleLength() / 2 +
+                                (CAPSULE / 2 - BAR_H / 2) * k() +
+                                i() * BAR_GAP * k()
+                              }
+                              width={BAR_W * k()}
+                              height={BAR_H * k()}
+                              rx={(BAR_H / 2) * k()}
+                              fill={lineColour(code)}
+                            />
+                          )}
+                        </For>
+                      </Show>
                     </g>
                   </Show>
 
@@ -777,30 +884,36 @@ function MapControls(props: {
   zoomInLabel: string;
   zoomOutLabel: string;
 }) {
+  // The same coat as `MAP_CONTROL` in ~/lib/mapKit, spelt out rather than
+  // imported: this map is SVG, and the one string is not worth carrying
+  // maplibre into its bundle for.
   const button =
-    "app-press app-glass flex size-9 items-center justify-center rounded-lg " +
-    "text-muted-foreground transition-colors duration-state active:text-foreground";
+    "app-press app-glass flex size-[1.6rem] items-center justify-center rounded-full text-foreground lg:size-9 " +
+    "opacity-75 transition-opacity duration-state hover:opacity-100 active:opacity-100";
 
   return (
-    <div class="absolute right-2.5 top-2.5 flex flex-col gap-1.5">
-      <button
-        type="button"
-        onClick={() => props.onZoom(2)}
-        aria-label={props.zoomInLabel}
-        class={button}
-      >
-        <PlusIcon size={13} />
-      </button>
-      <button
-        type="button"
-        onClick={() => props.onZoom(0.5)}
-        aria-label={props.zoomOutLabel}
-        class={button}
-      >
-        <MinusIcon size={13} />
-      </button>
+    <div class="absolute right-2.5 top-2.5 flex flex-col gap-2">
+      {/* A pair, spaced as one: in and out are halves of one control. */}
+      <div class="flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => props.onZoom(2)}
+          aria-label={props.zoomInLabel}
+          class={button}
+        >
+          <PlusIcon size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onZoom(0.5)}
+          aria-label={props.zoomOutLabel}
+          class={button}
+        >
+          <MinusIcon size={15} />
+        </button>
+      </div>
       <button type="button" onClick={props.onFit} aria-label={props.fitLabel} class={button}>
-        <ExpandIcon size={13} />
+        <ExpandIcon size={15} />
       </button>
     </div>
   );

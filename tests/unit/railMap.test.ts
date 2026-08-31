@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { LIGHT_RAIL_SHAPE, MAP_BENDS, MAP_EDGES, MAP_STATIONS } from "~/data/railMap";
+import {
+  LIGHT_RAIL_SHAPE,
+  MAP_BENDS,
+  MAP_EDGES,
+  MAP_STATIONS,
+  RACECOURSE,
+  RACECOURSE_LOOP,
+} from "~/data/railMap";
 
 /**
  * The schematic map's geometry is generated once and then corrected by hand,
@@ -94,6 +101,29 @@ describe("the schematic map's geometry", () => {
       shape.filter((p, i) => i > 0 && skew(shape[i - 1]![0], shape[i - 1]![1], p[0], p[1]) > 0.5),
     );
     expect(off).toEqual([]);
+  });
+
+  /*
+   * The Racecourse loop is drawn from nothing but these constants - the route
+   * database has no station to anchor it - so the rules the other track lives
+   * by are asserted for it directly: legs on the grid, and the marker actually
+   * on the loop it names.
+   */
+  it("draws the racecourse loop on the grid, with its marker on it", () => {
+    const off = RACECOURSE_LOOP.filter(
+      (p, i) =>
+        i > 0 && skew(RACECOURSE_LOOP[i - 1]![0], RACECOURSE_LOOP[i - 1]![1], p[0], p[1]) > 0.5,
+    );
+    expect(off).toEqual([]);
+
+    const onLoop = RACECOURSE_LOOP.slice(0, -1).some((p, i) => {
+      const q = RACECOURSE_LOOP[i + 1]!;
+      const cross = (q[0] - p[0]) * (RACECOURSE[1] - p[1]) - (q[1] - p[1]) * (RACECOURSE[0] - p[0]);
+      const along = (q[0] - p[0]) * (RACECOURSE[0] - p[0]) + (q[1] - p[1]) * (RACECOURSE[1] - p[1]);
+      const length = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
+      return cross === 0 && along >= 0 && along <= length;
+    });
+    expect(onLoop).toBe(true);
   });
 
   it("gives every segment a length to draw", () => {

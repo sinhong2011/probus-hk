@@ -132,7 +132,7 @@ export function operatorRank(co: Company): number {
  * the same here as in the dataset this app's route logic comes from.
  */
 const MTR_LINES: Record<string, string> = {
-  AEL: "#00888E",
+  AEL: "#03828B",
   TCL: "#F3982D",
   TML: "#9C2E00",
   TKL: "#7E3C93",

@@ -4,6 +4,7 @@ import {
   MAP_BENDS,
   MAP_EDGES,
   MAP_STATIONS,
+  RACECOURSE_LOOP,
   type MapStation,
 } from "~/data/railMap";
 import { lineRank } from "~/data/rail";
@@ -110,9 +111,47 @@ function bendsBetween(a: string, b: string): Point[] {
 }
 
 /**
+ * The normal a leg's offset is pushed along, taken the same way whichever way
+ * the chain happens to be walked - always the one that points east, or north
+ * on a horizontal leg. Taken from the walk instead, two lines walked in
+ * opposite directions were pushed to the same side and lay on top of each
+ * other, which is how the Kwun Tong line vanished under Nathan Road.
+ */
+const across = (a: Point, b: Point): Point => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const n = { x: -dy / d, y: dx / d };
+  return n.x < 0 || (n.x === 0 && n.y > 0) ? { x: -n.x, y: -n.y } : n;
+};
+
+const unit = (dx: number, dy: number): Point => {
+  const d = Math.hypot(dx, dy) || 1;
+  return { x: dx / d, y: dy / d };
+};
+
+/**
+ * Where a line rides a shared stretch straight in from its own approach - the
+ * Kwun Tong and Tseung Kwan O lines both turn onto the Yau Tong row before
+ * the station - the approach's last leg carries the stretch's offset too,
+ * keyed here as `line:pair` for `chainGeometry` to pick up. Without it both
+ * approaches ran the centreline into the junction, one hiding the other; with
+ * it each curve lands on the track it will ride, which is how the railway's
+ * own map draws the merge.
+ */
+const EXTENDED = new Map<string, { junction: string; offset: number }>();
+
+/**
  * Every segment to draw, each already offset off any segment it shares its two
  * stations with - the Airport Express and the Tung Chung line run between Hong
  * Kong and Kowloon together, and drawn honestly one simply hides the other.
+ *
+ * Which line takes which side is the side its own approach arrives from,
+ * or the tracks cross at the junction - green from Lam Tin keeps the north
+ * track into Yau Tong and purple from Quarry Bay the south, the Express
+ * from its seaward shadow keeps the west track under Kowloon. Lines whose
+ * approach rides the stretch's own axis take the running order of the
+ * railway's key between whatever the sided ones have claimed.
  */
 const SEGMENTS = (() => {
   const groups = new Map<string, { line: string; a: MapStation; b: MapStation }[]>();
@@ -127,8 +166,76 @@ const SEGMENTS = (() => {
     }
   }
 
+  /**
+   * How a line comes into one end of a shared stretch: which side of the
+   * stretch's axis its approach arrives from, read off the first approach
+   * point that stands off the axis - the elbow the curve turns at sits on
+   * it - or null when the approach rides the axis itself. `straight` says
+   * whether it runs straight through the junction, which is what decides
+   * whether the stretch's offset reaches back along it.
+   */
+  const approach = (
+    line: string,
+    junction: MapStation,
+    other: MapStation,
+  ): { side: number; pair: string; straight: boolean } | null => {
+    const legs = (MAP_EDGES[line] ?? []).filter(
+      ([p, q]) => (p === junction.id || q === junction.id) && p !== other.id && q !== other.id,
+    );
+    if (legs.length !== 1) return null;
+    const [p, q] = legs[0]!;
+    const from = byId.get(p === junction.id ? q : p);
+    if (!from) return null;
+
+    const start = bendsBetween(junction.id, other.id)[0] ?? { x: other.x, y: other.y };
+    const dir = unit(start.x - junction.x, start.y - junction.y);
+    const n = across({ x: junction.x, y: junction.y }, start);
+
+    const points = [{ x: from.x, y: from.y }, ...bendsBetween(from.id, junction.id)];
+    const last = points[points.length - 1]!;
+    const into = unit(junction.x - last.x, junction.y - last.y);
+    const straight = into.x * dir.x + into.y * dir.y > 0.99;
+
+    for (let i = points.length - 1; i >= 0; i--) {
+      const side = (points[i]!.x - junction.x) * n.x + (points[i]!.y - junction.y) * n.y;
+      if (Math.abs(side) > 0.1) return { side, pair: pairKey(from.id, junction.id), straight };
+    }
+    return null;
+  };
+
   return [...groups.values()].flatMap((shared) => {
-    const ordered = [...shared].sort((p, q) => lineRank(p.line) - lineRank(q.line));
+    let ordered = [...shared].sort((p, q) => lineRank(p.line) - lineRank(q.line));
+
+    if (shared.length > 1) {
+      const { a, b } = shared[0]!;
+      for (const [junction, other] of [
+        [a, b],
+        [b, a],
+      ] as const) {
+        const sides = new Map<string, { side: number; pair: string; straight: boolean }>();
+        for (const seg of shared) {
+          const came = approach(seg.line, junction, other);
+          if (came) sides.set(seg.line, came);
+        }
+        if (sides.size === 0) continue;
+
+        ordered = [...shared].sort(
+          (p, q) =>
+            (sides.get(p.line)?.side ?? 0) - (sides.get(q.line)?.side ?? 0) ||
+            lineRank(p.line) - lineRank(q.line),
+        );
+        ordered.forEach((seg, i) => {
+          const came = sides.get(seg.line);
+          if (!came?.straight) return;
+          EXTENDED.set(`${seg.line}:${came.pair}`, {
+            junction: junction.id,
+            offset: i - (ordered.length - 1) / 2,
+          });
+        });
+        break;
+      }
+    }
+
     return ordered.map((seg, i) => ({
       ...seg,
       /** In pair-widths, so the gap holds at every zoom. */
@@ -221,6 +328,8 @@ function chainsOf(code: string): MapStation[][] {
 /**
  * A chain as the points its path goes through - stations and the elbows
  * between them - with the offset each leg carries for the stretch it is on.
+ * A leg that runs straight into a shared stretch carries the stretch's offset
+ * on the piece that touches the junction, so its curve lands on its own track.
  */
 function chainGeometry(
   code: string,
@@ -232,12 +341,15 @@ function chainGeometry(
     points.push({ x: station.x, y: station.y });
     const next = stations[i + 1];
     if (!next) return;
-    const shift = OFFSET_OF.get(`${code}:${pairKey(station.id, next.id)}`) ?? 0;
-    for (const elbow of bendsBetween(station.id, next.id)) {
-      points.push(elbow);
-      shifts.push(shift);
-    }
-    shifts.push(shift);
+    const pair = pairKey(station.id, next.id);
+    const shift = OFFSET_OF.get(`${code}:${pair}`) ?? 0;
+    const elbows = bendsBetween(station.id, next.id);
+    const legShifts = new Array<number>(elbows.length + 1).fill(shift);
+    const extended = shift === 0 ? EXTENDED.get(`${code}:${pair}`) : undefined;
+    if (extended?.junction === next.id) legShifts[legShifts.length - 1] = extended.offset;
+    else if (extended?.junction === station.id) legShifts[0] = extended.offset;
+    points.push(...elbows);
+    shifts.push(...legShifts);
   });
   return { points, shifts };
 }
@@ -250,11 +362,19 @@ export const CHAINS = Object.keys(MAP_EDGES).flatMap((code) =>
  * Every straight piece of track on the map, for keeping names off it. A leg
  * runs between two consecutive points of a chain, elbows included.
  */
-const LEGS: { a: Point; b: Point; tram: boolean }[] = CHAINS.flatMap((chain) =>
-  chain.points
-    .slice(0, -1)
-    .map((a, i) => ({ a, b: chain.points[i + 1]!, tram: chain.code === LIGHT_RAIL })),
-);
+const LEGS: { a: Point; b: Point; tram: boolean }[] = [
+  ...CHAINS.flatMap((chain) =>
+    chain.points
+      .slice(0, -1)
+      .map((a, i) => ({ a, b: chain.points[i + 1]!, tram: chain.code === LIGHT_RAIL })),
+  ),
+  // The Racecourse loop is track too, as far as a name is concerned: Fo Tan's
+  // name flipping east would sit on it.
+  ...RACECOURSE_LOOP.slice(0, -1).map(([x, y], i) => {
+    const [bx, by] = RACECOURSE_LOOP[i + 1]!;
+    return { a: { x, y }, b: { x: bx, y: by }, tram: false };
+  }),
+];
 
 /** The light rail's loops, as legs, for the zooms at which they stand for it. */
 const SHAPE_LEGS: { a: Point; b: Point }[] = LIGHT_RAIL_SHAPE.flatMap((shape) =>
@@ -313,28 +433,16 @@ export function roundedPath(points: Point[], radius: number): string {
  * rather than one hiding the other.
  *
  * At a corner the two legs' offsets are not averaged but met: the point moves
- * along the corner's bisector far enough that *both* legs sit a full offset
- * off their centreline, which is what keeps a pair the same distance apart
- * round a bend as along a straight. Averaging pinched every pair at every
- * turn. Where the offset changes at a station - a shared stretch ending - the
- * mean is what keeps the path continuous, and there the pinch is the point.
+ * to where *both* legs sit their own offset off their centreline - a full one
+ * round a bend, which keeps a pair the same distance apart through a turn,
+ * and each leg's own where a line turns onto a shared stretch, which lands
+ * the turning curve on its track. Averaging did neither: it pinched every
+ * pair at every turn, and ran every merge down the centreline. Where the two
+ * legs run the same way - a shared stretch ending at a station on a straight
+ * - there is no corner to meet at, and the mean keeps the path continuous:
+ * there the pinch is the point.
  */
 export function offsetPoints(points: Point[], shifts: number[], width: number): Point[] {
-  /*
-   * The normal is taken the same way whichever way the chain happens to be
-   * walked - always the one that points east, or north on a horizontal leg.
-   * Taken from the walk instead, two lines walked in opposite directions
-   * were pushed to the same side and lay on top of each other, which is how
-   * the Kwun Tong line vanished under Nathan Road.
-   */
-  const across = (a: Point, b: Point): Point => {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const n = { x: -dy / d, y: dx / d };
-    return n.x < 0 || (n.x === 0 && n.y > 0) ? { x: -n.x, y: -n.y } : n;
-  };
-
   return points.map((point, i) => {
     const before = i > 0 ? points[i - 1]! : null;
     const after = i < points.length - 1 ? points[i + 1]! : null;
@@ -349,9 +457,12 @@ export function offsetPoints(points: Point[], shifts: number[], width: number): 
 
     const n1 = across(before, point);
     const n2 = across(point, after);
-    if (d1 === d2) {
-      const t = d1 / (1 + n1.x * n2.x + n1.y * n2.y);
-      return { x: point.x + (n1.x + n2.x) * t, y: point.y + (n1.y + n2.y) * t };
+    const det = n1.x * n2.y - n1.y * n2.x;
+    if (Math.abs(det) > 0.1) {
+      return {
+        x: point.x + (d1 * n2.y - d2 * n1.y) / det,
+        y: point.y + (d2 * n1.x - d1 * n2.x) / det,
+      };
     }
     return { x: point.x + (n1.x * d1 + n2.x * d2) / 2, y: point.y + (n1.y * d1 + n2.y * d2) / 2 };
   });
@@ -372,6 +483,20 @@ export const BAR_W = 7.5;
 export const BAR_H = 2.4;
 /** A station on one line only. */
 export const BEAD_R = 5.2;
+/** The circles inside a branch interchange's capsule. */
+export const TWIN_R = 3;
+
+/**
+ * Stations that are an interchange within one line: their two branches meet
+ * across a platform, and the railway's own map gives each the capsule with a
+ * white circle per branch rather than a bead - Sheung Shui between Lo Wu and
+ * Lok Ma Chau, Tseung Kwan O between Po Lam and LOHAS Park. Which forks earn
+ * this is the map's judgement, not something the topology can say.
+ */
+export const TWIN = new Set(["SHS", "TKO"]);
+/** How many marks a station's marker carries: bars, circles, or one bead. */
+export const slotsOf = (station: MapStation): number =>
+  TWIN.has(station.id) ? 2 : station.lines.length;
 
 /**
  * Which way to lay the capsule: across the axis most of the track runs on.
@@ -393,6 +518,38 @@ export function capsuleAngle(directions: Point[]): number {
   let best = 2;
   for (const axis of [2, 0, 1, 3]) if (count[axis]! > count[best]!) best = axis;
   return best * 45;
+}
+
+/**
+ * The order a capsule's bars are drawn in: each line's bar on the side its
+ * track actually passes the station. Drawn in the key's order instead, the
+ * bars at Mong Kok read green-red while the tracks run red-green, and a
+ * rider lining the map up with the platform got the answer backwards. Lines
+ * whose track runs the centreline keep the key's order between the rest.
+ */
+export const BAR_LINES = new Map<string, string[]>();
+for (const station of MAP_STATIONS) {
+  if (station.lines.length < 2) continue;
+  const rad = (capsuleAngle(DIRECTIONS.get(station.id) ?? []) * Math.PI) / 180;
+  /** Where along the capsule bar `i + 1` sits relative to bar `i`. */
+  const axis = { x: -Math.sin(rad), y: Math.cos(rad) };
+
+  /** How far off the centreline this line's track passes, along the axis. */
+  const shiftOf = (line: string): number => {
+    for (const seg of SEGMENTS) {
+      if (seg.line !== line || seg.offset === 0) continue;
+      const other = seg.a.id === station.id ? seg.b : seg.b.id === station.id ? seg.a : null;
+      if (!other) continue;
+      const start = bendsBetween(station.id, other.id)[0] ?? { x: other.x, y: other.y };
+      const n = across({ x: station.x, y: station.y }, start);
+      return (n.x * axis.x + n.y * axis.y) * seg.offset;
+    }
+    return 0;
+  };
+  BAR_LINES.set(
+    station.id,
+    [...station.lines].sort((p, q) => shiftOf(p) - shiftOf(q)),
+  );
 }
 
 /*
@@ -545,7 +702,7 @@ export function placeLabels(options: {
   const chosen = new Map<string, { placement: Placement; cost: number; box: Box }>();
 
   const kind = (station: MapStation) =>
-    station.lines.length > 1 ? "interchange" : isLightRailOnly(station) ? "tram" : "station";
+    slotsOf(station) > 1 ? "interchange" : isLightRailOnly(station) ? "tram" : "station";
 
   /**
    * A station's marker, as a box, for keeping other names off it: a bead, or
@@ -553,8 +710,8 @@ export function placeLabels(options: {
    * narrow, and boxing it square walled off the row's names.
    */
   const marker = (station: MapStation): Box => {
-    if (station.lines.length > 1) {
-      const long = ((station.lines.length - 1) * BAR_GAP + CAPSULE) * k;
+    if (slotsOf(station) > 1) {
+      const long = ((slotsOf(station) - 1) * BAR_GAP + CAPSULE) * k;
       const short = CAPSULE * k;
       const angle = capsuleAngle(DIRECTIONS.get(station.id) ?? []);
       const w = angle === 0 ? short : angle === 90 ? long : long * DIAG;
@@ -650,8 +807,8 @@ export function placeLabels(options: {
     if (!order.includes(station)) order.push(station);
   };
   for (const station of [...MAP_STATIONS]
-    .filter((s) => s.lines.length > 1)
-    .sort((p, q) => q.lines.length - p.lines.length || (p.id < q.id ? -1 : 1)))
+    .filter((s) => slotsOf(s) > 1)
+    .sort((p, q) => slotsOf(q) - slotsOf(p) || (p.id < q.id ? -1 : 1)))
     queue(station);
   if (options.minorShown)
     for (const chain of CHAINS) if (chain.code !== LIGHT_RAIL) chain.stations.forEach(queue);
@@ -662,9 +819,10 @@ export function placeLabels(options: {
   for (const station of order) chosen.set(station.id, evaluate(station));
   for (let pass = 0; pass < 2; pass++) {
     for (const station of order) {
-      const now = chosen.get(station.id)!;
-      const again = evaluate(station);
-      if (again.cost + 0.01 < now.cost) chosen.set(station.id, again);
+      // The stored cost is from when this name last chose, before later names
+      // landed around it, so it cannot be compared against: re-choose with
+      // everything where it now stands and keep whichever placement that is.
+      chosen.set(station.id, evaluate(station));
     }
   }
 
