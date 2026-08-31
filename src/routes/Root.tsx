@@ -19,6 +19,7 @@ import { TabBar } from "~/components/TabBar";
 import { Toaster } from "~/components/Toaster";
 import { APP_VERSION, BUILD_SHA } from "~/lib/build";
 import { t, type Lang } from "~/lib/i18n";
+import { installTooltips } from "~/lib/tooltip";
 import { installTrailEffects } from "~/stores/trail";
 import { settings } from "~/stores/settings";
 
@@ -26,7 +27,7 @@ import { settings } from "~/stores/settings";
 function Splash() {
   return (
     <div class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background text-foreground">
-      <div class="motion-safe:animate-[mb-pulse_1.6s_ease-in-out_infinite]">
+      <div class="motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]">
         <AppMark size={62} />
       </div>
       <span class="text-[0.88rem] font-semibold text-subtle-foreground">
@@ -89,15 +90,15 @@ function ErrorDetail(props: { text: string; lang: Lang; open?: boolean }) {
 
   return (
     <details class="group mt-8 w-full text-left" open={props.open}>
-      <summary class="mb-tap flex h-9 cursor-pointer list-none select-none items-center gap-1.5 rounded-lg px-2 text-[0.75rem] font-semibold text-faint-foreground [&::-webkit-details-marker]:hidden">
+      <summary class="app-tap flex h-9 cursor-pointer list-none select-none items-center gap-1.5 rounded-lg px-2 text-[0.75rem] font-semibold text-faint-foreground [&::-webkit-details-marker]:hidden">
         <ChevronRightIcon
           size={12}
           class="transition-transform duration-state ease-out group-open:rotate-90"
         />
         {t("errorDetails", props.lang)}
       </summary>
-      <div class="mt-1.5 overflow-hidden rounded-xl border border-border bg-card">
-        <pre class="mb-scroll max-h-44 whitespace-pre-wrap px-3.5 py-3 font-mono text-[0.72rem] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
+      <div class="mt-1.5 overflow-hidden rounded-xl bg-card shadow-card">
+        <pre class="app-scroll max-h-44 whitespace-pre-wrap px-3.5 py-3 font-mono text-[0.72rem] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
           {props.text}
         </pre>
         <div class="flex items-center justify-between gap-3 border-t border-border py-1.5 pl-3.5 pr-1.5">
@@ -106,7 +107,7 @@ function ErrorDetail(props: { text: string; lang: Lang; open?: boolean }) {
           </span>
           <button
             type="button"
-            class="mb-press flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-2.5 text-[0.72rem] font-bold text-foreground"
+            class="app-press flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-2.5 text-[0.72rem] font-bold text-foreground"
             onClick={copy}
           >
             <Show when={copied()} fallback={<ClipboardIcon size={12} />}>
@@ -154,7 +155,7 @@ function Crashed(props: { reset: () => void; detail: string }) {
         <div class="mt-6 flex items-center gap-2">
           <button
             type="button"
-            class="mb-press flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground"
+            class="app-press flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground"
             onClick={() => window.location.reload()}
           >
             <RefreshIcon size={14} />
@@ -162,7 +163,7 @@ function Crashed(props: { reset: () => void; detail: string }) {
           </button>
           <button
             type="button"
-            class="mb-press flex h-10 items-center rounded-xl bg-secondary px-4 text-[0.88rem] font-bold text-foreground"
+            class="app-press flex h-10 items-center rounded-xl bg-secondary px-4 text-[0.88rem] font-bold text-foreground"
             onClick={home}
           >
             {t("goHome", lang())}
@@ -280,7 +281,7 @@ function LoadFailed(props: { reset: () => void; detail?: string }) {
         <div
           class={[
             "flex size-14 items-center justify-center rounded-2xl bg-secondary text-subtle-foreground lg:size-16",
-            { "motion-safe:animate-[mb-pulse_2.4s_ease-in-out_infinite]": !working() },
+            { "motion-safe:animate-[app-pulse_2.4s_ease-in-out_infinite]": !working() },
           ]}
         >
           <Show when={online()} fallback={<DownloadCloudIcon size={24} />}>
@@ -297,11 +298,11 @@ function LoadFailed(props: { reset: () => void; detail?: string }) {
 
         <button
           type="button"
-          class="mb-press mt-6 flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground disabled:opacity-70"
+          class="app-press mt-6 flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-[0.88rem] font-bold text-primary-foreground disabled:opacity-70"
           disabled={working()}
           onClick={retry}
         >
-          <span class={{ "mb-spin": working() }}>
+          <span class={{ "app-spin": working() }}>
             <RefreshIcon size={14} />
           </span>
           {t(working() ? "retrying" : "retry", lang())}
@@ -319,7 +320,7 @@ function LoadFailed(props: { reset: () => void; detail?: string }) {
             fallback={
               <>
                 <span
-                  class="size-1.5 rounded-full bg-faint-foreground motion-safe:animate-[mb-pulse_1.6s_ease-in-out_infinite]"
+                  class="size-1.5 rounded-full bg-faint-foreground motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]"
                   aria-hidden="true"
                 />
                 {t("waitingForNetwork", lang())}
@@ -386,9 +387,9 @@ function PageShell(props: { children: JSX.Element }) {
 
       // A class already on the element does not replay, so it has to come off,
       // force a reflow, and go back on.
-      shell.classList.remove("mb-page-in");
+      shell.classList.remove("app-page-in");
       void shell.offsetWidth;
-      shell.classList.add("mb-page-in");
+      shell.classList.add("app-page-in");
     },
   );
 
@@ -396,7 +397,7 @@ function PageShell(props: { children: JSX.Element }) {
     <>
       <Show when={isRouting()}>
         <div class="pointer-events-none fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden">
-          <div class="mb-page-wait h-full bg-primary" />
+          <div class="app-page-wait h-full bg-primary" />
         </div>
       </Show>
 
@@ -412,7 +413,7 @@ function PageShell(props: { children: JSX.Element }) {
         // Cards inside the page animate too, and their events bubble; only the
         // shell's own animation should clear the class.
         onAnimationEnd={(event) => {
-          if (event.target === shell) shell.classList.remove("mb-page-in");
+          if (event.target === shell) shell.classList.remove("app-page-in");
         }}
       >
         {props.children}
@@ -432,6 +433,9 @@ export function Root() {
   // Inside the router, because it watches the location to remember which tab a
   // detail screen belongs to.
   installTrailEffects();
+
+  // The document-level tooltip layer: installed once, for every screen.
+  installTooltips();
 
   return (
     <Errored
