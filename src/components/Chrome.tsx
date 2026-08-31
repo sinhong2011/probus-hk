@@ -1,6 +1,7 @@
 import { For, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import type { IconProps } from "./Icons";
+import { SlidingPill } from "./SlidingPill";
 import type { Bilingual } from "~/data/types";
 import { pick, stopCode, type Lang } from "~/lib/i18n";
 
@@ -53,15 +54,20 @@ export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Elem
 /**
  * Rounded surface that groups rows, with hairlines drawn between them.
  *
- * `raised` lifts it one step above the card surface it sits on - for a card
- * inside a sheet, which is itself a card and leaves `bg-card` invisible.
+ * `raised` lifts it one step above the surface it sits on - for a card
+ * inside a sheet, where `bg-card` would vanish into the ground. The step is
+ * the secondary tone, except inside a drawer, whose lighter ground re-points
+ * `--raised` a full step further up - see `.bg-drawer` in app.css.
  */
 export function Card(props: { children: JSX.Element; class?: string; raised?: boolean }) {
   return (
     <div
       class={[
-        "overflow-hidden rounded-xl shadow-card",
-        props.raised ? "bg-secondary" : "bg-card",
+        /* The hairline, not the shadow, is what draws the card's edge: in the
+           dark `--shadow-card` is `none`, and a card one step off the page
+           tone needs an edge of its own to read as lifted. */
+        "overflow-hidden rounded-xl border border-border shadow-card",
+        props.raised ? "bg-raised" : "bg-card",
         props.class ?? "",
       ]}
     >
@@ -125,15 +131,18 @@ export function Chip(props: {
          wraps does not make the chip taller, it spills out of it. "52 m" broke
          across two lines the moment a long stop name claimed the row. */
       class={[
-        "inline-flex h-[1.6rem] w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[0.75rem] font-bold",
+        "inline-flex h-[1.6rem] w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[0.75rem] font-bold",
         props.class ?? "",
         {
-          "bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
-          "bg-card text-muted-foreground": props.tone === "card",
-          "bg-primary-muted text-primary": props.tone === "accent",
+          "border-border bg-secondary text-muted-foreground": (props.tone ?? "plain") === "plain",
+          "border-border bg-card text-muted-foreground": props.tone === "card",
+          /* A toned chip takes its edge from its own colour, not the neutral
+             hairline: a grey ring around a primary or amber ground reads as a
+             second, unrelated shape drawn over it. */
+          "border-primary-border bg-primary-muted text-primary": props.tone === "accent",
           // The last bus of the night is the one piece of timetable that is
           // urgent, and it shares its colour with an arrival that is imminent.
-          "bg-warning/12 text-warning": props.tone === "warn",
+          "border-warning/25 bg-warning/12 text-warning": props.tone === "warn",
         },
       ]}
     >
@@ -267,12 +276,35 @@ export function Segmented<T extends string | number>(props: {
    */
   fill?: boolean;
 }) {
+  /*
+   * -1 parks the pill rather than sending it to the first choice: a value
+   * persisted by an older build may no longer be one of the options, and a
+   * control that quietly claims a choice nobody made is worse than one that
+   * shows none.
+   */
+  const activeIndex = () => props.options.findIndex((option) => option.value === props.value);
+
   return (
     <div
       role="radiogroup"
       aria-label={props.label}
-      class={["flex items-center gap-1", { "w-full": Boolean(props.fill) }]}
+      class={[
+        "relative flex items-center bg-secondary p-[3px]",
+        props.pill ? "rounded-full" : "rounded-lg",
+        { "w-full": Boolean(props.fill) },
+      ]}
     >
+      {/* The pill the choices ride on, which is what this control has always
+          been built for - the buttons below mark themselves `data-pill-active`
+          and stand at `z-10` so it can pass under them. The same component
+          slides down the navigation rail and across the search/plan switch. */}
+      <Show when={activeIndex() >= 0}>
+        <SlidingPill
+          active={activeIndex()}
+          class={`inset-y-[3px] bg-card shadow-card ${props.pill ? "rounded-full" : "rounded-md"}`}
+        />
+      </Show>
+
       <For each={props.options}>
         {(option) => {
           const on = () => props.value === option.value;

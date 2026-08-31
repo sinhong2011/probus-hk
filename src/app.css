@@ -39,6 +39,18 @@
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
 
+  /* The sheet's own ground. A drawer floats over the cards, so in the dark it
+     sits one step lighter than them; in the light a card is already white and
+     the sheet simply shares it. */
+  --drawer: oklch(1 0 0);
+  /* What a raised card wears on that ground - the secondary tone is only one
+     small step from the drawer, and a group that nearly matches its sheet
+     reads as no group at all. Resolved through `--raised`, which the
+     `.bg-drawer` scope re-points here; everywhere else raised stays
+     secondary. */
+  --drawer-raised: oklch(0.967 0.001 286.375);
+  --raised: var(--secondary);
+
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
 
@@ -119,6 +131,9 @@
     --card: oklch(0.192 0.002 286);
     --card-foreground: oklch(0.985 0 0);
 
+    --drawer: oklch(0.225 0.003 286);
+    --drawer-raised: oklch(0.285 0.004 286);
+
     --secondary: oklch(0.248 0.003 286);
     --secondary-foreground: oklch(0.985 0 0);
 
@@ -161,6 +176,9 @@
   --card: oklch(0.192 0.002 286);
   --card-foreground: oklch(0.985 0 0);
 
+  --drawer: oklch(0.225 0.003 286);
+  --drawer-raised: oklch(0.285 0.004 286);
+
   --secondary: oklch(0.248 0.003 286);
   --secondary-foreground: oklch(0.985 0 0);
 
@@ -198,6 +216,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-drawer: var(--drawer);
+  --color-raised: var(--raised);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -755,9 +775,9 @@
    * Liquid-glass surface for controls floating over imagery - the map's
    * buttons and its status note. Mostly the picture behind it, bent: a heavy
    * blur with a saturation lift so the colours underneath pool instead of
-   * greying out, and a breath of the card tint for contrast. No inset
-   * hairline: in a dark theme it read as a border, which this design has
-   * none of - the blur and the gradient alone are the glass.
+   * greying out, and a breath of the card tint for contrast. The rim-light
+   * inset is its edge - see `.app-glass` below - rather than the drawn
+   * hairline every other surface in the app now carries.
    */
   /*
    * Liquid glass is the app's button surface, declared once against the
@@ -765,6 +785,12 @@
    * that fills itself with the secondary or primary surface renders as glass
    * instead of a flat fill. The element selector outranks the utility it
    * overrides, and a control that must stay flat can always say so inline.
+   *
+   * Every one of them is drawn to its edge. A hairline is what separates a
+   * control from the surface behind it once the shadow is gone - `--shadow-
+   * card` is `none` in the dark - and it is the same edge the cards, the
+   * fields, the drawer and the sidebar carry, so a button reads as part of
+   * the same set of surfaces rather than as a floating tint.
    */
   button.bg-secondary,
   a.bg-secondary {
@@ -772,6 +798,7 @@
       color-mix(in srgb, var(--secondary) 55%, transparent),
       color-mix(in srgb, var(--secondary) 38%, transparent)
     );
+    border: 1px solid var(--border);
     -webkit-backdrop-filter: blur(14px) saturate(1.6);
     backdrop-filter: blur(14px) saturate(1.6);
   }
@@ -781,54 +808,181 @@
       color-mix(in srgb, var(--primary) 72%, transparent),
       color-mix(in srgb, var(--primary) 58%, transparent)
     );
+    /* The same neutral hairline every other surface wears. It used to take a
+       tint of its own fill, which drew a second, brighter edge around an
+       already-loud shape - the button read as two rectangles, and the accent
+       colour appeared twice in one control. One edge colour across the app
+       means a button is a button whatever it is filled with. */
+    border: 1px solid var(--border);
     -webkit-backdrop-filter: blur(14px) saturate(1.6);
     backdrop-filter: blur(14px) saturate(1.6);
     box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
   }
+  /* A control cut from the card surface - a category tile, a saved card, a
+     planner endpoint - takes the same hairline the `Card` component does. */
+  button.bg-card,
+  a.bg-card {
+    border: 1px solid var(--border);
+  }
 
   /*
-   * The chosen state, declared AFTER the glass and outside any layer: a
-   * chosen chip or radio pools the primary colour behind primary ink. It
-   * used to live in the utilities layer, where the unlayered glass rules
-   * above always beat it - a pressed "all" chip rendered exactly like an
-   * open one, and the choice was invisible.
+   * The chosen state, declared AFTER the glass and outside any layer: it used
+   * to live in the utilities layer, where the unlayered glass rules above
+   * always beat it - a pressed "all" chip rendered exactly like an open one,
+   * and the choice was invisible.
+   *
+   * A toggle and a radio do not answer the same way. A toggle is a claim the
+   * rider makes against the list - "only these" - and any number of them may
+   * be off, so being on is news: it pools `--primary-muted` under `--primary`
+   * ink and reads as accent across the room.
+   *
+   * A radio is a row in a set where exactly one is always on. The accent
+   * there shouts a fact the group states by construction, and a sheet of
+   * options wearing it under an accent commit button leaves the button
+   * nothing to mean. So a chosen radio takes the neutral ground the segmented
+   * switch's pill already takes - `--secondary` under plain `--foreground`,
+   * behind the same `--border` hairline every surface wears - and lets its
+   * weight and its tick say which one. The tick is the part that survives
+   * sunlight anyway.
+   *
+   * Opaque, and flat. Both of the washes this went through - 12%, then a 22%
+   * gradient with a rim light and a glow - were translucent tint laid over
+   * whatever happened to be behind, which is how they came out muddy: the
+   * tone shifted with the surface under it and the glow smeared the edge the
+   * hairline had just drawn. These are designed tones, the same ones in both
+   * themes' token blocks, and they need nothing on top. The blur goes with
+   * the translucency - there is nothing to see through now.
    */
-  button[aria-pressed="true"],
-  button[role="radio"][aria-checked="true"] {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
+  button[aria-pressed="true"] {
+    background: var(--primary-muted);
     color: var(--primary);
+    /* The ground and the ink carry the accent; the edge stays neutral, as it
+       does on every other button. A tinted rim around a tinted fill only
+       thickens the shape. */
+    border: 1px solid var(--border);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     box-shadow: none;
+  }
+  button[role="radio"][aria-checked="true"] {
+    background: var(--secondary);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  /*
+   * Choosing is a change of state, so it moves. The transition is declared
+   * on the role rather than on the chosen rule, because a property only
+   * animates when the state being left declares it too - set only on the
+   * `true` rule, a chip would fade in and snap out. `background-image`
+   * carries the gradient: both states are a two-stop linear gradient of the
+   * same shape, so they interpolate; where a call site gives the open state
+   * a flat fill instead, that one property lands at once and the rest still
+   * travel.
+   */
+  button[aria-pressed],
+  button[role="radio"] {
+    transition:
+      background-color var(--duration-state) var(--ease-out),
+      background-image var(--duration-state) var(--ease-out),
+      border-color var(--duration-state) var(--ease-out),
+      box-shadow var(--duration-state) var(--ease-out),
+      color var(--duration-state) var(--ease-out);
+  }
+
+  /*
+   * The edge a radio is about to grow, held open while it is not wearing one.
+   * A chosen radio takes a 1px hairline; an open row on a sheet has no surface
+   * and so had none, and `border-width` is not on the list above - it cannot
+   * be, an animated width is a reflow per frame. So choosing tightened the
+   * content box by 2px in a single frame and the label and the tick jumped
+   * inward while the colour was still easing in. Reserving the width in
+   * `transparent` leaves `border-color` the only thing that changes, which is
+   * the one thing that does travel. Call sites that draw their own edge - the
+   * dashed "no group" chip - state it in utilities and still win.
+   */
+  button[role="radio"] {
+    border: 1px solid transparent;
   }
 
   /*
    * A toggle that reads as a bare icon rather than a choice chip - the
-   * bookmark and the alarm on a stop row - opts out of the chosen tint;
-   * its own colour keeps carrying the state.
+   * bookmark and the alarm on a stop row - opts out of the chosen tint, and
+   * of the edge with it: there is no surface there to draw an edge around.
+   * Its own colour keeps carrying the state.
    */
   button[aria-pressed].app-bare {
     background: none;
+    border-width: 0;
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
+  /*
+   * A choice that rides on a sliding pill paints nothing of its own. The pill
+   * behind it is the state - it travels to the chosen one, which is this
+   * design's whole gesture for "this one" - and a fill on the button as well
+   * would show as a second shape sliding out from under the first. The marker
+   * is `data-pill-active`, which is the attribute `SlidingPill` already reads
+   * to find its target, so the opt-out and the fact are the same thing.
+   *
+   * Spelled out against the checked and pressed states as well, and not only
+   * as the bare attribute: those rules carry two attributes to this one's one,
+   * so on the bare selector alone the opt-out lost the cascade and the chosen
+   * segment painted its own fill and hairline over the pill - a second shape
+   * sliding out from under the first, which is the exact thing this prevents.
+   * Matching the plain attribute too keeps the unchosen segments bare.
+   */
+  button[data-pill-active],
+  button[data-pill-active][aria-checked="true"],
+  button[data-pill-active][aria-pressed="true"] {
+    background: none;
+    border-width: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /*
+   * A dense pad of controls - the route-number dial - draws its edge once,
+   * around the pad, and not around each of its keys: twenty-five hairlines
+   * in a grid read as graph paper rather than as a set of keys, and the pad
+   * is one instrument, not twenty-five surfaces. Here rather than as a
+   * `border-0` at the call site because the surface rules above are
+   * unlayered and would win against the utility.
+   */
+  .app-seamless button,
+  .app-seamless a {
+    border-width: 0;
+  }
+
+  /* Inside a drawer, a raised card steps up from the drawer's own ground
+     rather than by the page's secondary tone - see `--drawer-raised`. */
+  .bg-drawer {
+    --raised: var(--drawer-raised);
+  }
+
   .app-glass {
     /*
-     * Opaque enough to read on whatever it floats over. At a fifth of the
-     * card's colour the controls on a dark basemap were dark-on-dark ghosts;
-     * the material has to carry its own surface, and the blur is what still
-     * lets the map move underneath it. The top inset is the rim light that
-     * cuts a glass control out of its background - a caught edge, not a
-     * border - which is how the same buttons stay legible on iOS.
+     * Opaque enough to read on whatever it floats over, and cut from the same
+     * cloth as the tab pill: the secondary tone at near-full strength, so a
+     * map control reads as the same family of chrome as the segmented tabs -
+     * and a clear step lighter than the basemap under it. The faint gradient
+     * and the blur are what still let the map move underneath it. The top
+     * inset is the rim light that cuts a glass control out of its background
+     * - a caught edge, not a border - which is how the same buttons stay
+     * legible on iOS.
      */
     background: linear-gradient(
-      color-mix(in srgb, var(--card) 74%, transparent),
-      color-mix(in srgb, var(--card) 58%, transparent)
+      color-mix(in srgb, var(--secondary) 94%, transparent),
+      color-mix(in srgb, var(--secondary) 86%, transparent)
     );
-    -webkit-backdrop-filter: blur(16px) saturate(1.7);
-    backdrop-filter: blur(16px) saturate(1.7);
+    -webkit-backdrop-filter: blur(18px) saturate(1.7);
+    backdrop-filter: blur(18px) saturate(1.7);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.14),
       0 4px 14px rgb(0 0 0 / 0.25);
@@ -891,13 +1045,13 @@
 }
 
 /*
- * Choice controls carry their state as a tint, not a border: an open
- * choice is whatever surface its call site gave it - usually glass - and
- * a chosen one pools the primary colour behind primary ink. The border
- * that used to say "chosen" fought the glass surface everywhere else on
- * screen, and an edge is not part of this design language any more.
- * Declared against the roles rather than per call site, so every
- * aria-pressed chip and radio in the app answers the same way.
+ * Choice controls carry their state as a tint: an open choice is whatever
+ * surface its call site gave it - usually glass - and a chosen one fills.
+ * A pressed toggle fills with accent, a chosen radio with the neutral
+ * raised tone. Every control has an edge, so the edge cannot be the thing
+ * that says "chosen"; it changes colour with the tint instead of appearing
+ * out of nothing. Declared against the roles rather than per call site, so
+ * every aria-pressed chip and every radio in the app answers the same way.
  *
  * In the utilities layer, not components: a call site that also says
  * `bg-primary` must lose to the role, and utilities outrank components
@@ -931,5 +1085,123 @@
   }
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl {
     margin: 0 0 4px 6px;
+  }
+}
+
+/*
+ * MapLibre's ⓘ, dressed as one of our own corner controls. The glass is
+ * `app-glass`, put on by `addFoldedAttribution`; this is the shape - the
+ * library's white pill flattened to the same circle as the buttons above it -
+ * and the icon re-inked in the foreground through a mask, because it ships as
+ * a black background-image no colour token can reach. Unfolded, the circle
+ * stretches back into a pill for the credit line.
+ *
+ * Outside every layer on purpose: maplibre's stylesheet is unlayered, and an
+ * unlayered declaration beats any layered one however specific - these have
+ * to stand on the same ground to win.
+ */
+:root {
+  /* The app's own "i" glyph (lineicons `information`, the same icon every
+     other info control wears), as a mask so it can wear the foreground -
+     maplibre's stock ⓘ is a filled disc that read a weight class heavier
+     than the stroked icons beside it. */
+  --attrib-icon: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22black%22%20d%3D%22M40.4%2056h-6.1V21.6c0-2.8-2.3-5-5-5h-5.6c-1.2%200-2.3%201-2.3%202.3s1%202.3%202.3%202.3h5.6c.3%200%20.5.2.5.5V56h-6.1c-1.2%200-2.3%201-2.3%202.3s1%202.3%202.3%202.3h16.8c1.2%200%202.3-1%202.3-2.3S41.6%2056%2040.4%2056%22%2F%3E%3Ccircle%20cx%3D%2231.5%22%20cy%3D%228.7%22%20r%3D%223%22%20fill%3D%22black%22%2F%3E%3C%2Fsvg%3E");
+}
+
+/*
+ * A flex row - the round button, then the credit line - so the folded state
+ * is simply the row with its text at zero width, and unfolding is the text
+ * given room: `max-width` glides open and the words fade in behind it. The
+ * ease is a plain deceleration, not the app's spring - a clipped width
+ * cannot overshoot, it can only stop, and a spring here read as a snap with
+ * dead time after it. The cap sits just past the credit line's real width
+ * for the same reason: the animated edge has to be the edge the eye sees.
+ * The height never changes, so the circle becomes a pill without a jump,
+ * and the button never moves under the finger that pressed it.
+ *
+ * A size below the working controls on purpose: the credit is a footnote,
+ * and a footnote the size of a button asks to be pressed.
+ */
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+  display: flex;
+  align-items: center;
+  /* At rest it recedes like every other piece of map chrome; unfolded, the
+     credit is being read and comes back to full strength. */
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+  height: 1.3rem;
+  min-height: 0;
+  margin: 10px;
+  padding: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  background-color: transparent;
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact a {
+  color: inherit;
+}
+/* The library pads the unfolded pill per corner; the flex row above already
+   spaces itself, and the stray padding puffed the circle on opening. Four
+   classes, because the library's corner rule has three. */
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact.maplibregl-compact-show {
+  padding: 0;
+  opacity: 1;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact:hover {
+  opacity: 1;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  position: static;
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 9999px;
+  background: var(--foreground);
+  -webkit-mask: var(--attrib-icon) center / 0.6rem 0.6rem no-repeat;
+  mask: var(--attrib-icon) center / 0.6rem 0.6rem no-repeat;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+  display: block;
+  max-width: 0;
+  padding-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    max-width 0.3s cubic-bezier(0.5, 0, 0.75, 1),
+    padding-right 0.3s cubic-bezier(0.5, 0, 0.75, 1),
+    opacity 0.18s ease;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+  max-width: 17rem;
+  padding-right: 0.75rem;
+  opacity: 1;
+  /* An S-curve, not an ease-out: half the width in the first frames reads
+     as a snap with a long tail, and the ask here is an unhurried extend -
+     it gathers, glides, and settles. */
+  transition:
+    max-width 0.45s cubic-bezier(0.65, 0, 0.35, 1),
+    padding-right 0.45s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.3s ease 0.12s;
+}
+@media (min-width: 64rem) {
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+    height: 1.75rem;
+  }
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+    width: 1.75rem;
+    height: 1.75rem;
+    -webkit-mask-size: 0.78rem 0.78rem;
+    mask-size: 0.78rem 0.78rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+    transition: none;
   }
 }

@@ -97,7 +97,7 @@ function ErrorDetail(props: { text: string; lang: Lang; open?: boolean }) {
         />
         {t("errorDetails", props.lang)}
       </summary>
-      <div class="mt-1.5 overflow-hidden rounded-xl bg-card shadow-card">
+      <div class="mt-1.5 overflow-hidden rounded-xl border border-border bg-card shadow-card">
         <pre class="app-scroll max-h-44 whitespace-pre-wrap px-3.5 py-3 font-mono text-[0.72rem] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
           {props.text}
         </pre>

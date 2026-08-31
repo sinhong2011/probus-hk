@@ -162,9 +162,10 @@ export function GroupSheet(props: {
             a single instrument rather than as a box next to a button that
             happens to be near it. */}
         <form
-          // Filled, not outlined: the sunken background is what says "type
-          // here", the same way every field in the app now does.
-          class="flex h-12 items-center gap-2.5 rounded-2xl bg-background pl-3.5 pr-1.5"
+          // Filled rather than outlined: the sunken background is what says
+          // "type here", the same way every field in the app does. The
+          // hairline is the field's edge, not that outline.
+          class="flex h-12 items-center gap-2.5 rounded-2xl border border-border bg-raised pl-3.5 pr-1.5"
           onSubmit={(event) => {
             event.preventDefault();
             invent();
@@ -241,7 +242,7 @@ function Chip(props: {
   /*
    * A group chip answers in its own colour - the whole ground, not a mark on
    * it: a tint while open, the full colour once chosen. Inline, because the
-   * chosen-state utility rules would otherwise repaint it in the accent.
+   * chosen-state rule on the role would otherwise repaint it in the neutral.
    */
   const paint = () =>
     props.color
@@ -261,12 +262,13 @@ function Chip(props: {
       onClick={props.onSelect}
       style={paint()}
       class={[
-        "app-press flex h-8 max-w-full items-center gap-1.5 rounded-full px-3 text-[0.81rem] transition-colors duration-state",
+        "app-press flex h-8 max-w-full items-center gap-1.5 rounded-full px-3 text-[0.81rem]",
         {
           "font-bold": props.selected,
-          // Tinted rather than filled while colourless: the accent belongs
-          // to the button that saves.
-          "bg-primary-muted text-primary": props.selected && !props.color,
+          // Neutral while colourless - "no group" is an absence being
+          // chosen, and the accent belongs to the button that saves. The
+          // dashed edge going solid is half of what says it was picked.
+          "bg-secondary text-foreground": props.selected && !props.color,
           // The one border that stays: dashed is what says "not made yet",
           // and a ghost with no edge at all is indistinguishable from a gap.
           "border border-dashed border-border bg-transparent font-semibold text-subtle-foreground":

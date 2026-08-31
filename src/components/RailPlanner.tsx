@@ -418,7 +418,7 @@ export function RailPlanner(props: { lang: Lang }) {
         description={t("chooseStation", props.lang)}
       >
         <div class="flex flex-col gap-3">
-          <div class="flex h-11 items-center gap-2.5 rounded-2xl bg-card px-3.5 shadow-card">
+          <div class="flex h-11 items-center gap-2.5 rounded-2xl border border-border bg-card px-3.5 shadow-card">
             <span class="text-primary">
               <SearchIcon size={17} />
             </span>

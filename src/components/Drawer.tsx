@@ -195,7 +195,10 @@ export function Drawer(props: DrawerProps) {
         {/* The card: what is seen of the drawer. */}
         <div
           class={[
-            "flex min-h-0 grow flex-col overflow-hidden bg-card shadow-xl",
+            /* The hairline is what separates the card from whatever it floats
+               over - a map, a scrimmed page - where the shadow alone leaves
+               the top edge soft against a light background. */
+            "flex min-h-0 grow flex-col overflow-hidden border border-border bg-drawer shadow-xl",
             /* Flush with the foot of the window, the card keeps the home
                indicator clear inside itself, and has no bottom corners to
                round. */

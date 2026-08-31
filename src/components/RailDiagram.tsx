@@ -805,7 +805,7 @@ function Legend(props: {
   onAll: () => void;
 }) {
   return (
-    <div class="absolute left-2.5 top-2.5 max-w-[min(66%,20rem)] rounded-xl bg-card/92 p-1.5 shadow-card backdrop-blur">
+    <div class="absolute left-2.5 top-2.5 max-w-[min(66%,20rem)] rounded-xl border border-border bg-card/92 p-1.5 shadow-card backdrop-blur">
       <div class="grid grid-cols-2 gap-x-1 gap-y-px">
         <LegendEntry
           on={props.focus === null}

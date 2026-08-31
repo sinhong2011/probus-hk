@@ -102,7 +102,7 @@ export function ExploreFrame(props: {
         </>
       }
     >
-      <div class="relative min-h-0 grow overflow-hidden rounded-2xl bg-map shadow-card">
+      <div class="relative min-h-0 grow overflow-hidden rounded-2xl border border-border bg-map shadow-card">
         {props.map}
         <Show when={!wide()}>
           <Drawer

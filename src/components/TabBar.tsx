@@ -272,7 +272,7 @@ function Sidebar(props: { lang: Lang; isActive: (href: string) => boolean }) {
   return (
     <nav
       aria-label={t("navigation", props.lang)}
-      class="fixed inset-y-3 left-3 z-30 hidden flex-col rounded-2xl bg-card p-3 shadow-card transition-[width] duration-state ease-[var(--ease-spring)] lg:flex"
+      class="fixed inset-y-3 left-3 z-30 hidden flex-col rounded-2xl border border-border bg-card p-3 shadow-card transition-[width] duration-state ease-[var(--ease-spring)] lg:flex"
       style={{ width: open() ? "15rem" : "4.5rem" }}
     >
       <div class={["flex items-center gap-2.5", { "flex-col gap-2": !open() }]}>

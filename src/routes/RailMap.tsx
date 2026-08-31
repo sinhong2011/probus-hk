@@ -205,7 +205,7 @@ export default function RailMap() {
           page's other sheets rather than inside one card of it. The page is
           flush with the sidebar top and bottom, so the map's edges are level
           with the sidebar's. */}
-      <div class="relative flex min-h-0 grow flex-col overflow-hidden rounded-xl">
+      <div class="relative flex min-h-0 grow flex-col overflow-hidden rounded-xl border border-border">
         <RailDiagram
           lang={lang()}
           label={t("networkMap", lang())}

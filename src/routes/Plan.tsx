@@ -626,7 +626,11 @@ export default function Plan() {
     );
 
     return (
-      <div class={["flex h-11 w-full items-center gap-2 rounded-2xl bg-card px-3.5 shadow-card"]}>
+      <div
+        class={[
+          "flex h-11 w-full items-center gap-2 rounded-2xl border border-border bg-card px-3.5 shadow-card",
+        ]}
+      >
         <input
           ref={field}
           value={active() ? query() : (endpointLabel(props.end, lang()) ?? "")}
@@ -734,7 +738,7 @@ export default function Plan() {
               carry results does not open to carry an apology. */}
           <Show when={!wide() && picking() === null && from() && to() && journeys().length === 0}>
             <div class="absolute inset-x-0 bottom-3.5 z-10 flex justify-center px-3">
-              <div class="flex flex-col items-center gap-0.5 rounded-2xl bg-card px-4 py-3 text-center shadow-card">
+              <div class="flex flex-col items-center gap-0.5 rounded-2xl border border-border bg-card px-4 py-3 text-center shadow-card">
                 <span class="text-[0.88rem] font-bold text-foreground">
                   {t("noJourneys", lang())}
                 </span>
@@ -755,7 +759,7 @@ export default function Plan() {
               class="absolute inset-x-0 z-10 flex justify-center px-3"
               style={{ bottom: "0.875rem" }}
             >
-              <div class="flex min-w-0 items-center gap-2 rounded-full bg-card p-1.5 shadow-card">
+              <div class="flex min-w-0 items-center gap-2 rounded-full border border-border bg-card p-1.5 shadow-card">
                 <Show
                   when={pinStop()}
                   fallback={

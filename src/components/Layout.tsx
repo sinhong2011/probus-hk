@@ -182,7 +182,7 @@ export function RowCard(props: {
   return (
     <div
       class={[
-        "grid overflow-hidden rounded-xl bg-card shadow-card",
+        "grid overflow-hidden rounded-xl border border-border bg-card shadow-card",
         "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:left-3.5 [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
         props.single
           ? ""
