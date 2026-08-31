@@ -7,11 +7,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("offers something to browse instead of a blank screen", async ({ page }) => {
-  await expect(page.getByText("路線分類", { exact: false }).first()).toBeVisible({
-    timeout: 10_000,
-  });
   // Categories are the way in when you know the kind of trip, not the number.
-  await expect(page.locator('a[href^="/browse/"]').first()).toBeVisible();
+  // On a phone they are the chips themselves - six coloured names, which say
+  // 路線分類 more plainly than the heading did and cost no row.
+  await expect(page.locator('a[href^="/browse/"]').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: /睇晒/ })).toBeVisible();
 });
 
 test("typing on the keypad finds matching routes", async ({ page }) => {
@@ -76,7 +76,7 @@ test("backspace and clear both undo the query", async ({ page }) => {
 
   await page.getByRole("button", { name: "backspace" }).click();
   await page.getByRole("button", { name: "clear" }).click();
-  await expect(page.getByText("路線分類", { exact: false }).first()).toBeVisible();
+  await expect(page.locator('a[href^="/browse/"]').first()).toBeVisible();
 });
 
 test("opening a result navigates to that route", async ({ page }) => {

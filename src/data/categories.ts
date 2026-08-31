@@ -1,4 +1,4 @@
-import type { Bilingual, Company, KeyedRoute, RouteDb, StopEntry } from "./types";
+import type { Bilingual, KeyedRoute, RouteDb, StopEntry } from "./types";
 
 /**
  * Hong Kong route numbers carry a lot of meaning - N is overnight, A is an
@@ -423,67 +423,19 @@ export function routesInCategory(db: RouteDb, category: Category, limit = 300): 
   return out.sort((a, b) => a.route.localeCompare(b.route, "en", { numeric: true }));
 }
 
-/** One route in a category's shop window: its number, and who runs it. */
-export interface CategorySample {
-  route: string;
-  co: Company[];
-}
-
 /**
- * A few routes out of each category - the sample a tile shows so that
- * "過海路線" comes with 101, 102, 103 beside it and a rider recognises the
- * category from the numbers they already know.
+ * How many routes each category holds.
  *
- * The operator travels with the number because the number is only half of a
- * route's identity here: 101 is a red plate and A11 is a yellow one, and a
- * rider finds a route by that colour as much as by the digits.
- *
- * One pass over the database, and it gives up as soon as every category has
- * its quota: the tiles want three routes each, not a count, and counting every
- * cross-harbour route to print three of them means reading the stop list of
- * every route in Hong Kong. The numbers are sorted the way a rider reads them
- * - 1, 2, 10 - within each category.
+ * Takes the categories to count rather than always counting all of them: the
+ * search screen shows six and would otherwise pay for seventeen, and the
+ * expensive predicates here are the ones that read a route's whole stop list.
  */
-export function categorySamples(
+export function categoryCounts(
   db: RouteDb,
-  categories: Category[],
-  each = 3,
-): Record<string, CategorySample[]> {
-  const out: Record<string, CategorySample[]> = {};
-  const seen = new Map<string, Set<string>>();
-  for (const category of categories) {
-    out[category.id] = [];
-    seen.set(category.id, new Set());
-  }
-
-  let hungry = categories.length;
-  for (const key in db.routeList) {
-    const entry = db.routeList[key];
-    if (!entry) continue;
-    const route: KeyedRoute = { ...entry, key };
-
-    for (const category of categories) {
-      const found = out[category.id];
-      const bucket = seen.get(category.id);
-      if (!found || !bucket || found.length >= each || bucket.has(route.route)) continue;
-      if (!category.matches(route, db)) continue;
-      bucket.add(route.route);
-      found.push({ route: route.route, co: route.co });
-      if (found.length === each) hungry -= 1;
-    }
-    if (hungry === 0) break;
-  }
-
-  for (const id in out) {
-    out[id]?.sort((a, b) => a.route.localeCompare(b.route, "en", { numeric: true }));
-  }
-  return out;
-}
-
-/** How many routes each category holds, for the browse tiles. */
-export function categoryCounts(db: RouteDb): Record<CategoryId, number> {
-  const counts = Object.fromEntries(CATEGORIES.map((c) => [c.id, 0])) as Record<CategoryId, number>;
-  const seen = new Map<CategoryId, Set<string>>(CATEGORIES.map((c) => [c.id, new Set()]));
+  categories: Category[] = CATEGORIES,
+): Record<CategoryId, number> {
+  const counts = Object.fromEntries(categories.map((c) => [c.id, 0])) as Record<CategoryId, number>;
+  const seen = new Map<CategoryId, Set<string>>(categories.map((c) => [c.id, new Set()]));
 
   for (const key in db.routeList) {
     const entry = db.routeList[key];
@@ -491,7 +443,7 @@ export function categoryCounts(db: RouteDb): Record<CategoryId, number> {
     const route: KeyedRoute = { ...entry, key };
     const identity = `${route.route}/${route.dest.en}/${route.co[0]}`;
 
-    for (const category of CATEGORIES) {
+    for (const category of categories) {
       const bucket = seen.get(category.id);
       if (!bucket || bucket.has(identity)) continue;
       if (category.matches(route, db)) {

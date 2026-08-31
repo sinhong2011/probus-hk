@@ -44,6 +44,13 @@ const nearbyRoute = createRoute({
 /** The search screen's list modes, as its URL is allowed to name them. */
 const SEARCH_TABS = ["all", "bus", "minibus", "rail", "ferry", "stops", "dest"] as const;
 
+/**
+ * The sheets the search screen can have up. Only one at a time, so one name
+ * rather than a flag each - and in the address, because a sheet is a place a
+ * rider is in and the back button should be the way out of it.
+ */
+const SEARCH_SHEETS = ["recent", "categories"] as const;
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
@@ -64,7 +71,16 @@ const searchRoute = createRoute({
     // altogether - the recents are the field's own history now, not a mode of
     // the list, so an old link carrying `?tab=recent` lands on the whole list.
     const tab = SEARCH_TABS.find((id) => id === search.tab && id !== "all");
-    return { ...(q !== undefined && { q }), ...(tab && { tab }) };
+    const sheet = SEARCH_SHEETS.find((id) => id === search.sheet);
+    // The dial is up unless the address says otherwise, so only its absence
+    // is worth writing down.
+    const dial = search.dial === false ? false : undefined;
+    return {
+      ...(q !== undefined && { q }),
+      ...(tab && { tab }),
+      ...(sheet && { sheet }),
+      ...(dial === false && { dial }),
+    };
   },
   component: lazyScreen(() => import("~/routes/Search")),
 });

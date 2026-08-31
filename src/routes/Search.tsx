@@ -20,7 +20,7 @@ import { RoutePlate } from "~/components/RoutePlate";
 import { browseLink, routeLink, stopLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { useDb } from "~/data/context";
-import { CATEGORIES, categorySamples } from "~/data/categories";
+import { CATEGORIES, categoryCounts } from "~/data/categories";
 import {
   allRoutes,
   nextRouteChars,
@@ -392,7 +392,38 @@ export default function Search() {
      because dialling a number is what this screen is for, and pushed down
      when the rider wants the list - the sheet replaces the tab bar as the
      thing the thumb is using, the way the app's other sheets do. */
-  const [dialOpen, setDialOpen] = createSignal(true);
+  /*
+   * Both live in the address rather than in a signal, so that a sheet is a
+   * place the back button leaves and a screen sent to somebody arrives in the
+   * state it was sent in - the same rule the route screen's map and timetable
+   * follow. Opening one pushes; closing one replaces, so Back never walks
+   * forward into a sheet a rider has just shut.
+   */
+  const dialOpen = () => params().dial !== false;
+  const setDialOpen = (open: boolean) =>
+    void navigate({
+      to: "/search",
+      search: (prev) => {
+        const { dial: _, ...rest } = prev;
+        return open ? rest : { ...rest, dial: false as const };
+      },
+      // The dial is furniture rather than a place: it comes and goes with the
+      // keyboard, and a history entry for each of those would make the back
+      // button a keypad toggle.
+      replace: true,
+    });
+
+  /** Which sheet is up, if any. */
+  const sheet = () => params().sheet;
+  const setSheet = (id: "recent" | "categories" | undefined) =>
+    void navigate({
+      to: "/search",
+      search: (prev) => {
+        const { sheet: _, ...rest } = prev;
+        return id ? { ...rest, sheet: id } : rest;
+      },
+      replace: id === undefined,
+    });
 
   /*
    * What was actually opened, newest first - a list of real rows, not of
@@ -405,7 +436,6 @@ export default function Search() {
       return route ? [route] : [];
     }),
   );
-  const [openedSheet, setOpenedSheet] = createSignal(false);
 
   /*
    * A search the rider stopped on is a search they meant.
@@ -484,7 +514,12 @@ export default function Search() {
             <ModeSwitch lang={lang()} />
           </div>
 
-          <Categories lang={lang()} class="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1" />
+          <Categories
+            lang={lang()}
+            class="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+            allOpen={sheet() === "categories"}
+            onAllOpen={(open) => setSheet(open ? "categories" : undefined)}
+          />
 
           <div class="order-3 flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-2 lg:gap-6">
             <div class="relative">
@@ -562,7 +597,7 @@ export default function Search() {
                       <button
                         type="button"
                         aria-label={t("recent", lang())}
-                        onClick={() => setOpenedSheet(true)}
+                        onClick={() => setSheet("recent")}
                         class="app-press flex size-7 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
                       >
                         <HistoryIcon size={16} />
@@ -812,8 +847,8 @@ export default function Search() {
           and the drawer is the app's answer to "show me this over what I am
           looking at". */}
       <Drawer
-        open={openedSheet()}
-        onClose={() => setOpenedSheet(false)}
+        open={sheet() === "recent"}
+        onClose={() => setSheet(undefined)}
         label={t("recent", lang())}
         /* A dialog: it is a list to pick from, so it takes the scrim, the
            Escape and the tap outside. */
@@ -831,7 +866,7 @@ export default function Search() {
               type="button"
               onClick={() => {
                 frequent.clear();
-                setOpenedSheet(false);
+                setSheet(undefined);
               }}
               class="app-press rounded-lg px-2 py-1 text-[0.75rem] font-bold text-primary"
             >
@@ -883,27 +918,56 @@ export default function Search() {
  * column standing empty beside the dial, so they become tiles: the same
  * glyph, the name, and the line that says what is in the category.
  */
-function Categories(props: { lang: Lang; class?: string }) {
+function Categories(props: {
+  lang: Lang;
+  class?: string;
+  /** Whether the whole catalogue is up, which the address is the record of. */
+  allOpen: boolean;
+  onAllOpen: (open: boolean) => void;
+}) {
   const db = useDb();
-  /* Three numbers per tile, taken from the database rather than written down:
-     a category whose sample is stale is worse than one with none. Three is a
-     sample; a fourth was a list starting to compete with the name. */
-  const samples = createMemo(() => categorySamples(db(), SHOWN_CATEGORIES, 3));
+  const allOpen = () => props.allOpen;
+  const setAllOpen = (open: boolean) => props.onAllOpen(open);
+  /* How many routes are in each, counted from the database rather than written
+     down. It used to be three of the numbers themselves, which said what the
+     category holds but not how much of it - and three plates beside a name
+     read as the answer rather than as a sample of it. Only the six that are
+     shown are counted; the other eleven would be paid for and never read. */
+  const counts = createMemo(() => categoryCounts(db(), SHOWN_CATEGORIES));
+  /* The whole catalogue's counts, and only once the sheet that shows them is
+     open: seventeen categories over four thousand routes is a pass nobody
+     should pay for on a screen they may never open. */
+  const allCounts = createMemo(() => (allOpen() ? categoryCounts(db()) : null));
+
+  /* The way to the other eleven, in the same shape at both widths: a chip at
+     the end of the phone's row, and the same chip where the heading's link
+     used to be on a desktop. It used to be a text link there, which meant one
+     word did two different things depending on the window - and reading as a
+     link, it promised to leave the screen. */
+  const viewAll = () => (
+    <button
+      type="button"
+      onClick={() => setAllOpen(true)}
+      class="app-press flex shrink-0 items-center gap-0.5 self-center rounded-full bg-secondary py-1 pl-2.5 pr-1.5 text-[0.69rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground"
+    >
+      {t("viewAll", props.lang)}
+      <ChevronRightIcon size={12} />
+    </button>
+  );
 
   return (
     /* `min-w-0`: the strip below is a flex line of chips that do not shrink,
        and a grid column sized to `auto` would take their whole sum - which on
        a phone is twice the window, and the page slides sideways with it. */
     <section class={`flex min-w-0 flex-col gap-1.5 lg:gap-2.5 ${props.class ?? ""}`}>
-      <SectionLabel
-        trailing={
-          <a {...useLinkProps({ to: "/browse" })} class="text-[0.75rem] font-bold text-primary">
-            {t("viewAll", props.lang)}
-          </a>
-        }
-      >
-        {t("categories", props.lang)}
-      </SectionLabel>
+      {/* The heading is a wide window's. On a phone the row is six coloured
+          chips with names in them, which says 路線分類 more plainly than the
+          words would, and the words were costing a line of a screen whose job
+          is the list underneath. The chip at the end of the row is where 睇晒
+          went. */}
+      <div class="hidden lg:block">
+        <SectionLabel trailing={viewAll()}>{t("categories", props.lang)}</SectionLabel>
+      </div>
 
       {/* Six of them, three across and two down at every wide width. Sized
           from a minimum tile instead, the block re-flowed to four columns and
@@ -948,29 +1012,87 @@ function Categories(props: { lang: Lang; class?: string }) {
                   <span class="hidden text-[0.75rem] font-medium leading-snug text-subtle-foreground lg:block">
                     {pick(item.hint, props.lang)}
                   </span>
+                  {/* And how many there are, in the category's own colour -
+                      the size of the answer, which three sample plates could
+                      never give. */}
+                  <span
+                    class="tnum hidden text-[0.75rem] font-bold lg:block"
+                    style={{ color: item.accent }}
+                  >
+                    {counts()[item.id]} {t("routesCount", props.lang)}
+                  </span>
                 </span>
-              </span>
-
-              {/* A few of the routes inside, down the tile's right-hand edge.
-                  "過海路線" is an abstraction; 101 is the thing a rider
-                  actually knows, and three of them say what the category
-                  holds faster than the line of prose beneath the name does.
-
-                  On their operators' own plates, not on a wash of the
-                  category's accent: a route number in this app is red for
-                  九巴 and yellow for 城巴 everywhere else it appears, and a
-                  sample that recoloured them by category would be teaching
-                  the wrong thing in the one place a rider is learning what
-                  the category holds. */}
-              <span class="hidden shrink-0 flex-col items-end gap-1 lg:flex">
-                <For each={samples()[item.id] ?? []}>
-                  {(sample) => <RoutePlate route={sample.route} co={sample.co} size="xs" />}
-                </For>
               </span>
             </a>
           )}
         </For>
+
+        {/* The rest of them, at the end of the row where a thumb arrives after
+            swiping the six. A phone has no room for the other eleven and no
+            heading to hang 睇晒 off, so this chip is both - and it opens them
+            over the screen rather than navigating away from a search that is
+            half typed. */}
+        <span class="contents lg:hidden">{viewAll()}</span>
       </div>
+
+      {/* Every category, as a sheet. The browse screen lists them too, but
+          reaching it means leaving the search behind; this is the same list
+          brought to the rider instead. */}
+      <Drawer
+        open={allOpen()}
+        onClose={() => setAllOpen(false)}
+        modal
+        label={t("categories", props.lang)}
+        class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
+      >
+        <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
+          <SectionLabel>{t("categories", props.lang)}</SectionLabel>
+          <Card>
+            <For each={CATEGORIES}>
+              {(item, index) => (
+                <>
+                  <Show when={index() > 0}>
+                    <Hairline />
+                  </Show>
+                  <a
+                    {...useLinkProps(browseLink(item.id))}
+                    class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+                  >
+                    <span
+                      class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
+                        color: item.accent,
+                      }}
+                    >
+                      <CategoryIcon id={item.id} size={16} />
+                    </span>
+                    <span class="flex min-w-0 grow flex-col gap-0.5">
+                      <span class="truncate text-[0.88rem] font-bold text-foreground">
+                        {pick(item.name, props.lang)}
+                      </span>
+                      <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                        {pick(item.hint, props.lang)}
+                      </span>
+                    </span>
+                    {/* How big the category is, in its own colour - the one
+                        thing a name and a line of examples do not say. */}
+                    <span
+                      class="tnum shrink-0 text-[0.75rem] font-bold"
+                      style={{ color: item.accent }}
+                    >
+                      {allCounts()?.[item.id]} {t("routesCount", props.lang)}
+                    </span>
+                    <span class="shrink-0 text-faint-foreground">
+                      <ChevronRightIcon size={14} />
+                    </span>
+                  </a>
+                </>
+              )}
+            </For>
+          </Card>
+        </div>
+      </Drawer>
     </section>
   );
 }
