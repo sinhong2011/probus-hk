@@ -140,6 +140,39 @@ export const PlusIcon = wrap(IconPlus as IconComponent);
 export const CloseIcon = wrap(IconXmark as IconComponent);
 export const ExpandIcon = wrap(IconExpand as IconComponent);
 /**
+ * A clock wound back: what was opened before.
+ *
+ * Lineicons has no history glyph - its nearest is the refresh ring, which
+ * already means "fetch this again" three screens away - so it is drawn here at
+ * the weight the set is drawn at. The arc is open at the bottom left and the
+ * arrow closes it, which is the shape every history control has had since the
+ * VCR.
+ */
+export function HistoryIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <path d="M4.4 13.2a7.8 7.8 0 1 0 1.6-5.6" />
+      <path d="M4 4.2v3.9h3.9" />
+      <path d="M12 7.8v4.4l3.2 1.9" />
+    </svg>
+  );
+}
+
+/**
  * The keyboard's own delete key - a tag pointing back at the last character
  * with a cross inside it. An eraser was reading as "wipe everything", which
  * is the clear key's job, and Lineicons has no backspace, so it is drawn here

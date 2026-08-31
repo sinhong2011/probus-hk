@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
   CloseIcon,
   DialpadIcon,
+  HistoryIcon,
   SearchIcon,
   TrashIcon,
 } from "~/components/Icons";
@@ -23,6 +24,7 @@ import { CATEGORIES, categorySamples } from "~/data/categories";
 import {
   allRoutes,
   nextRouteChars,
+  routeAt,
   searchDestinations,
   searchRoutes,
   searchStops,
@@ -31,6 +33,7 @@ import type { KeyedRoute, RouteDb } from "~/data/types";
 import { concessionFare, formatFare } from "~/lib/format";
 import { pick, stripStopCode, t, type Lang, type MessageKey } from "~/lib/i18n";
 import { kindOf, operatorShort, type Kind } from "~/lib/operators";
+import { frequent } from "~/stores/frequent";
 import { searches } from "~/stores/searches";
 import { settings } from "~/stores/settings";
 
@@ -203,7 +206,7 @@ function RouteList(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: s
  * them. The list that needs a virtualiser is the one with four thousand rows
  * in it; the destination matches are capped at twenty and can simply be rows.
  */
-function RouteRows(props: { routes: KeyedRoute[]; lang: Lang }) {
+function RouteRows(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: string) => void }) {
   return (
     <For each={props.routes}>
       {(route, index) => (
@@ -211,7 +214,11 @@ function RouteRows(props: { routes: KeyedRoute[]; lang: Lang }) {
           <Show when={index() > 0}>
             <Hairline />
           </Show>
-          <RouteItem route={route} lang={props.lang} />
+          <RouteItem
+            route={route}
+            lang={props.lang}
+            onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
+          />
         </>
       )}
     </For>
@@ -318,8 +325,11 @@ export default function Search() {
    */
   const tabs = () =>
     TABS.filter((entry) => {
-      if (entry.id === "stops") return stops().length > 0;
-      if (entry.id === "dest") return destinations().length > 0;
+      // The two query-shaped chips are there for any typed query, empty answer
+      // or not: a row that grows a chip the moment a stop happens to match is
+      // a row that moves under the thumb aiming at it. On the blank screen
+      // there is nothing for them to be about, so they stay away.
+      if (entry.id === "stops" || entry.id === "dest") return !empty();
       return entry.id === "all" || kinds().has(entry.id);
     });
 
@@ -383,6 +393,19 @@ export default function Search() {
      when the rider wants the list - the sheet replaces the tab bar as the
      thing the thumb is using, the way the app's other sheets do. */
   const [dialOpen, setDialOpen] = createSignal(true);
+
+  /*
+   * What was actually opened, newest first - a list of real rows, not of
+   * words. The two histories answer different questions: `searches` is what a
+   * rider asked, and this is where they ended up.
+   */
+  const recentRoutes = createMemo(() =>
+    frequent.recent(20).flatMap((key) => {
+      const route = routeAt(db(), key);
+      return route ? [route] : [];
+    }),
+  );
+  const [openedSheet, setOpenedSheet] = createSignal(false);
 
   /*
    * A search the rider stopped on is a search they meant.
@@ -526,7 +549,27 @@ export default function Search() {
                   spellcheck={false}
                   class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
                 />
-                <Show when={query()}>
+                {/* One slot at the end of the field, holding whichever of the
+                    two is the useful one. With something typed that is the
+                    clear; with nothing typed the clear has nothing to do and
+                    the slot is dead space, so it carries the way back to what
+                    was opened before - which is the same reach as "what am I
+                    looking for", and needs no chrome of its own to get there. */}
+                <Show
+                  when={query()}
+                  fallback={
+                    <Show when={recentRoutes().length > 0}>
+                      <button
+                        type="button"
+                        aria-label={t("recent", lang())}
+                        onClick={() => setOpenedSheet(true)}
+                        class="app-press flex size-7 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+                      >
+                        <HistoryIcon size={16} />
+                      </button>
+                    </Show>
+                  }
+                >
                   <button
                     type="button"
                     aria-label="clear"
@@ -761,6 +804,43 @@ export default function Search() {
           a disappearance rather than a slide. That padding lies over the
           tab bar, so it takes no pointer: the card inside it does, and the
           strip below the card is the bar's again. */}
+      {/* What was opened before, as the rows themselves rather than as words:
+          a route a rider recognises by its plate and where it is going, not by
+          the digits they happened to type to find it. It is a list to look at
+          rather than a list to complete a field from, so it comes up as a
+          sheet - at every width, because a desktop rider has the same question
+          and the drawer is the app's answer to "show me this over what I am
+          looking at". */}
+      <Drawer
+        open={openedSheet()}
+        onClose={() => setOpenedSheet(false)}
+        label={t("recent", lang())}
+        class="max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
+      >
+        <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
+          <div class="flex items-center justify-between gap-3">
+            <SectionLabel>{t("recent", lang())}</SectionLabel>
+            <button
+              type="button"
+              onClick={() => {
+                frequent.clear();
+                setOpenedSheet(false);
+              }}
+              class="app-press rounded-lg px-2 py-1 text-[0.75rem] font-bold text-primary"
+            >
+              {t("clearQuery", lang())}
+            </button>
+          </div>
+          <Card>
+            <RouteRows
+              routes={recentRoutes()}
+              lang={lang()}
+              onRemove={(key) => frequent.forget(key)}
+            />
+          </Card>
+        </div>
+      </Drawer>
+
       <Show when={!wide()}>
         <Drawer
           open={dialOpen()}
