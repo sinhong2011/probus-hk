@@ -14,6 +14,7 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "cameras": "bun scripts/build-cameras.ts",
+    "traffic": "bun scripts/build-traffic-segments.ts",
     "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "fares": "bun scripts/build-rail-fares.ts",
     "railmap": "bun scripts/build-rail-map.ts",
