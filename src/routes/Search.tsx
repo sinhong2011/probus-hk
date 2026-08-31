@@ -6,7 +6,7 @@ import { CategoryIcon } from "~/components/CategoryIcon";
 import { Page } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
-import { Drawer } from "~/components/Drawer";
+import { Drawer, DrawerHeader } from "~/components/Drawer";
 import {
   BackspaceIcon,
   ChevronRightIcon,
@@ -174,27 +174,6 @@ function RouteItem(props: {
         )}
       </Show>
     </div>
-  );
-}
-
-/**
- * The sheet's own way out, at the top right where a dialog's has always been.
- *
- * The drawer already closes by dragging it down, by tapping outside it and by
- * Escape - but the first of those has to be discovered, and the other two are
- * a keyboard and a scrim that a thumb over the middle of a phone cannot see.
- * A cross costs one corner and asks nothing of anybody.
- */
-function SheetClose(props: { lang: Lang; onClose: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={t("close", props.lang)}
-      onClick={props.onClose}
-      class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors duration-state hover:text-foreground"
-    >
-      <CloseIcon size={14} />
-    </button>
   );
 }
 
@@ -881,30 +860,34 @@ export default function Search() {
            can see. */
         class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
       >
-        <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
-          <div class="flex items-center justify-between gap-3">
-            <SectionLabel>{t("recent", lang())}</SectionLabel>
-            <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  frequent.clear();
-                  setSheet(undefined);
-                }}
-                class="app-press rounded-lg px-2 py-1 text-[0.75rem] font-bold text-primary"
-              >
-                {t("clearQuery", lang())}
-              </button>
-              <SheetClose lang={lang()} onClose={() => setSheet(undefined)} />
-            </div>
+        <div class="flex flex-col">
+          {/* The house sheet header: the name, and the cross tucked into the
+              corner rather than given a row of its own. */}
+          <DrawerHeader
+            title={t("recent", lang())}
+            onClose={() => setSheet(undefined)}
+            closeLabel={t("close", lang())}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                frequent.clear();
+                setSheet(undefined);
+              }}
+              class="app-press -my-1 rounded-lg py-1 text-[0.81rem] font-bold text-primary"
+            >
+              {t("clearQuery", lang())}
+            </button>
+          </DrawerHeader>
+          <div class="px-3.5 pb-4">
+            <Card>
+              <RouteRows
+                routes={recentRoutes()}
+                lang={lang()}
+                onRemove={(key) => frequent.forget(key)}
+              />
+            </Card>
           </div>
-          <Card>
-            <RouteRows
-              routes={recentRoutes()}
-              lang={lang()}
-              onRemove={(key) => frequent.forget(key)}
-            />
-          </Card>
         </div>
       </Drawer>
 
@@ -923,7 +906,21 @@ export default function Search() {
           {/* Clear of the grab handle above it: the pad is what the thumb is
               aiming at, and the top row of keys sat close enough to the bar
               to catch a drag meant for the sheet. */}
-          <div class="mx-auto mt-[10px] w-full px-4 pb-3 pt-1">{keypad()}</div>
+          <div class="relative mx-auto mt-[10px] w-full px-4 pb-3 pt-7">
+            {/* The way out, and nothing else - a keypad does not need to be
+                told it is a keypad. In the sheet's own corner at the weight
+                the app's other sheets close at: a filled circle the size of a
+                key read as an eleventh button on a pad of ten. */}
+            <button
+              type="button"
+              aria-label={t("close", lang())}
+              onClick={() => setDialOpen(false)}
+              class="app-press absolute right-2 top-0 z-10 flex size-8 items-center justify-center rounded-md text-foreground opacity-60 transition-opacity duration-state active:opacity-100"
+            >
+              <CloseIcon size={15} />
+            </button>
+            {keypad()}
+          </div>
         </Drawer>
       </Show>
     </Page>
@@ -1081,55 +1078,58 @@ function Categories(props: {
         label={t("categories", props.lang)}
         class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
       >
-        <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
-          <div class="flex items-center justify-between gap-3">
-            <SectionLabel>{t("categories", props.lang)}</SectionLabel>
-            <SheetClose lang={props.lang} onClose={() => setAllOpen(false)} />
-          </div>
-          <Card>
-            <For each={CATEGORIES}>
-              {(item, index) => (
-                <>
-                  <Show when={index() > 0}>
-                    <Hairline />
-                  </Show>
-                  <a
-                    {...useLinkProps(browseLink(item.id))}
-                    class="app-tap flex items-center gap-3 px-3.5 py-2.5"
-                  >
-                    <span
-                      class="flex size-8 shrink-0 items-center justify-center rounded-lg"
-                      style={{
-                        background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
-                        color: item.accent,
-                      }}
+        <div class="flex flex-col">
+          <DrawerHeader
+            title={t("categories", props.lang)}
+            onClose={() => setAllOpen(false)}
+            closeLabel={t("close", props.lang)}
+          />
+          <div class="px-3.5 pb-4">
+            <Card>
+              <For each={CATEGORIES}>
+                {(item, index) => (
+                  <>
+                    <Show when={index() > 0}>
+                      <Hairline />
+                    </Show>
+                    <a
+                      {...useLinkProps(browseLink(item.id))}
+                      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
                     >
-                      <CategoryIcon id={item.id} size={16} />
-                    </span>
-                    <span class="flex min-w-0 grow flex-col gap-0.5">
-                      <span class="truncate text-[0.88rem] font-bold text-foreground">
-                        {pick(item.name, props.lang)}
+                      <span
+                        class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                        style={{
+                          background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
+                          color: item.accent,
+                        }}
+                      >
+                        <CategoryIcon id={item.id} size={16} />
                       </span>
-                      <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-                        {pick(item.hint, props.lang)}
+                      <span class="flex min-w-0 grow flex-col gap-0.5">
+                        <span class="truncate text-[0.88rem] font-bold text-foreground">
+                          {pick(item.name, props.lang)}
+                        </span>
+                        <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                          {pick(item.hint, props.lang)}
+                        </span>
                       </span>
-                    </span>
-                    {/* How big the category is, in its own colour - the one
+                      {/* How big the category is, in its own colour - the one
                         thing a name and a line of examples do not say. */}
-                    <span
-                      class="tnum shrink-0 text-[0.75rem] font-bold"
-                      style={{ color: item.accent }}
-                    >
-                      {allCounts()?.[item.id]} {t("routesCount", props.lang)}
-                    </span>
-                    <span class="shrink-0 text-faint-foreground">
-                      <ChevronRightIcon size={14} />
-                    </span>
-                  </a>
-                </>
-              )}
-            </For>
-          </Card>
+                      <span
+                        class="tnum shrink-0 text-[0.75rem] font-bold"
+                        style={{ color: item.accent }}
+                      >
+                        {allCounts()?.[item.id]} {t("routesCount", props.lang)}
+                      </span>
+                      <span class="shrink-0 text-faint-foreground">
+                        <ChevronRightIcon size={14} />
+                      </span>
+                    </a>
+                  </>
+                )}
+              </For>
+            </Card>
+          </div>
         </div>
       </Drawer>
     </section>
