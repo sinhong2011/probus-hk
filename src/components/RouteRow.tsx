@@ -1,11 +1,14 @@
 import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
+import { useDb } from "~/data/context";
+import { lastRunPassed } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
 import { concessionFare, fareAt } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
+import { now } from "~/stores/clock";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
 
@@ -42,6 +45,15 @@ function subtitleFor(props: LineProps): string {
 
 /** Presentational row - takes arrivals it is given, so a stop can batch them. */
 export function RouteLine(props: LineProps) {
+  const db = useDb();
+  /* Whether an empty answer here means "wait" or "that was the last one".
+     Read through the clock so the row turns over on the minute the last bus
+     passes rather than on a reload. */
+  const over = () => {
+    now();
+    return lastRunPassed(db(), props.route, props.seq);
+  };
+
   return (
     <a
       {...useLinkProps(routeLink(props.route.key))}
@@ -58,7 +70,12 @@ export function RouteLine(props: LineProps) {
         </span>
       </div>
 
-      <EtaCountdown etas={props.etas} lang={props.lang} size={props.countdownSize ?? "sm"} />
+      <EtaCountdown
+        etas={props.etas}
+        lang={props.lang}
+        size={props.countdownSize ?? "sm"}
+        over={over()}
+      />
     </a>
   );
 }

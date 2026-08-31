@@ -18,6 +18,7 @@
   "arriving": "Arriving",
   "scheduled": "Scheduled",
   "no_service": "No service",
+  "last_bus_gone": "Last bus gone",
   "minute": "min",
   "live": "Live",
   "passed": "Passed",

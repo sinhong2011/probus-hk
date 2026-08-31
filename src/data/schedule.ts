@@ -45,6 +45,18 @@ function travelMinutes(route: KeyedRoute, seq: number): number {
 }
 
 /**
+ * End to end, in minutes - how long a bus that has just left is still running.
+ *
+ * The same estimate `travelMinutes` makes for any stop, asked for the last one,
+ * so a route with no published journey time falls back the same way rather than
+ * counting as arriving the instant it departs.
+ */
+function journeyMinutes(route: KeyedRoute): number {
+  const stops = route.stops[route.co[0] as keyof typeof route.stops];
+  return travelMinutes(route, stops?.length ?? 0);
+}
+
+/**
  * Minutes on the bus between two stops of a route.
  *
  * The database publishes one journey time for the whole route, so this is that
@@ -266,6 +278,12 @@ export function routeTimetable(db: RouteDb, route: KeyedRoute): TimetableGroup[]
  * 02:20 is still the one running at one in the morning, and telling that rider
  * about tonight's last bus - twenty-two hours away - would be answering a
  * question nobody asked.
+ *
+ * And yesterday's day is not over at its last *departure*. A route whose last
+ * one leaves at 23:40 and takes an hour is still carrying people at half past
+ * midnight; asked then, this used to answer with today's span, which had the
+ * screen saying "no service now, first at 05:35" over a bus that had not
+ * reached its terminus yet. The day ends when the last one arrives.
  */
 export function serviceSpan(
   db: RouteDb,
@@ -281,7 +299,9 @@ export function serviceSpan(
     ? { first: yesterday.first - 1440, last: yesterday.last - 1440 }
     : null;
 
-  const span = overnight && overnight.last >= now.minutesSinceMidnight ? overnight : today;
+  // How long the last one is still on the road after it leaves.
+  const tail = journeyMinutes(route);
+  const span = overnight && overnight.last + tail >= now.minutesSinceMidnight ? overnight : today;
   if (!span) return null;
 
   return {
@@ -292,6 +312,29 @@ export function serviceSpan(
     untilFirst: span.first - now.minutesSinceMidnight,
     untilLast: span.last - now.minutesSinceMidnight,
   };
+}
+
+/**
+ * Has the day's last one already gone past this stop?
+ *
+ * "暫無班次" and "尾班車已過" are the same silence and different news: the
+ * first is a wait, the second is a taxi. Nothing in an empty feed tells the
+ * two apart - the timetable does. The last one sets off `untilLast` minutes
+ * from now and takes the rest of the road to reach this stop, so past that it
+ * is gone from here even while it is still carrying people further up the
+ * line.
+ *
+ * Before the day's first departure the answer is yes at every stop: last
+ * night's run has finished everywhere and nothing is coming until morning.
+ *
+ * A route with no published timetable answers no - silence about a route is
+ * not evidence that its day is over.
+ */
+export function lastRunPassed(db: RouteDb, route: KeyedRoute, seq: number): boolean {
+  const span = serviceSpan(db, route);
+  if (!span) return false;
+  if (span.untilFirst > 0) return true;
+  return span.untilLast + travelMinutes(route, seq) < 0;
 }
 
 /** The ends of one service day, in that day's own clock. */

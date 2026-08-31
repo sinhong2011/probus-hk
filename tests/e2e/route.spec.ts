@@ -22,6 +22,31 @@ test("warns when the last bus of the day is the next hour's problem", async ({ p
   await expect(page.getByText("尾班 23:40 · 20 分鐘")).toBeVisible({ timeout: 15_000 });
 });
 
+test("counts down to the first bus once it is within the hour", async ({ page }) => {
+  // 05:00 Hong Kong time. Route 1's first is 05:35, so the wait is thirty-five
+  // minutes. The other half of this chip has always counted down to the last
+  // departure; this half stated a clock time and left the subtraction to a
+  // rider standing at a stop at five in the morning.
+  await page.clock.setFixedTime(new Date("2026-08-29T21:00:00Z"));
+  await page.goto(`/route/${KMB_1}`);
+
+  await expect(page.getByText("而家未有車 · 首班 05:35 · 35 分鐘")).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test("states the first bus without a countdown when it is a night away", async ({ page }) => {
+  // 00:30, five hours before the first one. "300 分鐘" is not a wait a rider
+  // holds in their head, so past the hour the clock time stands alone.
+  await page.clock.setFixedTime(new Date("2026-08-29T16:30:00Z"));
+  await page.goto(`/route/${KMB_1}`);
+
+  // The whole chip, so that "no countdown" is actually asserted rather than
+  // just "the clock time is somewhere in there".
+  const chip = page.locator("span.tnum", { hasText: "首班 05:35" }).first();
+  await expect(chip).toHaveText("而家未有車 · 首班 05:35", { timeout: 15_000 });
+});
+
 test("passes on the operator's word that a departure is the last one", async ({ page }) => {
   // Every feed carries remarks - 最後班次, 延誤 - and the app parsed them and
   // then dropped them on the floor. The last of the three arrivals says so.

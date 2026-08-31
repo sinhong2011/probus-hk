@@ -31,7 +31,7 @@ import { CardGrid, Page, RowCard, Section } from "~/components/Layout";
 import { routeLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { routeAt } from "~/data/db";
-import { isRunningNow } from "~/data/schedule";
+import { isRunningNow, lastRunPassed } from "~/data/schedule";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
 import { arrivals, type Arrival } from "~/data/arrivals";
 import { createLiveQuery } from "~/lib/tanstack/db";
@@ -124,6 +124,14 @@ function BookmarkCard(props: {
     return a.nth < 0 ? Number.POSITIVE_INFINITY : a.nth;
   };
 
+  const db = useDb();
+  /* Why there is nothing coming: still to come, or gone for the night. A
+     bookmark is read at the two ends of the day more than anywhere else. */
+  const over = () => {
+    now();
+    return lastRunPassed(db(), props.entry.route, props.entry.item.seq);
+  };
+
   const dim = () => !props.entry.running && etas()?.length === 0;
   const alerted = () =>
     alerts.has("arrival", props.entry.route.key, props.entry.item.stopId) ||
@@ -196,6 +204,7 @@ function BookmarkCard(props: {
           size="sm"
           limit={2}
           unreachable={unreachable()}
+          over={over()}
         />
       </div>
 

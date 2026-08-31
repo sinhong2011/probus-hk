@@ -77,6 +77,16 @@ export function EtaCountdown(props: {
    * same sentence said twice, once too small to read.
    */
   notices?: boolean;
+  /**
+   * The day's last one has already gone past here.
+   *
+   * "暫無班次" and "尾班車已過" are not the same sentence. The first says the
+   * feed has nothing to report, which a rider reads as "wait and one will
+   * come"; the second says there is nothing more tonight and the answer is a
+   * taxi or a walk. Only the screen holding the timetable can tell the two
+   * apart, so it says which this is.
+   */
+  over?: boolean;
   /** Milliseconds before the digits roll; see `RollingNumber`. */
   stagger?: number;
 }) {
@@ -150,8 +160,11 @@ export function EtaCountdown(props: {
       <Show
         when={upcoming().length > 0}
         fallback={
-          <span class="text-[0.81rem] font-semibold text-faint-foreground" data-eta-state="none">
-            {t("noService", props.lang)}
+          <span
+            class="text-[0.81rem] font-semibold text-faint-foreground"
+            data-eta-state={props.over ? "over" : "none"}
+          >
+            {t(props.over ? "lastBusGone" : "noService", props.lang)}
           </span>
         }
       >

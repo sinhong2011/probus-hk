@@ -35,6 +35,7 @@ const MESSAGES = {
   arriving: m.arriving,
   scheduled: m.scheduled,
   noService: m.no_service,
+  lastBusGone: m.last_bus_gone,
   minute: m.minute,
   live: m.live,
   passed: m.passed,

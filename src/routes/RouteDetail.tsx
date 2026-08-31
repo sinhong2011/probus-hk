@@ -37,7 +37,7 @@ import { useInView } from "~/lib/inView";
 import { reverseRoute, routeAt, routeStops } from "~/data/db";
 import { lineName, lineRank, stationLines } from "~/data/rail";
 import { railFare } from "~/data/railFares";
-import { rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
+import { lastRunPassed, rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import { useVehicles } from "~/data/useVehicles";
@@ -48,6 +48,7 @@ import {
   countdown,
   fareAt,
   formatFare,
+  isLastRun,
   serviceNotice,
 } from "~/lib/format";
 import { now } from "~/stores/clock";
@@ -531,6 +532,15 @@ function StopRow(props: {
   /** Outside the ride being planned. */
   dimmed: boolean;
   /**
+   * The day's last bus has already gone past this stop.
+   *
+   * Read from the timetable rather than from the empty answer: a stop with
+   * nothing coming says "暫無班次", which is what a rider sees at four in the
+   * morning and at four in the afternoon alike. One of those two is a wait;
+   * the other is a taxi.
+   */
+  dayOver: boolean;
+  /**
    * How many stops short of this one the next bus still is, or `null` when
    * nothing live is coming. Counted in stops rather than metres because that
    * is the unit a rider standing at a kerb can check for themselves.
@@ -582,6 +592,23 @@ function StopRow(props: {
     3,
     { keepLast: true },
   );
+
+  /*
+   * What the row actually shows.
+   *
+   * A stop the last bus has already left behind keeps whatever the operator
+   * still reports - a live answer is evidence - but drops the timetable's own
+   * projections. Those are an estimate of a bus that has gone: route 104 takes
+   * 75 minutes spread over 33 stops, so at ten to one the estimate still had
+   * the 23:50 departure four minutes from a stop the feed had watched it pass.
+   * "4 分鐘" under a stop whose last bus went ten minutes ago is worse than
+   * saying nothing, and what the row says instead is 尾班車已過.
+   */
+  const shown = () => {
+    const list = etas();
+    if (!list || !props.dayOver) return list;
+    return list.filter((eta) => eta.source !== "scheduled");
+  };
 
   const pinned = () => saved.has(props.route.key, props.stopId);
   /* What the flag would say if it still said anything: the four states the one
@@ -1068,11 +1095,12 @@ function StopRow(props: {
                   list is for scanning forty of these, and the stop a rider
                   opened is the one whose number they are reading. */}
               <EtaCountdown
-                etas={etas()}
+                etas={shown()}
                 lang={props.lang}
                 size={props.open ? "md" : "sm"}
                 limit={1}
                 clock={props.open}
+                over={props.dayOver}
                 /* Said in full beside the name, a tap away; a second copy
                    here would be the same sentence cut to six characters. */
                 notices={false}
@@ -1301,6 +1329,7 @@ export default function RouteDetail() {
     const r = route();
     return r ? serviceSpan(db(), r) : null;
   });
+
   const stops = createMemo(() => {
     const r = route();
     return r ? routeStops(db(), r) : [];
@@ -1581,6 +1610,45 @@ export default function RouteDetail() {
       return map;
     });
   };
+  /**
+   * The furthest stop an operator still reports the last run at.
+   *
+   * The timetable spreads a route's journey time evenly over its stops, which
+   * at one in the morning is slower than the road really is: the estimate had
+   * the last bus back at stop 23 while the feed was reporting it a minute from
+   * stop 30. A live answer is evidence and beats the estimate, so where the
+   * operator says the last one is here, every stop behind it is done.
+   *
+   * Zero when no row has heard of it - the ordinary case, all day long.
+   */
+  const lastRunSeq = createMemo(() => {
+    let furthest = 0;
+    for (const [seq, list] of rowEtas()) {
+      if (seq <= furthest) continue;
+      const live = list.some(
+        (eta) => eta.source !== "scheduled" && eta.remark && isLastRun(eta.remark),
+      );
+      if (live) furthest = seq;
+    }
+    return furthest;
+  });
+
+  /**
+   * Whether the day's last bus has already gone past a given stop - the
+   * difference between 暫無班次 and 尾班車已過, which are the same silence and
+   * different news. The timetable answers it (see `lastRunPassed`), and a live
+   * sighting of the last run further up the line overrules it.
+   *
+   * `now()` is read so the row turns over on the clock rather than on a
+   * reload: the moment the last one passes is exactly when this changes.
+   */
+  const dayOver = (seq: number) => {
+    now();
+    const r = route();
+    if (!r) return false;
+    return seq < lastRunSeq() || lastRunPassed(db(), r, seq);
+  };
+
   /** Whether two neighbouring stops are under the same notice. */
   const sameNotice = (a: number, b: number) => {
     const key = noticeKeys().get(a);
@@ -1857,6 +1925,7 @@ export default function RouteDetail() {
                     (ride() !== null && roleOf(seq()) === null) ||
                     (picking() && seq() < (boardSeq() as number))
                   }
+                  dayOver={dayOver(seq())}
                 />
               );
             }}
@@ -2079,39 +2148,6 @@ export default function RouteDetail() {
                   unavailableLabel={t("mapUnavailable", lang())}
                   list={() => <StopList />}
                 />
-
-                {/*
-                 * The figures - fare, stops, journey time, service span -
-                 * live in the timetable dialog now; the card keeps only the
-                 * exception worth interrupting for: the hour in which the
-                 * service day is against you - not started, about to end, or
-                 * already over. All quiet, no row.
-                 */}
-                <Show when={span()}>
-                  {(hours) => (
-                    <Show when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}>
-                      <div class="flex min-h-11 items-center gap-2.5 border-t border-border px-3.5 py-2">
-                        <Chip tone="warn" class="min-w-0">
-                          <AlarmIcon size={12} />
-                          <span class="tnum truncate">
-                            <Show
-                              when={hours().untilFirst <= 0}
-                              fallback={`${t("notRunning", lang())} · ${t("firstBus", lang())} ${hours().first}`}
-                            >
-                              {t("lastBus", lang())} {hours().last} ·{" "}
-                              <Show
-                                when={hours().untilLast >= 0}
-                                fallback={t("alreadyLeft", lang())}
-                              >
-                                {Math.round(hours().untilLast)} {t("minute", lang())}
-                              </Show>
-                            </Show>
-                          </span>
-                        </Chip>
-                      </div>
-                    </Show>
-                  )}
-                </Show>
               </Card>
             </>
           }
@@ -2121,6 +2157,53 @@ export default function RouteDetail() {
            * the answer behind a control, and the page opens scrolled to where
            * you are standing anyway.
            */}
+
+          {/*
+           * The hour in which the service day is against you - not started,
+           * about to end, or already over. The figures it used to sit beside
+           * - fare, stops, journey time, the span itself - live in the
+           * timetable dialog now, and this is the one of them worth
+           * interrupting for, so it left the map's card with them and became
+           * a row of its own directly above the list it applies to. Inside
+           * the card it was a strip under a map, read after the map and
+           * below the fold on a phone; the list is what a rider is here to
+           * read, and "there is no bus yet" belongs at the top of it.
+           */}
+          <Show when={span()}>
+            {(hours) => (
+              <Show when={hours().untilFirst > 0 || hours().untilLast <= LAST_CALL_MINUTES}>
+                <Alert lang={lang()} tone="warn" icon={<AlarmIcon size={13} />} class="shrink-0">
+                  <span class="tnum font-semibold">
+                    <Show
+                      when={hours().untilFirst <= 0}
+                      fallback={
+                        <>
+                          {t("notRunning", lang())} · {t("firstBus", lang())} {hours().first}
+                          {/* And how long that is, once it is close enough to
+                              be worth waiting out - the same hour the last-bus
+                              warning uses. The other half of this note has
+                              always counted down to the last departure; this
+                              half stated a clock time and left the rider to do
+                              the subtraction at four in the morning. Past the
+                              hour the time alone is the honest answer: "312
+                              分鐘" is not a wait, it is a night's sleep. */}
+                          <Show when={hours().untilFirst <= LAST_CALL_MINUTES}>
+                            {" · "}
+                            {Math.round(hours().untilFirst)} {t("minute", lang())}
+                          </Show>
+                        </>
+                      }
+                    >
+                      {t("lastBus", lang())} {hours().last} ·{" "}
+                      <Show when={hours().untilLast >= 0} fallback={t("alreadyLeft", lang())}>
+                        {Math.round(hours().untilLast)} {t("minute", lang())}
+                      </Show>
+                    </Show>
+                  </span>
+                </Alert>
+              </Show>
+            )}
+          </Show>
 
           {/* Said once, before the list, and closed for good with one tap:
               the rider who has learned the gesture should not be told again. */}

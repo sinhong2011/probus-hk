@@ -27,6 +27,8 @@ import { EtaCountdown } from "~/components/EtaCountdown";
 import { StopCard } from "~/components/StopCard";
 import { StopListSkeleton } from "~/components/Skeleton";
 import { useDb } from "~/data/context";
+import { lastRunPassed } from "~/data/schedule";
+import { now } from "~/stores/clock";
 import { presetRoutes, scenicHighlights } from "~/data/presets";
 import { operatorLabel } from "~/lib/operators";
 import {
@@ -237,11 +239,18 @@ function clockTime(at: number): string {
  * and opens the route at that stop when tapped.
  */
 function NextTrip(props: { trip: Guess; lang: Lang }) {
+  const db = useDb();
   const etas = useEta(() => ({
     route: props.trip.route,
     seq: props.trip.seq,
     stopIdByCo: stopIdsFor(props.trip.route, props.trip.seq),
   }));
+  /* An empty answer at a kerb at midnight is not the same news as an empty
+     answer at noon; the timetable is what tells the two apart. */
+  const over = () => {
+    now();
+    return lastRunPassed(db(), props.trip.route, props.trip.seq);
+  };
 
   return (
     <Card>
@@ -261,7 +270,7 @@ function NextTrip(props: { trip: Guess; lang: Lang }) {
           </span>
         </div>
 
-        <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} />
+        <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} over={over()} />
       </a>
     </Card>
   );
