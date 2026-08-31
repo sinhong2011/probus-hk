@@ -979,6 +979,15 @@ function Categories(props: {
           the block ends level with the keypad's panel rather than stopping
           halfway down and leaving a hand's width of nothing under it. */}
       <div class="app-scroll -mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:grid lg:grow lg:grid-cols-3 lg:grid-rows-2 lg:gap-4 lg:overflow-visible lg:px-0">
+        {/* At the head of the row, not the foot. A control at the end of a
+            strip that scrolls is a control nobody has seen: six chips have to
+            be swiped past before it exists, and "there are eleven more" is
+            exactly the thing a rider needs told before they decide the six are
+            all there is. It wears the neutral chip against the categories'
+            white ones, so it reads as the way in rather than as a seventh
+            category. */}
+        <span class="contents lg:hidden">{viewAll()}</span>
+
         <For each={SHOWN_CATEGORIES}>
           {(item) => (
             /* A chip on a phone, a tile on a desktop. On the tile the glyph
@@ -1026,13 +1035,6 @@ function Categories(props: {
             </a>
           )}
         </For>
-
-        {/* The rest of them, at the end of the row where a thumb arrives after
-            swiping the six. A phone has no room for the other eleven and no
-            heading to hang 睇晒 off, so this chip is both - and it opens them
-            over the screen rather than navigating away from a search that is
-            half typed. */}
-        <span class="contents lg:hidden">{viewAll()}</span>
       </div>
 
       {/* Every category, as a sheet. The browse screen lists them too, but
