@@ -1,0 +1,6364 @@
+{
+  "generated": "2026-08-31",
+  "cameras": [
+    [
+      "AID01101",
+      22.248083364,
+      114.152524708,
+      "Aberdeen Praya Road near Abba House - Eastbound",
+      "香港仔海旁道近福群大樓 - 東行"
+    ],
+    [
+      "AID01102",
+      22.247126806,
+      114.157714898,
+      "Aberdeen Praya Road near Hoi Fai Mansion - Eastbound",
+      "香港仔海旁道近海暉大廈 - 東行"
+    ],
+    [
+      "AID01103",
+      22.248635389,
+      114.162148089,
+      "Wong Chuk Hang Road near Aberdeen Technical School - Eastbound",
+      "黃竹坑道近香港仔工業學校 - 東行"
+    ],
+    [
+      "AID01104",
+      22.248373789,
+      114.16581512,
+      "Wong Chuk Hang Road Flyover near AXA Southside - Eastbound",
+      "黃竹坑道行車天橋近安盛匯 - 東行"
+    ],
+    [
+      "AID01105",
+      22.249683404,
+      114.168638054,
+      "Wong Chuk Hang Road Flyover near Benefit Industrial Factory Building - Eastbound",
+      "黃竹坑道行車天橋近本利發工業大廈 - 東行"
+    ],
+    [
+      "AID01106",
+      22.250442111,
+      114.171878214,
+      "Wong Chuk Hang Road near Hong Kong Academy of Medicine - Eastbound",
+      "黃竹坑道近香港醫學專科學院 - 東行"
+    ],
+    [
+      "AID01107",
+      22.249990652,
+      114.176292267,
+      "Aberdeen Tunnel near Wong Chuk Hang Hospital - Eastbound",
+      "香港仔隧道近黃竹坑醫院 - 東行"
+    ],
+    [
+      "AID01108",
+      22.271862876,
+      114.180124745,
+      "Wong Nai Chung Gap Flyover near Racecourse - Northbound",
+      "黃泥涌峽天橋近馬場 - 北行"
+    ],
+    [
+      "AID01109",
+      22.276594911,
+      114.181075751,
+      "Canal Road Flyover near Cricket Club - Northbound",
+      "堅拿道天橋近木球會 - 北行"
+    ],
+    [
+      "AID01110",
+      22.279349253,
+      114.181211679,
+      "Canal Road Flyover near Wan Chai Fire Station - Northbound",
+      "堅拿道天橋近灣仔消防局 - 北行"
+    ],
+    [
+      "AID01111",
+      22.304120264,
+      114.180998944,
+      "Hong Chong Road near The Hong Kong Polytechnic University - Northbound (1)",
+      "康莊道近香港理工大學 - 北行（1）"
+    ],
+    [
+      "AID01112",
+      22.304923979,
+      114.181338641,
+      "Hong Chong Road near The Hong Kong Polytechnic University - Northbound (2)",
+      "康莊道近香港理工大學 - 北行（2）"
+    ],
+    [
+      "AID01113",
+      22.310288217,
+      114.178165168,
+      "Princess Margaret Road near Parc Palais- Northbound",
+      "公主道近君頤峰 - 北行"
+    ],
+    [
+      "AID01114",
+      22.313313474,
+      114.176884064,
+      "Princess Margaret Road near Oi Man Estate - Northbound",
+      "公主道近愛民邨 - 北行"
+    ],
+    [
+      "AID01115",
+      22.318506054,
+      114.178980542,
+      "Princess Margaret Road near Yu Chun Keung Memorial College - Northbound",
+      "公主道近余振強紀念中學 - 北行"
+    ],
+    [
+      "AID01116",
+      22.320745645,
+      114.178679688,
+      "Princess Margaret Road near St. John Ambulance Brigade Kowloon Depot - Northbound",
+      "公主道近聖約翰救傷隊九龍救護站 - 北行"
+    ],
+    [
+      "AID01117",
+      22.324357885,
+      114.178310896,
+      "Waterloo Road near St. George Apartments - Northbound",
+      "窩打老道近聖佐治大廈 - 北行"
+    ],
+    [
+      "AID01118",
+      22.328430678,
+      114.178475951,
+      "Waterloo Road near Kowloon Tong Club - Northbound",
+      "窩打老道近九龍塘會 - 北行"
+    ],
+    [
+      "AID01119",
+      22.332521529,
+      114.178767206,
+      "Waterloo Road near Durham Road - Northbound",
+      "窩打老道近對衡道- 北行"
+    ],
+    [
+      "AID01120",
+      22.334968814,
+      114.178883724,
+      "Waterloo Road near Kowloon East Barracks(1) - Northbound",
+      "窩打老道近九龍東軍營(1)- 北行"
+    ],
+    [
+      "AID01121",
+      22.338481705,
+      114.179145872,
+      "Waterloo Road near Kowloon East Barracks(2) - Northbound",
+      "窩打老道近九龍東軍營(2) - 北行"
+    ],
+    [
+      "AID01122",
+      22.341904294,
+      114.178932363,
+      "Waterloo Road near Warwick Road - Northbound",
+      "窩打老道近和域道 - 北行"
+    ],
+    [
+      "AID01123",
+      22.345218464,
+      114.181330228,
+      "Lion Rock Tunnel Road near Entrance from Kowloon - Northbound",
+      "獅子山隧道公路近九龍入口 - 北行"
+    ],
+    [
+      "AID01124",
+      22.359279096,
+      114.175185054,
+      "Lion Rock Tunnel Road near Toll Plaza - Northbound",
+      "獅子山隧道公路近收費廣場 - 北行"
+    ],
+    [
+      "AID01125",
+      22.363424098,
+      114.179845333,
+      "Lion Rock Tunnel Road near Worldwide Gardens - Northbound",
+      "獅子山隧道公路近世界花園 - 北行"
+    ],
+    [
+      "AID01126",
+      22.365446825,
+      114.183631948,
+      "Lion Rock Tunnel Road near Kak Tin Village - Northbound (1)",
+      "獅子山隧道公路近隔田村 - 北行 (1)"
+    ],
+    [
+      "AID01127",
+      22.367008994,
+      114.185981666,
+      "Lion Rock Tunnel Road near Kak Tin Village - Northbound (2)",
+      "獅子山隧道公路近隔田村 - 北行 (2)"
+    ],
+    [
+      "AID01128",
+      22.371144765,
+      114.189215217,
+      "Lion Rock Tunnel Road near Fung Shing Court - Northbound",
+      "獅子山隧道公路近豐盛苑 - 北行"
+    ],
+    [
+      "AID01129",
+      22.373817473,
+      114.192973122,
+      "Sha Tin Road near Pok Hong Estate - Northbound",
+      "沙田路近博康邨 - 北行"
+    ],
+    [
+      "AID01130",
+      22.374485437,
+      114.195701648,
+      "Sha Tin Road near Christ College - Northbound",
+      "沙田路近基督書院 - 北行"
+    ],
+    [
+      "AID01131",
+      22.376246018,
+      114.198663407,
+      "Sha Tin Road near Sha Tin Wai New Village - Northbound",
+      "沙田路近沙田圍新村 - 北行"
+    ],
+    [
+      "AID01132",
+      22.380905499,
+      114.200596469,
+      "Sha Tin Road near Prince of Wales Hospital - Northbound",
+      "沙田路近威爾斯親王醫院 - 北行"
+    ],
+    [
+      "AID01133",
+      22.383713868,
+      114.201422332,
+      "Sha Tin Road near Shing Mun River - Northbound(1)",
+      "沙田路近城門河 - 北行(1)"
+    ],
+    [
+      "AID01134",
+      22.38752486,
+      114.200675279,
+      "Sha Tin Road near Shing Mun River - Northbound",
+      "沙田路近城門河 - 北行"
+    ],
+    [
+      "AID01135",
+      22.390162008,
+      114.199005458,
+      "Sha Tin Road near Hong Kong Institute of Vocational Education (Sha Tin) - Northbound",
+      "沙田路近香港專業教育學院(沙田分校) - 北行"
+    ],
+    [
+      "AID01136",
+      22.394018027,
+      114.199083759,
+      "Sha Tin Road near Fo Tan Railway House - Northbound",
+      "沙田路近火炭鐵路大樓 - 北行"
+    ],
+    [
+      "AID01201",
+      22.345669985,
+      114.18156323,
+      "Lion Rock Tunnel Road near Exit to Kowloon - Southbound",
+      "獅子山隧道公路近九龍出口 - 南行"
+    ],
+    [
+      "AID01202",
+      22.342400978,
+      114.178747927,
+      "Waterloo Road near Warwick Road - Southbound",
+      "窩打老道近和域道 - 南行"
+    ],
+    [
+      "AID01203",
+      22.338915172,
+      114.179165294,
+      "Waterloo Road near Junction Road - Southbound",
+      "窩打老道近聯合道 - 南行"
+    ],
+    [
+      "AID01204",
+      22.334968814,
+      114.178912845,
+      "Waterloo Road near Kowloon East Barracks - Southbound",
+      "窩打老道近九龍東軍營 - 南行"
+    ],
+    [
+      "AID01205",
+      22.332521528,
+      114.178873981,
+      "Waterloo Road near American Internationnal School - Southbound",
+      "窩打老道近美國國際學校 - 南行"
+    ],
+    [
+      "AID01206",
+      22.328421647,
+      114.178602137,
+      "Waterloo Road near Kowloon Tong Club - Southbound",
+      "窩打老道近九龍塘會 - 南行"
+    ],
+    [
+      "AID01207",
+      22.323987632,
+      114.178281773,
+      "Waterloo Road near St. George Apartments - Southbound",
+      "窩打老道近聖佐治大廈 - 南行"
+    ],
+    [
+      "AID01208",
+      22.321305546,
+      114.178262333,
+      "Princess Margaret Road near St. John Ambulance Brigade Kowloon Depot - Southbound",
+      "公主道近聖約翰救傷隊九龍救護站 - 南行"
+    ],
+    [
+      "AID01209",
+      22.318497023,
+      114.178999954,
+      "Princess Margaret Road near Yu Chun Keung Memorial College - Southbound",
+      "公主道近余振強紀念中學 - 南行"
+    ],
+    [
+      "AID01210",
+      22.313313474,
+      114.176913181,
+      "Princess Margaret Road near Oi Man Estate - Southbound",
+      "公主道近愛民邨 - 南行"
+    ],
+    [
+      "AID01211",
+      22.310297247,
+      114.178174873,
+      "Princess Margaret Road near Oi Man Estate - Southbound(2)",
+      "公主道近愛民邨 - 南行(2)"
+    ],
+    [
+      "AID01212",
+      22.309457395,
+      114.178825119,
+      "Princess Margaret Road near King's Park -Southbound",
+      "公主道近京士柏道花園 - 南行"
+    ],
+    [
+      "AID01213",
+      22.305592239,
+      114.181523058,
+      "Hong Chong Road near The Hong Kong Polytechnic University - Southbound",
+      "康莊道近香港理工大學 - 南行"
+    ],
+    [
+      "AID01214",
+      22.280721923,
+      114.180697447,
+      "Canal Road Flyover near Elizabeth House - Southbound",
+      "堅拿道天橋近伊利莎伯大廈 - 南行"
+    ],
+    [
+      "AID01215",
+      22.278211393,
+      114.181211644,
+      "Canal Road Flyover near Wing Tak Building - Southbound",
+      "堅拿道天橋近永德大廈 - 南行"
+    ],
+    [
+      "AID01216",
+      22.27331682,
+      114.179600828,
+      "Wong Nai Chung Gap Flyover near Racecourse - Southbound",
+      "黃泥涌峽天橋近馬場 - 南行"
+    ],
+    [
+      "AID01217",
+      22.250595706,
+      114.177563124,
+      "Aberdeen Tunnel near Toll Plaza - Westbound",
+      "香港仔隧道近收費廣場 - 西行"
+    ],
+    [
+      "AID01218",
+      22.250053837,
+      114.173711752,
+      "Wong Chuk Hang Road near Wong Chuk Hang Sports Centre - Westbound",
+      "黃竹坑道近黃竹坑體育館 - 西行"
+    ],
+    [
+      "AID01219",
+      22.250071761,
+      114.169433529,
+      "Wong Chuk Hang Road near Wong Chuk Hang Recreation Ground - Westbound",
+      "黃竹坑道行車近黃竹坑遊樂場 - 西行"
+    ],
+    [
+      "AID01220",
+      22.248274398,
+      114.165048744,
+      "Wong Chuk Hang Road Flyover near Cheung Tak Industrial Building - Westbound",
+      "黃竹坑道行車天橋近長德工業大廈 - 西行"
+    ],
+    [
+      "AID01221",
+      22.248626324,
+      114.161769748,
+      "Wong Chuk Hang Road near Aberdeen Police Station - Westbound",
+      "黃竹坑道近香港仔警署 - 西行"
+    ],
+    [
+      "AID01222",
+      22.247614613,
+      114.159043871,
+      "Aberdeen Praya Road near Ocean Court - Westbound",
+      "香港仔海旁道近逸港居 - 西行"
+    ],
+    [
+      "AID01223",
+      22.247478612,
+      114.154639632,
+      "Aberdeen Praya Road near Aberdeen Bus Terminus - Westbound",
+      "香港仔海旁道近香港仔巴士總站 - 西行"
+    ],
+    [
+      "AID02104",
+      22.306946167,
+      114.233105747,
+      "Kwun Tong Bypass near Sceneway Garden - Westbound",
+      "觀塘繞道近匯景花園 - 西行"
+    ],
+    [
+      "AID02105",
+      22.30887989,
+      114.229612636,
+      "Kwun Tong Bypass near Magistrates Courts - Westbound",
+      "觀塘繞道近裁判法院 - 西行"
+    ],
+    [
+      "AID02106",
+      22.308122211,
+      114.226797847,
+      "Kwun Tong Bypass near Laguna City - Westbound",
+      "觀塘繞道近麗港城 - 西行"
+    ],
+    [
+      "AID02107",
+      22.306515439,
+      114.224555403,
+      "Kwun Tong Bypass near Manulife Financial Centre - Westbound",
+      "觀塘繞道近宏利金融中心 - 西行"
+    ],
+    [
+      "AID02108",
+      22.307889134,
+      114.220867904,
+      "Kwun Tong Bypass near Kwun Tong Ferry - Northbound",
+      "觀塘繞道近觀塘碼頭 - 北行"
+    ],
+    [
+      "AID02109",
+      22.311511172,
+      114.217947708,
+      "Kwun Tong Bypass near Kowloon Flour Mills - Northbound",
+      "觀塘繞道近九龍麵粉廠 - 北行"
+    ],
+    [
+      "AID02110",
+      22.313182236,
+      114.216327373,
+      "Kwun Tong Bypass near NEO - Northbound",
+      "觀塘繞道近綠景 - 北行"
+    ],
+    [
+      "AID02111",
+      22.315512672,
+      114.214037483,
+      "Kwun Tong Bypass near Kowloon Godown - Northbound",
+      "觀塘繞道近九龍貨倉 - 北行"
+    ],
+    [
+      "AID02112",
+      22.317012321,
+      114.211465843,
+      "Kwun Tong Bypass near Kai Tak Fire Station - Northbound",
+      "觀塘繞道近啟德消防局 - 北行"
+    ],
+    [
+      "AID02113",
+      22.318873412,
+      114.207554812,
+      "Kwun Tong Bypass near MegaBox - Northbound",
+      "觀塘繞道近企業廣場五期 - 北行"
+    ],
+    [
+      "AID02114",
+      22.322838397,
+      114.204469107,
+      "Kwun Tong Bypass near Trade &amp; Exhibition Centre - Northbound",
+      "觀塘繞道近九龍灣展貿 - 北行"
+    ],
+    [
+      "AID02115",
+      22.327606435,
+      114.205120384,
+      "Kwun Tong Bypass near Kowloon Bay Park - Northbound",
+      "觀塘繞道近九龍灣公園 - 北行"
+    ],
+    [
+      "AID02116",
+      22.33323248,
+      114.205160346,
+      "Kwun Tong Bypass near Choi Hung Estate - Northbound",
+      "觀塘繞道近彩虹邨 - 北行"
+    ],
+    [
+      "AID02117",
+      22.338425354,
+      114.203433498,
+      "Tate's Cairn Highway near Chi Lin Nunnery - Northbound",
+      "大老山公路近志蓮淨院 - 北行"
+    ],
+    [
+      "AID02118",
+      22.378266768,
+      114.210781859,
+      "Tate's Cairn Tunnel near Toll Plaza - Northbound",
+      "大老山隧道近收費廣場 - 北行"
+    ],
+    [
+      "AID02119",
+      22.382366718,
+      114.210345888,
+      "Tate's Cairn Highway near HK School of Motoring - Northbound",
+      "大老山公路近駕駛學院 - 北行"
+    ],
+    [
+      "AID02120",
+      22.387766798,
+      114.211162881,
+      "Tate's Cairn Highway near HKBU (Shek Mun) - Northbound",
+      "大老山公路近浸會大學 (石門) - 北行"
+    ],
+    [
+      "AID02121",
+      22.392300505,
+      114.209280056,
+      "Tate's Cairn Highway near On Sum Street - Northbound",
+      "大老山公路近安心街 - 北行"
+    ],
+    [
+      "AID02122",
+      22.396589804,
+      114.21023276,
+      "Tate's Cairn Highway near Rowing Centre - Northbound",
+      "大老山公路近划艇中心 - 北行"
+    ],
+    [
+      "AID02123",
+      22.399975764,
+      114.212476938,
+      "Tate's Cairn Highway near Shatin Hospital - Northbound",
+      "大老山公路近沙田醫院 - 北行"
+    ],
+    [
+      "AID02124",
+      22.402702249,
+      114.215633949,
+      "Tate's Cairn Highway near A Kung Kok Sports Grounds - Northbound",
+      "大老山公路近亞公角運動場 - 北行"
+    ],
+    [
+      "AID02125",
+      22.406006889,
+      114.217752076,
+      "Tate's Cairn Highway near Tai Shui Hang Bicycle Park - Northbound",
+      "大老山公路近大水坑單車公園 - 北行"
+    ],
+    [
+      "AID02126",
+      22.409385264,
+      114.2137225,
+      "Tate's Cairn Highway near Marine Police Station - Northbound",
+      "大老山公路近水警北分區基地 - 北行"
+    ],
+    [
+      "AID02127",
+      22.411841911,
+      114.212140031,
+      "Tate's Cairn Highway near Hyatt Regency ShaTin - Northbound",
+      "大老山公路近沙田凱悅酒店 - 北行"
+    ],
+    [
+      "AID02201",
+      22.340240435,
+      114.203822139,
+      "Tate's Cairn Highway near Chi Lin Nunnery - Southbound",
+      "大老山公路近志蓮淨院 - 南行"
+    ],
+    [
+      "AID02202",
+      22.335309604,
+      114.204636584,
+      "Tate's Cairn Highway near Choi Hung Estate - Southbound",
+      "大老山公路近彩虹邨 - 南行"
+    ],
+    [
+      "AID02203",
+      22.332374584,
+      114.205111638,
+      "Kwun Tong Bypass near Kai Ching Estate - Southbound",
+      "觀塘繞道近啟晴邨 - 南行"
+    ],
+    [
+      "AID02204",
+      22.327191065,
+      114.204906757,
+      "Kwun Tong Bypass near Skyline Tower Car Park - Southbound",
+      "觀塘繞道近宏天廣場 - 南行"
+    ],
+    [
+      "AID02205",
+      22.323768569,
+      114.204343108,
+      "Kwun Tong Bypass near Trade &amp; Exhibition Centre - Southbound",
+      "觀塘繞道近九龍灣展貿 - 南行"
+    ],
+    [
+      "AID02206",
+      22.319252759,
+      114.207224893,
+      "Kwun Tong Bypass near MegaBox - Southbound",
+      "觀塘繞道近企業廣場五期 - 南行"
+    ],
+    [
+      "AID02207",
+      22.317066713,
+      114.210475864,
+      "Kwun Tong Bypass near Vehicle Examination Centre - Southbound",
+      "觀塘繞道近九龍灣驗車中心 - 南行"
+    ],
+    [
+      "AID02208",
+      22.316172054,
+      114.213387373,
+      "Kwun Tong Bypass near Kowloon Godown - Southbound",
+      "觀塘繞道近九龍貨倉 - 南行"
+    ],
+    [
+      "AID02209",
+      22.312848026,
+      114.216647561,
+      "Kwun Tong Bypass near MG Tower - Southbound",
+      "觀塘繞道近萬兆豐中心 - 南行"
+    ],
+    [
+      "AID02210",
+      22.311158895,
+      114.218277589,
+      "Kwun Tong Bypass near Kowloon Flour Mills - Southbound",
+      "觀塘繞道近九龍麵粉廠 - 南行"
+    ],
+    [
+      "AID02211",
+      22.308629798,
+      114.220295528,
+      "Kwun Tong Bypass near Kwun Tong Ferry - Eastbound",
+      "觀塘繞道近觀塘碼頭 - 東行"
+    ],
+    [
+      "AID02212",
+      22.306299356,
+      114.222284345,
+      "Kwun Tong Bypass near Kwun Tong Sewage Treatment Works - Eastbound",
+      "觀塘繞道近觀塘污水處理廠 - 東行"
+    ],
+    [
+      "AID02213",
+      22.306380085,
+      114.224196269,
+      "Kwun Tong Bypass near Manulife Financial Centre - Eastbound",
+      "觀塘繞道近宏利金融中心 - 東行"
+    ],
+    [
+      "AID02214",
+      22.308519247,
+      114.227797625,
+      "Kwun Tong Bypass near Sunbeam Centre - Eastbound",
+      "觀塘繞道近日升中心 - 東行"
+    ],
+    [
+      "AID02215",
+      22.308283037,
+      114.232116352,
+      "Kwun Tong Bypass near Sceneway Garden - Eastbound",
+      "觀塘繞道近匯景花園 - 東行"
+    ],
+    [
+      "AID03101",
+      22.287995998,
+      114.137923302,
+      "Connaught Road West Flyover near Tram Depot - Eastbound",
+      "干諾道西天橋近電車廠 - 東行"
+    ],
+    [
+      "AID03102",
+      22.288700603,
+      114.138835269,
+      "Connaught Road West near Western Wholesale Food Market - Eastbound",
+      "干諾道西近西區副食品批發市場 - 東行"
+    ],
+    [
+      "AID03103",
+      22.288512545,
+      114.146355791,
+      "Connaught Road West near Sun Yat Sen Memorial Park - Westbound (1)",
+      "干諾道西近中山紀念公園 - 西行 (1)"
+    ],
+    [
+      "AID03104",
+      22.288692547,
+      114.143260225,
+      "Connaught Road West near Sun Yat Sen Memorial Park - Westbound (2)",
+      "干諾道西近中山紀念公園 - 西行 (2)"
+    ],
+    [
+      "AID03106",
+      22.307804007,
+      114.160734664,
+      "West Kowloon Highway near Centenary Substation - Northbound",
+      "西九龍公路近百周年變電站 - 北行"
+    ],
+    [
+      "AID03107",
+      22.314242872,
+      114.161190089,
+      "West Kowloon Highway near Olympic Plaza - Northbound",
+      "西九龍公路近奧海公園 - 北行"
+    ],
+    [
+      "AID03108",
+      22.317701454,
+      114.159830885,
+      "West Kowloon Highway near Olympic MTR Station - Northbound (1)",
+      "西九龍公路近港鐵奧運站 - 北行 (1)"
+    ],
+    [
+      "AID03109",
+      22.319363005,
+      114.15909303,
+      "West Kowloon Highway near Olympic MTR Station - Northbound (2)",
+      "西九龍公路近港鐵奧運站 - 北行 (2)"
+    ],
+    [
+      "AID03110",
+      22.324311362,
+      114.155695197,
+      "West Kowloon Highway near Tai Kok Tsui Substation - Northbound",
+      "西九龍公路近大角咀變電站 - 北行"
+    ],
+    [
+      "AID03111",
+      22.327137489,
+      114.152511038,
+      "West Kowloon Highway near Nam Cheong MTR Station - Northbound",
+      "西九龍公路近港鐵南昌站 - 北行"
+    ],
+    [
+      "AID03112",
+      22.32897925,
+      114.14951137,
+      "West Kowloon Highway near Hing Wah Street West - Northbound",
+      "西九龍公路近興華街西 - 北行"
+    ],
+    [
+      "AID03113",
+      22.330288126,
+      114.146375844,
+      "West Kowloon Highway near SKH St. Andrew's Primary School - Northbound",
+      "西九龍公路近聖公會聖安德烈小學 - 北行"
+    ],
+    [
+      "AID03114",
+      22.331660057,
+      114.142774318,
+      "West Kln Hwy near Tsing Sha Hwy - Northbound",
+      "西九龍公路近青沙公路 - 北行"
+    ],
+    [
+      "AID03115",
+      22.369208907,
+      114.07683828,
+      "Tsing Long Highway near Royal View Hotel - Northbound",
+      "青朗公路近帝景軒 - 北行"
+    ],
+    [
+      "AID03116",
+      22.37144646,
+      114.073622817,
+      "Tsing Long Highway near Tai Lam Tunnel Entrance from Kowloon - Northbound",
+      "青朗公路近大欖隧道九龍入口 - 北行"
+    ],
+    [
+      "AID03117",
+      22.423446797,
+      114.0642015,
+      "Tsing Long Highway near MTR Pat Heung Maintenance Centre - Northbound (1)",
+      "青朗公路近港鐵八鄉維修中心 - 北行 (1)"
+    ],
+    [
+      "AID03118",
+      22.428133415,
+      114.063925742,
+      "Tsing Long Highway near MTR Pat Heung Maintenance Centre - Northbound (2)",
+      "青朗公路近港鐵八鄉維修中心 - 北行 (2)"
+    ],
+    [
+      "AID03119",
+      22.431952485,
+      114.062766715,
+      "Tsing Long Highway near MTR Kam Sheung Road Station - Northbound (1)",
+      "青朗公路近港鐵錦上路站 - 北行 (1)"
+    ],
+    [
+      "AID03120",
+      22.435021391,
+      114.060733986,
+      "Tsing Long Highway near MTR Kam Sheung Road Station - Northbound (2)",
+      "青朗公路近港鐵錦上路站 - 北行 (2)"
+    ],
+    [
+      "AID03121",
+      22.437547894,
+      114.057953636,
+      "Tsing Long Highway near Kam Tin Road - Northbound (1)",
+      "青朗公路近錦田公路 - 北行 (1)"
+    ],
+    [
+      "AID03122",
+      22.440055751,
+      114.054464057,
+      "Tsing Long Highway near Kam Tin Road - Northbound (2)",
+      "青朗公路近錦田公路 - 北行 (2)"
+    ],
+    [
+      "AID03123",
+      22.443123441,
+      114.051002991,
+      "Tsing Long Highway near Kam Tin Road - Northbound (3)",
+      "青朗公路近錦田公路 - 北行 (3)"
+    ],
+    [
+      "AID03124",
+      22.447185509,
+      114.04893007,
+      "Tsing Long Highway near Castle Peak Road (Yuen Long) - Northbound (1)",
+      "青朗公路近青山公路元朗段 - 北行 (1)"
+    ],
+    [
+      "AID03125",
+      22.449641245,
+      114.048247768,
+      "Tsing Long Highway near Castle Peak Road (Yuen Long) - Northbound (2)",
+      "青朗公路近青山公路元朗段 - 北行 (2)"
+    ],
+    [
+      "AID03201",
+      22.373900205,
+      114.069688567,
+      "Tsing Long Highway near Tai Lam Tunnel exit to Kowloon - Southbound",
+      "青朗公路近大欖隧道九龍出口 - 南行"
+    ],
+    [
+      "AID03202",
+      22.33462042,
+      114.135600111,
+      "Tsing Kwai Highway near China Resources Int'l Logistics Centre - Southbound",
+      "青葵公路近華潤國際物流中心 - 南行"
+    ],
+    [
+      "AID03203",
+      22.332824412,
+      114.140075518,
+      "West Kln Hwy near Hoi Lai Estate - Southbound",
+      "西九龍公路近海麗邨 - 南行"
+    ],
+    [
+      "AID03204",
+      22.329367424,
+      114.148686229,
+      "West Kowloon Highway near Hing Wah Street West - Southbound",
+      "西九龍公路近興華街 - 南行"
+    ],
+    [
+      "AID03205",
+      22.326839539,
+      114.152909056,
+      "West Kowloon Highway near Nam Cheong MTR Statoin - Southbound",
+      "西九龍公路近港鐵南昌站 - 南行"
+    ],
+    [
+      "AID03206",
+      22.324004358,
+      114.155976726,
+      "West Kowloon Highway near Tai Kok Tsui Substation - Southbound",
+      "西九龍公路近大角咀變電站 - 南行"
+    ],
+    [
+      "AID03207",
+      22.32131349,
+      114.158005701,
+      "West Kowloon Highway near Olympian City Promenade Park - Southbound",
+      "西九龍公路近奧海城海濱公園 - 南行"
+    ],
+    [
+      "AID03208",
+      22.318956649,
+      114.1592872,
+      "West Kowloon Highway near Olympic MTR Station - Southbound",
+      "西九龍公路近港鐵奧運站 - 南行"
+    ],
+    [
+      "AID03209",
+      22.316879705,
+      114.160170687,
+      "West Kowloon Highway near Hoi Fai Road Promenade - Southbound",
+      "西九龍公路近海輝道海濱公園 - 南行"
+    ],
+    [
+      "AID03210",
+      22.314685358,
+      114.161054161,
+      "West Kowloon Highway near Olympic Plaza - Southbound",
+      "西九龍公路近奧海公園 - 南行"
+    ],
+    [
+      "AID03211",
+      22.307009332,
+      114.160919152,
+      "West Kowloon Highway near Centenary Substation - Southbound",
+      "西九龍公路近百周年變電站 - 南行"
+    ],
+    [
+      "AID04101",
+      22.286594573,
+      114.131461026,
+      "Shing Sai Road near Kennedy Town Swimming Pool - Eastbound",
+      "城西道近堅尼地城游泳池 - 東行"
+    ],
+    [
+      "AID04102",
+      22.287444675,
+      114.136070037,
+      "Connaught Road West Flyover near Western Harbour Centre - Eastbound",
+      "干諾道西天橋近匯港中心 - 東行"
+    ],
+    [
+      "AID04103",
+      22.288998873,
+      114.139960837,
+      "Connaught Road West Flyover near The Westpoint - Eastbound",
+      "干諾道西天橋近西港中心 - 東行"
+    ],
+    [
+      "AID04104",
+      22.289080796,
+      114.1429302,
+      "Connaught Road West Flyover near Sun Yat Sen Memorial Park - Eastbound",
+      "干諾道西天橋近中山紀念公園 - 東行"
+    ],
+    [
+      "AID04105",
+      22.288224054,
+      114.149082625,
+      "Connaught Road West Flyover near Central Police Station - Eastbound",
+      "干諾道西天橋近中區警署 - 東行"
+    ],
+    [
+      "AID04106",
+      22.293264241,
+      114.197165757,
+      "Island Eastern Corridor near Provident Centre - Eastbound",
+      "東區走廊近和富中心 - 東行"
+    ],
+    [
+      "AID04107",
+      22.293868703,
+      114.20142599,
+      "Island Eastern Corridor near North Point Ferry Pier Eastbound",
+      "東區走廊近北角渡輪碼頭 - 東行"
+    ],
+    [
+      "AID04108",
+      22.294120908,
+      114.205404765,
+      "Island Eastern Corridor near ICAC Headquarters - Eastbound",
+      "東區走廊近廉政公署總部大樓 - 東行"
+    ],
+    [
+      "AID04109",
+      22.293181132,
+      114.208587537,
+      "Island Eastern Corridor near North Point Government Offices - Eastbound",
+      "東區走廊近北角政府合署 - 東行"
+    ],
+    [
+      "AID04110",
+      22.291166645,
+      114.211789407,
+      "Island Eastern Corridor near Quarry Bay Park Phase 2 - Eastbound",
+      "東區走廊近鰂魚涌公園二期 - 東行"
+    ],
+    [
+      "AID04111",
+      22.28954921,
+      114.215961684,
+      "Island Eastern Corridor near Quarry Bay Park Phase 1 - Eastbound",
+      "東區走廊近鰂魚涌公園一期 - 東行"
+    ],
+    [
+      "AID04112",
+      22.287524866,
+      114.221696046,
+      "Island Eastern Corridor near Taikoo Shing - Eastbound",
+      "東區走廊近太古城 - 東行"
+    ],
+    [
+      "AID04113",
+      22.284156372,
+      114.221947263,
+      "Island Eastern Corridor near Tai On Building - Eastbound",
+      "東區走廊近太安樓 - 東行"
+    ],
+    [
+      "AID04114",
+      22.281301923,
+      114.224634171,
+      "Island Eastern Corridor near St. Mark's School - Eastbound",
+      "東區走廊近聖馬可中學 - 東行"
+    ],
+    [
+      "AID04115",
+      22.279972821,
+      114.229786141,
+      "Island Eastern Corridor near Aldrich Garden - Eastbound",
+      "東區走廊近愛蝶灣 - 東行"
+    ],
+    [
+      "AID04116",
+      22.282247085,
+      114.2340759,
+      "Island Eastern Corridor near Heng Fa Chuen - Southbound (1)",
+      "東區走廊近杏花邨 - 南行 (1)"
+    ],
+    [
+      "AID04117",
+      22.27876033,
+      114.236655521,
+      "Island Eastern Corridor near Heng Fa Chuen - Southbound (2)",
+      "東區走廊近杏花邨 - 南行 (2)"
+    ],
+    [
+      "AID04118",
+      22.275291842,
+      114.238584927,
+      "Island Eastern Corridor near Heng Fa Chuen - Southbound (3)",
+      "東區走廊近杏花邨 - 南行 (3)"
+    ],
+    [
+      "AID04119",
+      22.271164651,
+      114.239077949,
+      "Island Eastern Corridor near HKIVE (Chai Wan) - Southbound",
+      "東區走廊近專業教育學院 - 南行"
+    ],
+    [
+      "AID04120",
+      22.267480695,
+      114.237630665,
+      "Island Eastern Corridor near Chai Wan Park - Southbound",
+      "東區走廊近柴灣公園 - 南行"
+    ],
+    [
+      "AID04121",
+      22.293795761,
+      114.205657008,
+      "Island Eastern Corridor near ICAC Headquarters - Eastbound",
+      "東區走廊近廉政公署總部大樓 - 東行"
+    ],
+    [
+      "AID04122",
+      22.293199365,
+      114.207694759,
+      "Island Eastern Corridor near North Point Government Offices - Eastbound",
+      "東區走廊近北角政府合署 - 東行"
+    ],
+    [
+      "AID04201",
+      22.264599994,
+      114.237425675,
+      "Island Eastern Corridor near Chai Wan MTR Station - Northbound",
+      "東區走廊近柴灣地鐵站 - 北行"
+    ],
+    [
+      "AID04202",
+      22.268970613,
+      114.238000003,
+      "Island Eastern Corridor near Eastern Hospital - Northbound",
+      "東區走廊近東區醫院 - 北行"
+    ],
+    [
+      "AID04203",
+      22.271670445,
+      114.238874417,
+      "Island Eastern Corridor near HKIVE (Chai Wan) - Northbound",
+      "東區走廊近專業教育學院 - 北行"
+    ],
+    [
+      "AID04204",
+      22.27640298,
+      114.237605412,
+      "Island Eastern Corridor near Heng Fa Chuen - Northbound (1)",
+      "東區走廊近杏花邨 - 北行 (1)"
+    ],
+    [
+      "AID04205",
+      22.278986138,
+      114.236539179,
+      "Island Eastern Corridor near Heng Fa Chuen - Northbound (2)",
+      "東區走廊近杏花邨 - 北行 (2)"
+    ],
+    [
+      "AID04206",
+      22.281361814,
+      114.2348324,
+      "Island Eastern Corridor near Museum of Coastal Defence - Northbound",
+      "東區走廊近香港海防博物館 - 北行"
+    ],
+    [
+      "AID04207",
+      22.281264071,
+      114.230184464,
+      "Island Eastern Corridor near Aldrich Garden - Westbound",
+      "東區走廊近愛蝶灣 - 西行"
+    ],
+    [
+      "AID04208",
+      22.280615242,
+      114.225817739,
+      "Island Eastern Corridor near Oi Tung Estate - Westbound",
+      "東區走廊近愛東邨 - 西行"
+    ],
+    [
+      "AID04209",
+      22.281329072,
+      114.224440113,
+      "Island Eastern Corridor near Tai On Building - Westbound",
+      "東區走廊近太安樓 - 西行"
+    ],
+    [
+      "AID04210",
+      22.286007793,
+      114.221433563,
+      "Island Eastern Corridor near Taikoo Shing - Westbound (1)",
+      "東區走廊近太古城 - 西行 (1)"
+    ],
+    [
+      "AID04211",
+      22.288428642,
+      114.219037486,
+      "Island Eastern Corridor near Taikoo Shing - Westbound (2)",
+      "東區走廊近太古城 - 西行 (2)"
+    ],
+    [
+      "AID04212",
+      22.288446422,
+      114.220104912,
+      "Island Eastern Corridor near Quarry Bay Park Phase 1 - Westbound (1)",
+      "東區走廊近鰂魚涌公園一期 - 西行 (1)"
+    ],
+    [
+      "AID04213",
+      22.289106756,
+      114.215767484,
+      "Island Eastern Corridor near Quarry Bay Park Phase 1 - Westbound (2)",
+      "東區走廊近鰂魚涌公園一期 - 西行 (2)"
+    ],
+    [
+      "AID04214",
+      22.290877635,
+      114.211925192,
+      "Island Eastern Corridor near Quarry Bay Park Phase 2 - Westbound",
+      "東區走廊近鰂魚涌公園二期 - 西行"
+    ],
+    [
+      "AID04215",
+      22.292883083,
+      114.208781552,
+      "Island Eastern Corridor near North Point Government Offices - Westbound",
+      "東區走廊近北角政府合署 - 西行"
+    ],
+    [
+      "AID04216",
+      22.293931298,
+      114.205220346,
+      "Island Eastern Corridor near Vehicle Ferry Pier - Westbound",
+      "東區走廊近渡輪碼頭 - 西行"
+    ],
+    [
+      "AID04217",
+      22.293507811,
+      114.199116332,
+      "Island Eastern Corridor near Hyatt Centric - Westbound",
+      "東區走廊近凱悅酒店 - 西行"
+    ],
+    [
+      "AID04218",
+      22.287529096,
+      114.151528111,
+      "Connaught Road West Flyover near Shun Tak Centre - Westbound",
+      "干諾道西天橋近信德中心 - 西行"
+    ],
+    [
+      "AID04219",
+      22.288422534,
+      114.147966646,
+      "Connaught Road West Flyover near Sheung Wan Fire Station - Westbound",
+      "干諾道西天橋近上環消防局 - 西行"
+    ],
+    [
+      "AID04220",
+      22.288891364,
+      114.143958855,
+      "Connaught Road West Flyover near Sun Yat Sen Memorial Park - Westbound",
+      "干諾道西天橋近中山紀念公園 - 西行"
+    ],
+    [
+      "AID04221",
+      22.288176735,
+      114.138447258,
+      "Connaught Road West Flyover near Courtyard - Westbound",
+      "干諾道西天橋近萬怡酒店 - 西行"
+    ],
+    [
+      "AID04222",
+      22.289513546,
+      114.21401119,
+      "Island Eastern Corridor near EHC - Westbound",
+      "東區走廊近東區海底隧道 - 西行"
+    ],
+    [
+      "AID05101",
+      22.315421343,
+      114.218259435,
+      "Kai Fuk Road near Kwun Tong Government Primary School - Westbound",
+      "啟福道近觀塘官立小學 - 西行"
+    ],
+    [
+      "AID05102",
+      22.316731432,
+      114.215619849,
+      "Kai Fuk Road near Ngau Tau Kok Jockey Club Clinic - Westbound",
+      "啟福道近牛頭角賽馬會診所 - 西行"
+    ],
+    [
+      "AID05103",
+      22.31817721,
+      114.211737895,
+      "Kai Fuk Road near Kowloon Bay Vehicle Examination Centre - Westbound",
+      "啟福道近九龍灣驗車中心 - 西行"
+    ],
+    [
+      "AID05104",
+      22.318882396,
+      114.207797462,
+      "Kai Fuk Road near Kowloon Bay Vehicle Detention and Examination Centre - Westbound",
+      "啟福道近九龍灣車輛扣留及驗車中心 - 西行"
+    ],
+    [
+      "AID05109",
+      22.308536171,
+      114.182920708,
+      "Chatham Road North near MTR Ho Man Tin Station - Westbound",
+      "漆咸道北近港鐵何文田站 - 西行"
+    ],
+    [
+      "AID05110",
+      22.30588128,
+      114.178233061,
+      "Gascoigne Road near Gun Club Hill Barracks - Westbound",
+      "加士居道近槍會山軍營 - 西行"
+    ],
+    [
+      "AID05111",
+      22.308003418,
+      114.172371153,
+      "Gascoigne Road near Diocesan Girls' School - Westbound",
+      "加士居道近拔萃女書院 - 西行"
+    ],
+    [
+      "AID05113",
+      22.311705738,
+      114.167139805,
+      "Gascoigne Road Flyover near Prosperous Garden - Northbound",
+      "加士居道天橋近駿發花園 - 北行"
+    ],
+    [
+      "AID05114",
+      22.313268013,
+      114.16682912,
+      "Ferry Street near Cherry Street Park - Northbound",
+      "渡船街近櫻桃街公園 - 北行"
+    ],
+    [
+      "AID05115",
+      22.316844095,
+      114.166275635,
+      "West Kowloon Corridor West near Cherry Street Park - Northbound (1)",
+      "西九龍走廊西近櫻桃街公園 - 北行 (1)"
+    ],
+    [
+      "AID05116",
+      22.318478483,
+      114.164179036,
+      "West Kowloon Corridor West near Cherry Street Park - Northbound (2)",
+      "西九龍走廊西近櫻桃街公園 - 北行 (2)"
+    ],
+    [
+      "AID05117",
+      22.322776859,
+      114.161985047,
+      "West Kowloon Corridor West near Fuk Tsun Street - Northbound",
+      "西九龍走廊西近福全街 - 北行"
+    ],
+    [
+      "AID05118",
+      22.326750071,
+      114.159499769,
+      "West Kowloon Corridor near Tung Chau Street Park - Northbound",
+      "西九龍走廊近通州街公園 - 北行"
+    ],
+    [
+      "AID05119",
+      22.328555907,
+      114.157043775,
+      "West Kowloon Corridor near Yen Chow Street West - Northbound",
+      "西九龍走廊近欽州街西 - 北行"
+    ],
+    [
+      "AID05120",
+      22.331481324,
+      114.153354777,
+      "West Kowloon Corridor near West Kowloon Law Courts Building - Northbound",
+      "西九龍走廊近西九龍法院大樓 - 北行"
+    ],
+    [
+      "AID05121",
+      22.335571406,
+      114.148539378,
+      "West Kowloon Corridor near Lai Chi Kok MTR Station - Northbound",
+      "西九龍走廊近荔枝角港鐵站 - 北行"
+    ],
+    [
+      "AID05122",
+      22.3363472,
+      114.144103058,
+      "Kwai Chung Road near Lai Chi Kok Fire Station- Northbound",
+      "葵涌道近荔枝角消防局 - 北行"
+    ],
+    [
+      "AID05123",
+      22.3370778,
+      114.14001616,
+      "Kwai Chung Road near Delia Memorial School (Glee Path) - Northbound",
+      "葵涌道近地利亞修女紀念學校(吉利徑) - 北行"
+    ],
+    [
+      "AID05124",
+      22.337988612,
+      114.134774005,
+      "Kwai Chung Road near Kwai Chung Interchange - Northbound",
+      "葵涌道近葵涌交匯處 - 北行"
+    ],
+    [
+      "AID05125",
+      22.343405302,
+      114.128831312,
+      "Kwai Chung Road near Hong Chi Winifred Mary Cheung Morninghope School - Northbound",
+      "葵涌道近匡智張玉瓊晨輝學校 - 北行"
+    ],
+    [
+      "AID05126",
+      22.348172225,
+      114.124897957,
+      "Kwai Chung Road near Lai King MTR Station - Nouthbound",
+      "葵涌道近港鐵荔景站 - 北行"
+    ],
+    [
+      "AID05127",
+      22.351242868,
+      114.125692889,
+      "Kwai Chung Road near Lai King Estate - Northbound",
+      "葵涌道近荔景邨 - 北行"
+    ],
+    [
+      "AID05128",
+      22.356073277,
+      114.1228077,
+      "Tsuen Wan Road near Kwai Chung Park - Northbound",
+      "荃灣路近葵涌公園 - 北行"
+    ],
+    [
+      "AID05129",
+      22.358510626,
+      114.12017571,
+      "Tsuen Wan Road near Wing Kin Industrial Building - Nouthbound",
+      "荃灣路近永健工業大廈 - 北行"
+    ],
+    [
+      "AID05130",
+      22.362031966,
+      114.118562605,
+      "Tsuen Wan Road near Wing Kei Road 5-A-Side Soccer Pitch - Northbound",
+      "荃灣路近永基路五人足球場 - 北行"
+    ],
+    [
+      "AID05131",
+      22.364144097,
+      114.115804353,
+      "Tsuen Wan Road near Tsuen Wan Driving Test Centre - Northbound",
+      "荃灣路近荃灣駕駛考試中心 - 北行"
+    ],
+    [
+      "AID05132",
+      22.366319367,
+      114.112978024,
+      "Tsuen Wan Road near Tsuen Wan Sports Centre - Northbound",
+      "荃灣路近荃灣體育館 - 北行"
+    ],
+    [
+      "AID05133",
+      22.369505818,
+      114.109694782,
+      "Tsuen Wan Road near Tsuen Wan West MTR Station - Northbound",
+      "荃灣路近港鐵荃灣西站 - 北行"
+    ],
+    [
+      "AID05134",
+      22.372367223,
+      114.106693134,
+      "Tsuen Wan Road near Hoi Shing Garden - Northbound",
+      "荃灣路近海盛花園 - 北行"
+    ],
+    [
+      "AID05135",
+      22.374207867,
+      114.10312873,
+      "Tsuen Wan Road near Kong Nam industrial building - Westbound",
+      "荃灣路近江南工業大廈 - 西行"
+    ],
+    [
+      "AID05201",
+      22.373791599,
+      114.101254971,
+      "Tuen Mun Road near Belvedere Garden Phase 1 Car Park -Eastbound",
+      "屯門公路近麗城花園一期停車場 - 東行"
+    ],
+    [
+      "AID05202",
+      22.372015192,
+      114.107062275,
+      "Tsuen Wan Road near Hoi Shing Garden - Southbound",
+      "荃灣路近海盛花園 - 南行"
+    ],
+    [
+      "AID05203",
+      22.369216969,
+      114.110005622,
+      "Tsuen Wan Road near Tsuen Wan West MTR Station - Southbound",
+      "荃灣路近港鐵荃灣西站 - 南行"
+    ],
+    [
+      "AID05204",
+      22.366400676,
+      114.11306537,
+      "Tsuen Wan Road near Tsuen Wan Sports Centre - Sorthbound",
+      "荃灣路近荃灣體育館 - 南行"
+    ],
+    [
+      "AID05205",
+      22.362609749,
+      114.118086626,
+      "Tsuen Wan Road near Wing Kei Road 5-A-Side Soccer Pitch - Southbound (1)",
+      "荃灣路近永基路五人足球場 - 南行 (1)"
+    ],
+    [
+      "AID05206",
+      22.359567036,
+      114.119709263,
+      "Tsuen Wan Road near Wing Kei Road 5-A-Side Soccer Pitch - Southbound (2)",
+      "荃灣路近永基路五人足球場 - 南行 (2)"
+    ],
+    [
+      "AID05207",
+      22.356551721,
+      114.122283255,
+      "Tsuen Wan Road near Kwai Chung Park - Southbound",
+      "荃灣路近葵涌公園 - 南行"
+    ],
+    [
+      "AID05208",
+      22.354222651,
+      114.124750089,
+      "Tsuen Wan Road near Kwai Shun Street Playground - Southbound",
+      "荃灣路近葵順街遊樂場 - 南行"
+    ],
+    [
+      "AID05209",
+      22.349734725,
+      114.125567234,
+      "Kwai Chung Road near Lai King MTR Station - Southbound (1)",
+      "葵涌道近港鐵荔景站 - 南行 (1)"
+    ],
+    [
+      "AID05210",
+      22.346546743,
+      114.124956806,
+      "Kwai Chung Road near Lai King MTR Station - Southbound (2)",
+      "葵涌道近港鐵荔景站 - 南行 (2)"
+    ],
+    [
+      "AID05211",
+      22.344018957,
+      114.12742349,
+      "Kwai Chung Road near Hong Chi Winifred Mary Cheung Morninghope School - Southbound",
+      "葵涌道近匡智張玉瓊晨輝學校 - 南行"
+    ],
+    [
+      "AID05212",
+      22.337916485,
+      114.135230267,
+      "Kwai Chung Road near Mei Foo MTR Station - Southbound",
+      "葵涌道近港鐵美孚站 - 南行"
+    ],
+    [
+      "AID05213",
+      22.33717701,
+      114.139462824,
+      "Kwai Chung Road near Delia Memorial School (Glee Path) - Southbound",
+      "葵涌道近地利亞修女紀念學校(吉利徑) - 南行"
+    ],
+    [
+      "AID05214",
+      22.336509566,
+      114.143200255,
+      "Kwai Chung Road near Lai Chi Kok Fire Station - Southbound",
+      "葵涌道近荔枝角消防局 - 南行"
+    ],
+    [
+      "AID05215",
+      22.335228042,
+      114.147403721,
+      "Lai Chi Kok Road near Novel Industrial Building - Southbound",
+      "荔枝角道近永新工業大廈 - 南行"
+    ],
+    [
+      "AID05216",
+      22.335427187,
+      114.150131367,
+      "West Kowloon Corridor near The Pacifica -Southbound",
+      "西九龍走廊近宇晴軒 - 南行"
+    ],
+    [
+      "AID05217",
+      22.331616799,
+      114.153471236,
+      "West Kowloon Corridor near West Kowloon Law Courts Building - Southbound",
+      "西九龍走廊近西九龍法院大樓 - 南行"
+    ],
+    [
+      "AID05218",
+      22.327309898,
+      114.15885907,
+      "West Kowloon Corridor near Tung Chau Street Park - Southbound",
+      "西九龍走廊近通州街公園 - 南行"
+    ],
+    [
+      "AID05219",
+      22.32449274,
+      114.162751665,
+      "West Kowloon Corridor near Sycamore Playground -Southbound",
+      "西九龍走廊近詩歌舞遊樂場 -南行"
+    ],
+    [
+      "AID05220",
+      22.322090815,
+      114.165459923,
+      "West Kowloon Corridor near Fuk Keung Indistrial Building - Southbound",
+      "西九龍走廊近福強工業大廈 - 南行"
+    ],
+    [
+      "AID05221",
+      22.318559903,
+      114.166197858,
+      "West Kowloon Corridor near Cherry Street Park - Southbound (1)",
+      "西九龍走廊近櫻桃街公園 - 南行 (1)"
+    ],
+    [
+      "AID05222",
+      22.314875454,
+      114.166741654,
+      "West Kowloon Corridor near Cherry Street Park - Southbound (2)",
+      "西九龍走廊近櫻桃街公園 - 南行 (2)"
+    ],
+    [
+      "AID05223",
+      22.311335487,
+      114.167207768,
+      "West Kowloon Corridor near Prosperous Garden - Southbound",
+      "西九龍走廊近駿發花園 - 南行"
+    ],
+    [
+      "AID05224",
+      22.308987732,
+      114.171643228,
+      "Gascoigne Road near Methodist College - Eastbound",
+      "加士居道近循道中學 - 東行"
+    ],
+    [
+      "AID05225",
+      22.307109431,
+      114.174409256,
+      "Gascoigne Road near Diocesan Girls' School - Eastbound",
+      "加士居道近拔萃女書院 - 東行"
+    ],
+    [
+      "AID05226",
+      22.305998681,
+      114.177835155,
+      "Gascoigne Road near Gun Club Hill Barracks - Eastbound",
+      "加士居道近槍會山軍營 - 東行"
+    ],
+    [
+      "AID05227",
+      22.308436846,
+      114.182590726,
+      "Chatham Road North near MTR Ho Man Tin Station - Eastbound",
+      "漆咸道北近港鐵何文田站 - 東行"
+    ],
+    [
+      "AID05232",
+      22.32081529,
+      114.205924618,
+      "Kai Fuk Road near Billion Centre - Eastbound",
+      "啟福道近億京中心 - 東行"
+    ],
+    [
+      "AID05233",
+      22.318728813,
+      114.20812743,
+      "Kai Fuk Road near Kowloon Bay Vehicle Detention and Examination Centre - Eastbound",
+      "啟福道近九龍灣車輛扣留及驗車中心 - 東行"
+    ],
+    [
+      "AID05234",
+      22.318141154,
+      114.211427298,
+      "Kai Fuk Road near Kowloon Bay Vehicle Examination Centre - Eastbound",
+      "啟福道近九龍灣驗車中心 - 東行"
+    ],
+    [
+      "AID05235",
+      22.316081001,
+      114.216561126,
+      "Kai Fuk Road near Kwun Tong Road Sitting-out Area - Eastbound",
+      "啟福道近觀塘道休憩處 - 東行"
+    ],
+    [
+      "AID07101",
+      22.31013708,
+      114.266367168,
+      "Wan Po Road near Pung Loi Road - Westbound",
+      "環保大道近蓬萊路 - 西行"
+    ],
+    [
+      "AID07102",
+      22.313398612,
+      114.263632284,
+      "Wan Po Road near Hong Kong Velodrome - Westbound",
+      "環保大道近香港單車館 - 西行"
+    ],
+    [
+      "AID07103",
+      22.316389937,
+      114.259421836,
+      "Tseung Kwan O Tunnel Road near Telephone Exchange - Westbound",
+      "將軍澳隧道公路近將軍澳電話機房 - 西行"
+    ],
+    [
+      "AID07104",
+      22.319995129,
+      114.255425084,
+      "Tseung Kwan O Tunnel Road near Tseung Kwan O Tunnel Portal - Westbound",
+      "將軍澳隧道公路近將軍澳隧道入口 - 西行"
+    ],
+    [
+      "AID07105",
+      22.31483643,
+      114.239854336,
+      "Tseung Kwan O Road near Lin Tak Road - Westbound",
+      "將軍澳道近連德道 - 西行"
+    ],
+    [
+      "AID07106",
+      22.313049416,
+      114.23710687,
+      "Tseung Kwan O Road near Junk Bay Road Substation - Westbound",
+      "將軍澳道近將軍澳道變電站 - 西行"
+    ],
+    [
+      "AID07107",
+      22.310324313,
+      114.231049569,
+      "Tseung Kwan O Road near Yau Tong Telephone Exchange - Westbound",
+      "將軍澳道近油塘電話機房 - 西行"
+    ],
+    [
+      "AID07108",
+      22.310894099,
+      114.228419631,
+      "Kwun Tong Road near Tsui Ping Road - Westbound",
+      "觀塘道近翠屛道 - 西行"
+    ],
+    [
+      "AID07109",
+      22.313677164,
+      114.222975828,
+      "Kwun Tong Road near The Grande Building - Westbound",
+      "觀塘道近嘉域大廈 - 西行"
+    ],
+    [
+      "AID07110",
+      22.315394253,
+      114.218249722,
+      "Kwun Tong Road near Lai Yip Street - Westbound",
+      "觀塘道近勵業街 - 西行"
+    ],
+    [
+      "AID07111",
+      22.318980254,
+      114.214756642,
+      "Kwun Tong Road near Yan Wing Mansion - Westbound",
+      "觀塘道近欣榮大廈 - 西行"
+    ],
+    [
+      "AID07112",
+      22.323251825,
+      114.214321016,
+      "Kwun Tong Road near Fuk To Street - Westbound",
+      "觀塘道近福淘街 - 西行"
+    ],
+    [
+      "AID07113",
+      22.32855321,
+      114.212410232,
+      "Kwun Tong Road near Kowloon Bay St. John the Baptist Catholic Primary School - Westbound",
+      "觀塘道近九龍灣聖若翰天主敎小學 - 西行"
+    ],
+    [
+      "AID07114",
+      22.330639781,
+      114.210022902,
+      "Kwun Tong Road near Choi Shek Lane - Westbound",
+      "觀塘道近彩石裡 - 西行"
+    ],
+    [
+      "AID07115",
+      22.331949569,
+      114.208246861,
+      "Lung Cheung Road near Ping Shek Estate - Westbound",
+      "龍翔道近坪石邨 - 西行"
+    ],
+    [
+      "AID07116",
+      22.336501198,
+      114.207102436,
+      "Lung Cheung Road near Kam Hon House Choi Hung Estate Substation - Westbound",
+      "龍翔道近彩虹邨金漢樓 - 西行"
+    ],
+    [
+      "AID07117",
+      22.339147908,
+      114.202763829,
+      "Lung Cheung Road near Diamond Hill MTR Station",
+      "龍翔道近鑽石山港鐡站 - 西行"
+    ],
+    [
+      "AID07118",
+      22.341704282,
+      114.197774641,
+      "Lung Cheung Road near Po Kong Village Road - Westbound",
+      "龍翔道近蒲崗村道 - 西行"
+    ],
+    [
+      "AID07119",
+      22.341677743,
+      114.192940297,
+      "Lung Cheung Road near Lung On House Lower Wong Tai Sin (II) Estate - Westbound",
+      "龍翔道近黃大仙下邨（二區）龍安樓 - 西行"
+    ],
+    [
+      "AID07120",
+      22.342545201,
+      114.186310126,
+      "Lung Cheung Road near Tin Ma Court - Westbound",
+      "龍翔道近天馬苑 - 西行"
+    ],
+    [
+      "AID07121",
+      22.343177449,
+      114.184223032,
+      "Lung Cheung Road near RTHK - Westbound",
+      "龍翔道近香港電臺 - 西行"
+    ],
+    [
+      "AID07122",
+      22.344098684,
+      114.180941885,
+      "Lung Cheung Road near Lung Cheung Road Park - Westbound",
+      "龍翔道近龍翔道公園 - 西行"
+    ],
+    [
+      "AID07123",
+      22.344721845,
+      114.176913199,
+      "Lung Cheung Road near Elizabethan Court - Westbound",
+      "龍翔道近碧華閣 - 西行"
+    ],
+    [
+      "AID07124",
+      22.343340085,
+      114.171641958,
+      "Lung Cheung Road Lookout - Westbound",
+      "龍翔道近觀景台 - 西行"
+    ],
+    [
+      "AID07125",
+      22.341813838,
+      114.16954519,
+      "Lung Cheung Road Beacon Heights - Westbound (1)",
+      "龍翔道近畢架山花園 - 西行 (1)"
+    ],
+    [
+      "AID07126",
+      22.341921916,
+      114.164720543,
+      "Lung Cheung Road Beacon Heights - Westbound (2)",
+      "龍翔道近畢架山花園 - 西行 (2)"
+    ],
+    [
+      "AID07127",
+      22.341217355,
+      114.162546129,
+      "Lung Cheung Road Tai Woh Ping - Westbound",
+      "龍翔道近大窩坪 - 西行"
+    ],
+    [
+      "AID07128",
+      22.342499374,
+      114.159274549,
+      "Lung Cheung Road near Ching Cheung Road - Westbound",
+      "龍翔道近呈祥道 - 西行"
+    ],
+    [
+      "AID07129",
+      22.3427697,
+      114.154478967,
+      "Lung Cheung Road near Monte Carlton - Westbound",
+      "龍翔道近爾登豪庭 - 西行"
+    ],
+    [
+      "AID07130",
+      22.341649515,
+      114.151780459,
+      "Ching Cheung Road near Caritas Medical Centre - Westbound",
+      "呈祥道近明愛醫院 - 西行"
+    ],
+    [
+      "AID07131",
+      22.340240163,
+      114.148256921,
+      "Ching Cheung Road near Dragon lndustrial Building - Westbound",
+      "呈祥道近龍翔工業大廈 - 西行"
+    ],
+    [
+      "AID07132",
+      22.341051889,
+      114.142937064,
+      "Ching Cheung Road near CLP Substation - Westbound",
+      "呈祥道近中華電力 - 西行"
+    ],
+    [
+      "AID07133",
+      22.341050946,
+      114.138694902,
+      "Ching Cheung Road near Lai Chi Kok Park Sports Centre - Westbound",
+      "呈祥道近荔枝角公園體育館 - 西行"
+    ],
+    [
+      "AID07134",
+      22.339370629,
+      114.136103497,
+      "Ching Cheung Road near Ching Lai Court - Westbound",
+      "呈祥道近清麗苑 - 西行"
+    ],
+    [
+      "AID07201",
+      22.339966659,
+      114.136151861,
+      "Ching Cheung Road near Ching Lai Court - Eastbound",
+      "呈祥道近清麗苑 - 東行"
+    ],
+    [
+      "AID07202",
+      22.339958885,
+      114.141510342,
+      "Ching Cheung Road near CLP Substation - Eastbound",
+      "呈祥道近中華電力 - 東行"
+    ],
+    [
+      "AID07203",
+      22.339887506,
+      114.145733073,
+      "Ching Cheung Road near International School - Eastbound",
+      "呈祥道近國際學校 - 東行"
+    ],
+    [
+      "AID07204",
+      22.340276204,
+      114.147800665,
+      "Ching Cheung Road near Dragon lndustrial Building - Eastbound",
+      "呈祥道近龍翔工業大廈 - 東行"
+    ],
+    [
+      "AID07205",
+      22.341848259,
+      114.152246384,
+      "Ching Cheung Road near Caritas Medical Centre - Eastbound",
+      "呈祥道近明愛醫院 - 東行"
+    ],
+    [
+      "AID07206",
+      22.34280593,
+      114.155274984,
+      "Lung Cheung Road near Monte Carlton - Eastbound",
+      "龍翔道近爾登豪庭 - 東行"
+    ],
+    [
+      "AID07207",
+      22.341081828,
+      114.161798668,
+      "Lung Cheung Road near Tai Woh Ping - Eastbound",
+      "龍翔道近大窩坪 - 東行"
+    ],
+    [
+      "AID07208",
+      22.3419581,
+      114.165574803,
+      "Lung Cheung Road near Block 15 Beacon Heights Phase 2 - Eastbound",
+      "龍翔道近筆架山花園第二期15座 - 東行"
+    ],
+    [
+      "AID07209",
+      22.342247324,
+      114.169962592,
+      "Lung Cheung Road Beacon Heights - Eastbound (2)",
+      "龍翔道近畢架山花園 -東行 (2)"
+    ],
+    [
+      "AID07210",
+      22.342771223,
+      114.174350395,
+      "Lung Cheung Road Lookout - Eastbound",
+      "龍翔道近觀景台 - 東行"
+    ],
+    [
+      "AID07211",
+      22.344766995,
+      114.177670402,
+      "Lung Cheung Road near Elizabethan Court - Eastbound",
+      "龍翔道近碧華閣 - 東行"
+    ],
+    [
+      "AID07212",
+      22.344026382,
+      114.182776633,
+      "Lung Cheung Road near Lung Cheung Road Park - Eastbound",
+      "龍翔道近龍翔道公園 - 東行"
+    ],
+    [
+      "AID07213",
+      22.34301488,
+      114.184621035,
+      "Lung Cheung Road near Meridain Hill - Eastbound",
+      "龍翔道近尚禦 - 東行"
+    ],
+    [
+      "AID07214",
+      22.341723082,
+      114.190940554,
+      "Lung Cheung Road near Temple Mall North - Eastbound",
+      "龍翔道近黃大仙中心北館 - 東行"
+    ],
+    [
+      "AID07215",
+      22.341722447,
+      114.196949505,
+      "Lung Cheung Road near Tropicana Gardens - Eastbound",
+      "龍翔道近豪苑 - 東行"
+    ],
+    [
+      "AID07216",
+      22.340846094,
+      114.199861615,
+      "Lung Cheung Road near Lung Poon Court Commercial Centre - Eastbound",
+      "龍翔道近龍蟠苑商塲 - 東行"
+    ],
+    [
+      "AID07217",
+      22.338389128,
+      114.204054757,
+      "Lung Cheung Road near Nan Lian Garden - Eastbound",
+      "龍翔道近南蓮園池 - 東行"
+    ],
+    [
+      "AID07218",
+      22.336194106,
+      114.207383877,
+      "Lung Cheung Road near Ngau Chi Wan Village Playground - Eastbound",
+      "龍翔道近牛池灣村遊樂塲 - 東行"
+    ],
+    [
+      "AID07219",
+      22.330016492,
+      114.210886651,
+      "Kwun Tong Road near Choi Shek Lane - Eastbound",
+      "觀塘道近彩石裡 - 東行"
+    ],
+    [
+      "AID07220",
+      22.328065436,
+      114.212963383,
+      "Kwun Tong Road near Kai Tai Court - Eastbound",
+      "觀塘道近啟泰苑 - 東行"
+    ],
+    [
+      "AID07221",
+      22.322141038,
+      114.214427487,
+      "Kwun Tong Road near Lower Ngau Tau Kok Estate - Eastbound",
+      "觀塘道近牛頭角下邨 - 東行"
+    ],
+    [
+      "AID07222",
+      22.318980245,
+      114.214795466,
+      "Kwun Tong Road near Sheung Yee Road - Eastbound",
+      "觀塘道近常怡道 - 東行"
+    ],
+    [
+      "AID07223",
+      22.316297766,
+      114.216435013,
+      "Kwun Tong Road near Foo Yue Building - Eastbound",
+      "觀塘道近富裕大廈 - 東行"
+    ],
+    [
+      "AID07224",
+      22.314626072,
+      114.22046238,
+      "Kwun Tong Road near Kwun Tong Road Rest Garden - Eastbound",
+      "觀塘道近觀塘道休憩花園 - 東行"
+    ],
+    [
+      "AID07225",
+      22.313315666,
+      114.223926853,
+      "Kwun Tong Road near Hong Ning Road - Eastbound",
+      "觀塘道近康寧道 - 東行"
+    ],
+    [
+      "AID07226",
+      22.311237427,
+      114.227895666,
+      "Kwun Tong Road near Hong Kong Student Aid Society - Eastbound",
+      "觀塘道近香港學生輔助會 - 東行"
+    ],
+    [
+      "AID07227",
+      22.311019487,
+      114.231593339,
+      "Tseung Kwan O Road near Kwun Tong Swimming Pool - Eastbound",
+      "將軍澳道近觀塘游泳池 - 東行"
+    ],
+    [
+      "AID07228",
+      22.312219356,
+      114.235039248,
+      "Tseung Kwan O Road near Tsui Ping (South) Estate - Eastbound",
+      "將軍澳道近翠屏南邨 - 東行"
+    ],
+    [
+      "AID07229",
+      22.321234199,
+      114.251446281,
+      "Tseung Kwan O Tunnel Road near Tseung Kwan O Tunnel Portal - Eastbound",
+      "將軍澳隧道公路近將軍澳隧道入口 - 東行"
+    ],
+    [
+      "AID07230",
+      22.318956186,
+      114.256298036,
+      "Tseung Kwan O Tunnel Road near Po Hong Park - Eastbound",
+      "將軍澳隧道公路近寶康公園 - 東行"
+    ],
+    [
+      "AID07231",
+      22.315630785,
+      114.260556956,
+      "Wan Po Road near Tseung Kwan O Tunnel Road - Eastbound",
+      "環保大道近將軍澳隧道公路 - 東行"
+    ],
+    [
+      "AID07232",
+      22.312747929,
+      114.264524787,
+      "Wan Po Road near Chiu Shun Road - Eastbound",
+      "環保大道近昭信路 - 東行"
+    ],
+    [
+      "AID08101",
+      22.327592285,
+      114.025326355,
+      "North Lantau Highway near Yan O Wan - Westbound (1)",
+      "北大嶼山公路近欣澳灣 - 西行 (1)"
+    ],
+    [
+      "AID08102",
+      22.325240153,
+      114.020912507,
+      "North Lantau Highway near Yan O Wan - Westbound (2)",
+      "北大嶼山公路近欣澳灣 - 西行 (2)"
+    ],
+    [
+      "AID08103",
+      22.325009976,
+      114.016389613,
+      "North Lantau Highway near Sunny Bay Beach - Westbound",
+      "北大嶼山公路近欣澳石灘 - 西行"
+    ],
+    [
+      "AID08104",
+      22.324770454,
+      114.011682326,
+      "North Lantau Highway near Sham Shui Kok Substation - Westbound (1)",
+      "北大嶼山公路深水角配電站 - 西行 (1)"
+    ],
+    [
+      "AID08105",
+      22.323068142,
+      114.007258306,
+      "North Lantau Highway near Sham Shui Kok Substation - Westbound (2)",
+      "北大嶼山公路深水角配電站 - 西行 (2)"
+    ],
+    [
+      "AID08106",
+      22.321103937,
+      114.002941485,
+      "North Lantau Highway near Sham Shui Kok Substation - Westbound (3)",
+      "北大嶼山公路深水角配電站 - 西行 (3)"
+    ],
+    [
+      "AID08107",
+      22.318598222,
+      113.999023413,
+      "North Lantau Highway near Tung Yip Hang - Westbound",
+      "北大嶼山公路近東葉坑 - 西行"
+    ],
+    [
+      "AID08108",
+      22.315299489,
+      113.99668853,
+      "North Lantau Highway near HK Police Vehicle Pound - Westbound",
+      "北大嶼山公路近警察車輛扣留中心 - 西行"
+    ],
+    [
+      "AID08109",
+      22.312089943,
+      113.993392802,
+      "North Lantau Highway near Siu Ho Wan Sewage Treatment Works - Westbound",
+      "北大嶼山公路近小蠔灣污水處理廠 - 西行"
+    ],
+    [
+      "AID08110",
+      22.309438835,
+      113.988893032,
+      "North Lantau Highway near Siu Ho Wan Gov. Vehicle Centre - Westbound",
+      "北大嶼山公路近小蠔灣政府維修廠 - 西行"
+    ],
+    [
+      "AID08111",
+      22.307031956,
+      113.984839532,
+      "North Lantau Highway near MTR Siu Ho Wan Depot - Westbound (2)",
+      "北大嶼山公路近港鐵小蠔灣車廠 - 西行 (2)"
+    ],
+    [
+      "AID08112",
+      22.304534776,
+      113.980873641,
+      "North Lantau Highway near Tai Ho Wan - Westbound (1)",
+      "北大嶼山公路近大蠔灣 - 西行 (1)"
+    ],
+    [
+      "AID08113",
+      22.30216382,
+      113.976820369,
+      "North Lantau Highway near Tai Ho Wan - Westbound (2)",
+      "北大嶼山公路近大蠔灣 - 西行 (2)"
+    ],
+    [
+      "AID08114",
+      22.300090527,
+      113.97257271,
+      "North Lantau Highway near Tai Ho Wan - Westbound (3)",
+      "北大嶼山公路近大蠔灣 - 西行 (3)"
+    ],
+    [
+      "AID08115",
+      22.298766272,
+      113.968023226,
+      "North Lantau Highway near Tai Ho Wan - Westbound (4)",
+      "北大嶼山公路近大蠔灣 - 西行 (4)"
+    ],
+    [
+      "AID08116",
+      22.297957841,
+      113.964394967,
+      "North Lantau Highway near Tai Ho Wan - Westbound (5)",
+      "北大嶼山公路近大蠔灣 - 西行 (5)"
+    ],
+    [
+      "AID08117",
+      22.296378471,
+      113.95833215,
+      "North Lantau Highway near Ying Tung Estate - Westbound (1)",
+      "北大嶼山公路近迎東邨 - 西行 (1)"
+    ],
+    [
+      "AID08118",
+      22.294631457,
+      113.95529745,
+      "North Lantau Highway near Ying Tung Estate - Westbound (2)",
+      "北大嶼山公路近迎東邨 - 西行 (2)"
+    ],
+    [
+      "AID08119",
+      22.292478855,
+      113.952874829,
+      "North Lantau Highway near Caribbean Coast Phase 1 - Westbound",
+      "北大嶼山公路近映灣園1期 - 西行"
+    ],
+    [
+      "AID08120",
+      22.290244116,
+      113.949860477,
+      "North Lantau Highway near Caribbean Coast Phase 3 - Westbound",
+      "北大嶼山公路近映灣園3期 - 西行"
+    ],
+    [
+      "AID08121",
+      22.28950534,
+      113.944699223,
+      "North Lantau Highway near Tung Chung (N) - Westbound (1)",
+      "北大嶼山公路近東涌(北) - 西行 (1)"
+    ],
+    [
+      "AID08122",
+      22.290998588,
+      113.940659915,
+      "North Lantau Highway near Tung Chung (N) - Westbound (2)",
+      "北大嶼山公路近東涌(北) - 西行 (2)"
+    ],
+    [
+      "AID08201",
+      22.293803083,
+      113.937918635,
+      "North Lantau Highway near Tung Chung (N) - Eastbound (1)",
+      "北大嶼山公路近東涌(北) - 東行 (1)"
+    ],
+    [
+      "AID08202",
+      22.291909145,
+      113.939610352,
+      "North Lantau Highway near Tung Chung (N) - Eastbound (2)",
+      "北大嶼山公路近東涌(北) - 東行(2)"
+    ],
+    [
+      "AID08203",
+      22.28960394,
+      113.944184756,
+      "North Lantau Highway near Tung Chung (N) - Eastbound (3)",
+      "北大嶼山公路近東涌(北) - 東行(3)"
+    ],
+    [
+      "AID08204",
+      22.289736772,
+      113.948696832,
+      "North Lantau Highway near Caribbean Coast Phase 3 - Eastbound",
+      "北大嶼山公路近映灣園1期 - 東行"
+    ],
+    [
+      "AID08205",
+      22.29210812,
+      113.952526075,
+      "North Lantau Highway near Caribbean Coast Phase 1 - Eastbound",
+      "北大嶼山公路近映灣園3期 - 東行"
+    ],
+    [
+      "AID08206",
+      22.294884683,
+      113.955568769,
+      "North Lantau Highway near Ying Tung Estate - Eastbound (1)",
+      "北大嶼山公路近迎東邨 - 東行 (1)"
+    ],
+    [
+      "AID08207",
+      22.29654157,
+      113.958739478,
+      "North Lantau Highway near Ying Tung Estate - Eastbound (2)",
+      "北大嶼山公路近迎東邨 - 東行 (2)"
+    ],
+    [
+      "AID08208",
+      22.297376473,
+      113.961804772,
+      "North Lantau Highway near Tai Ho Wan - Eastbound (1)",
+      "北大嶼山公路近大蠔灣 - 東行 (1)"
+    ],
+    [
+      "AID08209",
+      22.298303066,
+      113.965976272,
+      "North Lantau Highway near Tai Ho Wan - Eastbound (2)",
+      "北大嶼山公路近大蠔灣 - 東行 (2)"
+    ],
+    [
+      "AID08210",
+      22.29954683,
+      113.971098408,
+      "North Lantau Highway near Tai Ho Wan - Eastbound (3)",
+      "北大嶼山公路近大蠔灣 - 東行 (3)"
+    ],
+    [
+      "AID08211",
+      22.301213279,
+      113.974939016,
+      "North Lantau Highway near Tai Ho Wan - Eastbound (4)",
+      "北大嶼山公路近大蠔灣 - 東行 (4)"
+    ],
+    [
+      "AID08212",
+      22.303430905,
+      113.979108903,
+      "North Lantau Highway near Tai Ho Wan - Eastbound (5)",
+      "北大嶼山公路近大蠔灣 - 東行 (5)"
+    ],
+    [
+      "AID08213",
+      22.305919098,
+      113.983074744,
+      "North Lantau Highway near MTR Siu Ho Wan Depot - Eastbound (1)",
+      "北大嶼山公路近港鐵小蠔灣車廠 - 東行 (1)"
+    ],
+    [
+      "AID08214",
+      22.308126769,
+      113.986633488,
+      "North Lantau Highway near MTR Siu Ho Wan Depot - Eastbound (2)",
+      "北大嶼山公路近港鐵小蠔灣車廠 - 東行 (2)"
+    ],
+    [
+      "AID08215",
+      22.310479442,
+      113.990706534,
+      "North Lantau Highway near MTR Siu Ho Wan Depot - Eastbound (3)",
+      "北大嶼山公路近港鐵小蠔灣車廠 - 東行 (3)"
+    ],
+    [
+      "AID08216",
+      22.313428312,
+      113.995031286,
+      "North Lantau Highway near Siu Ho Wan Sewage Treatment Works - Eastbound",
+      "北大嶼山公路近小蠔灣污水處理廠 - 東行"
+    ],
+    [
+      "AID08217",
+      22.316980387,
+      113.997783124,
+      "North Lantau Highway near Refuse Transfer Station - Eastbound",
+      "北大嶼山廢物轉運站 - 東行"
+    ],
+    [
+      "AID08218",
+      22.320189822,
+      114.001059655,
+      "North Lantau Highway near Tung Yip Hang - Eastbound (1)",
+      "北大嶼山公路近東葉坑 - 東行 (1)"
+    ],
+    [
+      "AID08219",
+      22.322208228,
+      114.005347237,
+      "North Lantau Highway near Tung Yip Hang - Eastbound (2)",
+      "北大嶼山公路近東葉坑 - 東行 (2)"
+    ],
+    [
+      "AID08220",
+      22.324109175,
+      114.009683614,
+      "North Lantau Highway near Tung Yip Hang - Eastbound (3)",
+      "北大嶼山公路近東葉坑 - 東行 (3)"
+    ],
+    [
+      "AID08221",
+      22.325098018,
+      114.01411823,
+      "North Lantau Highway near Ta Pang Po - Eastbound",
+      "北大嶼山公路近打棚埔 - 東行"
+    ],
+    [
+      "AID08222",
+      22.324940408,
+      114.01911717,
+      "North Lantau Highway near Yan O Wan - Eastbound (1)",
+      "北大嶼山公路近欣澳灣 - 東行 (1)"
+    ],
+    [
+      "AID08223",
+      22.325828774,
+      114.022620177,
+      "North Lantau Highway near Yan O Wan - Eastbound (2)",
+      "北大嶼山公路近欣澳灣 - 東行 (2)"
+    ],
+    [
+      "AID09101",
+      22.374334246,
+      114.103021856,
+      "Tuen Mun Road near Tsuen Wan Road - Eastbound",
+      "屯門公路近荃灣路 - 東行"
+    ],
+    [
+      "AID09102",
+      22.374687349,
+      114.105051016,
+      "Tuen Mun Road near Chai Wan Kok Cooked Food Market - Eastbound",
+      "屯門公路近柴灣角熟食市場 - 東行"
+    ],
+    [
+      "AID09103",
+      22.375610115,
+      114.108876227,
+      "Cheung Pei Shan Road near The Mills - Eastbound",
+      "象鼻山路近南豐紗廠 - 東行"
+    ],
+    [
+      "AID09104",
+      22.376578385,
+      114.113827818,
+      "Cheung Pei Shan Road near Discovery Park - Eastbound",
+      "象鼻山路近愉景新城 - 東行"
+    ],
+    [
+      "AID09105",
+      22.375451964,
+      114.120314503,
+      "Cheung Pei Shan Road near Tsuen Kam Interchange - Eastbound",
+      "象鼻山路近荃錦交匯處 - 東行"
+    ],
+    [
+      "AID09106",
+      22.376419167,
+      114.123062018,
+      "Cheung Pei Shan Road near Shek Wai Kok Estate - Eastbound",
+      "象鼻山路近石圍角邨 - 東行"
+    ],
+    [
+      "AID09107",
+      22.378145468,
+      114.127683331,
+      "Cheung Pei Shan Road near Lui Ming Choi Lutheran College - Eastbound",
+      "象鼻山路近路德會呂明才中學 - 東行"
+    ],
+    [
+      "AID09108",
+      22.379979946,
+      114.132100811,
+      "Cheung Pei Shan Road near Wo Yi Hop Road Interchange - Eastbound",
+      "象鼻山路近和宜合道交匯處 - 東行"
+    ],
+    [
+      "AID09109",
+      22.381651586,
+      114.135848444,
+      "Cheung Pei Shan Road near Ho Fung College - Eastbound",
+      "象鼻山路近可風中學 - 東行"
+    ],
+    [
+      "AID09110",
+      22.380870826,
+      114.16705734,
+      "Shing Mun Tunnel Road near Entrance from Shatin - Eastbound",
+      "城門隧道公路近沙田入口 - 東行"
+    ],
+    [
+      "AID09111",
+      22.382469499,
+      114.173941857,
+      "Shing Mun Tunnel Road near Puguangming Temple - Eastbound",
+      "城門隧道公路近普光明寺 - 東行"
+    ],
+    [
+      "AID09112",
+      22.38000419,
+      114.177262785,
+      "Shing Mun Tunnel Road near Mei Tin Road - Eastbound",
+      "城門隧道公路近美田路 - 東行"
+    ],
+    [
+      "AID09113",
+      22.378089699,
+      114.179350437,
+      "Shing Mun Tunnel Road near Chung Ling Road - Eastbound",
+      "城門隧道公路近松嶺路 - 東行"
+    ],
+    [
+      "AID09114",
+      22.378649415,
+      114.184817218,
+      "Shing Mun Tunnel Road near Hong Kong Heritage Museum - Eastbound",
+      "城門隧道公路近香港文化博物館 - 東行"
+    ],
+    [
+      "AID09115",
+      22.38369,
+      114.18866,
+      "Tai Po Road - Sha Tin near Sha Tin MTR Station - Eastbound",
+      "大埔公路沙田段近港鐵沙田站 - 東行"
+    ],
+    [
+      "AID09116",
+      22.39042,
+      114.19509,
+      "Tai Po Road - Sha Tin near Wo Che Estate - Eastbound",
+      "大埔公路沙田段近禾輋邨 - 東行"
+    ],
+    [
+      "AID09118",
+      22.393729058,
+      114.199025446,
+      "Tai Po Road near Fo Tan Railway House - Northbound",
+      "大埔公路沙田段近火炭鐵路大樓 - 北行"
+    ],
+    [
+      "AID09119",
+      22.39768407,
+      114.201453922,
+      "Tai Po Road near Sha Tin Racecourse - Northbound (1)",
+      "大埔公路沙田段近沙田馬場 - 北行 (1)"
+    ],
+    [
+      "AID09120",
+      22.399526111,
+      114.202619629,
+      "Tai Po Road near Sha Tin Racecourse - Northbound (2)",
+      "大埔公路沙田段近沙田馬場 - 北行 (2)"
+    ],
+    [
+      "AID09121",
+      22.403300408,
+      114.205320201,
+      "Tai Po Road near Sha Tin Racecourse - Northbound (3)",
+      "大埔公路沙田段近沙田馬場 - 北行 (3)"
+    ],
+    [
+      "AID09122",
+      22.406306719,
+      114.209768906,
+      "Tolo Highway near Sha Tin Sewage Treatment Works - Northbound",
+      "吐露港公路近沙田污水處理廠 - 北行"
+    ],
+    [
+      "AID09123",
+      22.409078644,
+      114.211847967,
+      "Tolo Highway near Ma Liu Shui Weigh Station - Northbound",
+      "吐露港公路近馬料水秤車站 - 北行"
+    ],
+    [
+      "AID09151",
+      22.50218399,
+      114.116385392,
+      "Fanling Highway near Golf Parkview - Eastbound",
+      "粉嶺公路近高爾夫景園 - 東行"
+    ],
+    [
+      "AID09152",
+      22.501030007,
+      114.121701962,
+      "Fanling Highway near Eden Manor - Eastbound",
+      "粉嶺公路近高爾夫御苑 - 東行"
+    ],
+    [
+      "AID09153",
+      22.499838914,
+      114.124452772,
+      "Fanling Highway near Choi Yuen Estate Choi Lai House - Eastbound",
+      "粉嶺公路近彩園邨彩麗樓 - 東行"
+    ],
+    [
+      "AID09154",
+      22.498386647,
+      114.129720695,
+      "Fanling Highway near So Kwun Po Road - Eastbound",
+      "粉嶺公路近掃管埔路 - 東行"
+    ],
+    [
+      "AID09155",
+      22.4938281,
+      114.136349975,
+      "Fanling Highway near Fanling Recreation Ground - Eastbound",
+      "粉嶺公路近粉嶺游樂場 - 東行"
+    ],
+    [
+      "AID09156",
+      22.491516907,
+      114.138770411,
+      "Fanling Highway near Fanling Station - Eastbound",
+      "粉嶺公路近港鐵粉嶺站 - 東行"
+    ],
+    [
+      "AID09157",
+      22.488411599,
+      114.143999389,
+      "Fanling Highway near Avon Park - Eastbound",
+      "粉嶺公路近碧湖花園 - 東行"
+    ],
+    [
+      "AID09201",
+      22.3816788,
+      114.13633395,
+      "Cheung Pei Shan Road near Ho Fung College - Westbound",
+      "象鼻山路近可風中學 - 西行"
+    ],
+    [
+      "AID09202",
+      22.380729805,
+      114.133294928,
+      "Cheung Pei Shan Road near Wo Yi Hop Road Interchange - Westbound",
+      "象鼻山路近和宜合道交匯處 - 西行"
+    ],
+    [
+      "AID09203",
+      22.378443712,
+      114.128469741,
+      "Cheung Pei Shan Road near Lui Ming Choi Lutheran College - Westbound",
+      "象鼻山路近路德會呂明才中學 - 西行"
+    ],
+    [
+      "AID09204",
+      22.376193242,
+      114.12257661,
+      "Cheung Pei Shan Road near Shek Wai Kok Estate - Westbound",
+      "象鼻山路近石圍角邨 - 西行"
+    ],
+    [
+      "AID09205",
+      22.37525303,
+      114.119566926,
+      "Cheung Pei Shan Road near Tsuen Kam Interchange - Westbound",
+      "象鼻山路近荃錦交匯處 - 西行"
+    ],
+    [
+      "AID09206",
+      22.37653308,
+      114.113439441,
+      "Cheung Pei Shan Road near Discovery Park - Westbound",
+      "象鼻山路近愉景新城 - 西行"
+    ],
+    [
+      "AID09207",
+      22.375574317,
+      114.109653032,
+      "Cheung Pei Shan Road near The Mills - Westbound",
+      "象鼻山路近南豐紗廠 - 西行"
+    ],
+    [
+      "AID09208",
+      22.375030903,
+      114.105944143,
+      "Tuen Mun Road near Chai Wan Kok Cooked Food Market - Westbound",
+      "屯門公路近柴灣角熟食市場 - 西行"
+    ],
+    [
+      "AID09251",
+      22.487743737,
+      114.145962514,
+      "Fanling Highway near Dawning Views - Westbound",
+      "粉嶺公路近牽晴間 - 西行"
+    ],
+    [
+      "AID09252",
+      22.488483744,
+      114.143523203,
+      "Fanling Highway near Fanling Centre - Westbound",
+      "粉嶺公路近粉嶺中心 - 西行"
+    ],
+    [
+      "AID09253",
+      22.492157854,
+      114.1378859,
+      "Fanling Highway near Fanling Station - Westbound",
+      "粉嶺公路近港鐵粉嶺站 - 西行"
+    ],
+    [
+      "AID09254",
+      22.49589538,
+      114.13372545,
+      "Fanling Highway near Exit to So Kwun Po Road - Westbound",
+      "粉嶺公路近掃管埔路出口 - 西行"
+    ],
+    [
+      "AID09255",
+      22.498215022,
+      114.12955554,
+      "Fanling Highway near Entrance from So Kwun Po Road - Westbound",
+      "粉嶺公路近掃管埔路入口 - 西行"
+    ],
+    [
+      "AID09256",
+      22.499730647,
+      114.124754086,
+      "Fanling Highway near Choi Yuen Estate Choi Lai House - Westbound",
+      "粉嶺公路近彩園邨彩麗樓 - 西行"
+    ],
+    [
+      "AID09257",
+      22.501201468,
+      114.121361743,
+      "Fanling Highway near Eden Manor - Westbound",
+      "粉嶺公路高爾夫禦園 - 西行"
+    ],
+    [
+      "AID09258",
+      22.502229291,
+      114.116783838,
+      "Fanling Highway near Golf Parkview - Westbound",
+      "粉嶺公路近高爾夫景園 - 西行"
+    ],
+    ["AID09301", 22.50737, 114.14072, "Fanling Bypass - Westbound (1)", "粉嶺繞道 - 西行 (1)"],
+    ["AID09302", 22.50736, 114.14488, "Fanling Bypass - Westbound (2)", "粉嶺繞道 - 西行 (2)"],
+    ["AID09303", 22.50484, 114.14621, "Fanling Bypass - Westbound (3)", "粉嶺繞道 - 西行 (3)"],
+    ["AID09304", 22.50009, 114.14784, "Fanling Bypass - Westbound (4)", "粉嶺繞道 - 西行 (4)"],
+    ["AID09305", 22.49821, 114.14758, "Fanling Bypass - Westbound (5)", "粉嶺繞道 - 西行 (5)"],
+    ["AID09306", 22.49545, 114.14635, "Fanling Bypass - Westbound (6)", "粉嶺繞道 - 西行 (6)"],
+    ["AID09307", 22.49203, 114.14754, "Fanling Bypass - Westbound (7)", "粉嶺繞道 - 西行 (7)"],
+    ["AID09308", 22.48733, 114.14808, "Fanling Bypass - Westbound (8)", "粉嶺繞道 - 西行 (8)"],
+    ["AID09401", 22.48518, 114.15199, "Fanling Bypass - Eastbound (1)", "粉嶺繞道 - 東行 (1)"],
+    ["AID09402", 22.48785, 114.14865, "Fanling Bypass - Eastbound (2)", "粉嶺繞道 - 東行 (2)"],
+    ["AID09403", 22.4917, 114.14763, "Fanling Bypass - Eastbound (3)", "粉嶺繞道 - 東行 (3)"],
+    ["AID09404", 22.49531, 114.1464, "Fanling Bypass - Eastbound (4)", "粉嶺繞道 - 東行 (4)"],
+    ["AID09405", 22.49999, 114.14787, "Fanling Bypass - Eastbound (5)", "粉嶺繞道 - 東行 (5)"],
+    ["AID09406", 22.5033, 114.14653, "Fanling Bypass - Eastbound (6)", "粉嶺繞道 - 東行 (6)"],
+    ["AID09407", 22.50751, 114.14465, "Fanling Bypass - Eastbound (7)", "粉嶺繞道 - 東行 (7)"],
+    ["AID09408", 22.5074, 114.14071, "Fanling Bypass - Eastbound (8)", "粉嶺繞道 - 東行 (8)"],
+    ["AID09409", 22.5066, 114.13849, "Fanling Bypass - Eastbound (9)", "粉嶺繞道 - 東行 (9)"],
+    [
+      "AID10101",
+      22.416723079,
+      113.99042931,
+      "Kong Sham Western Highway near Fuk Hang Tsuen - Northbound (1)",
+      "港深西部公路近福亨村 - 北行 (1)"
+    ],
+    [
+      "AID10102",
+      22.419097522,
+      113.989940499,
+      "Kong Sham Western Highway near Fuk Hang Tsuen - Northbound (2)",
+      "港深西部公路近福亨村 - 北行 (2)"
+    ],
+    [
+      "AID10103",
+      22.419849883,
+      113.992406568,
+      "Kong Sham Western Highway near Fuk Hang Tsuen - Northbound (3)",
+      "港深西部公路近福亨村 - 北行 (3)"
+    ],
+    [
+      "AID10104",
+      22.4189147,
+      113.988037029,
+      "Kong Sham Western Highway near The Sherwood - Northbound",
+      "港深西部公路近豫豐花園 - 北行"
+    ],
+    [
+      "AID10105",
+      22.42283916,
+      113.984826399,
+      "Kong Sham Western Highway Tsing Yick Road - Northbound",
+      "港深西部公路近青亦路 - 北行"
+    ],
+    [
+      "AID10106",
+      22.425898434,
+      113.983112649,
+      "Kong Sham Western Highway near Mai Yuan Wei Lu - Northbound",
+      "港深西部公路近麥園圍路 - 北行"
+    ],
+    [
+      "AID10107",
+      22.430151062,
+      113.982523931,
+      "Kong Sham Western Highway near Yick Yuen Road - Northbound (1)",
+      "港深西部公路近亦園路 - 北行 (1)"
+    ],
+    [
+      "AID10108",
+      22.434316178,
+      113.984266634,
+      "Kong Sham Western Highway near Yick Yuen Road - Northbound (2)",
+      "港深西部公路近亦園路 - 北行 (2)"
+    ],
+    [
+      "AID10109",
+      22.438317945,
+      113.9853491,
+      "Kong Sham Western Highway near San Sang San Tsuen - Northbound",
+      "港深西部公路近新生新村 - 北行"
+    ],
+    [
+      "AID10110",
+      22.443338275,
+      113.984856483,
+      "Kong Sham Western Highway near Ha Tsuen Road - Northbound",
+      "港深西部公路近廈村路 - 北行"
+    ],
+    [
+      "AID10111",
+      22.446793051,
+      113.981626425,
+      "Kong Sham Western Highway near San Wai Sewage Treatment Plant - Northbound",
+      "港深西部公路近新圍污水處理廠 - 北行"
+    ],
+    [
+      "AID10112",
+      22.448720618,
+      113.977582328,
+      "Kong Sham Western Highway near Helipad - Northbound",
+      "港深西部公路近直升機停機坪 - 北行"
+    ],
+    [
+      "AID10113",
+      22.452553934,
+      113.973885087,
+      "Kong Sham Western Highway near Ngau Hom Shek E&amp;M Plant Room - Northbound",
+      "港深西部公路近鰲磡石機電室 - 北行"
+    ],
+    [
+      "AID10114",
+      22.455215344,
+      113.97186042,
+      "Shenzhen Bay Bridge - Northbound (1)",
+      "深圳灣公路大橋 - 北行 (1)"
+    ],
+    [
+      "AID10115",
+      22.458689075,
+      113.969533285,
+      "Shenzhen Bay Bridge - Northbound (2)",
+      "深圳灣公路大橋 - 北行 (2)"
+    ],
+    [
+      "AID10116",
+      22.462578432,
+      113.967409442,
+      "Shenzhen Bay Bridge - Northbound (3)",
+      "深圳灣公路大橋 - 北行 (3)"
+    ],
+    [
+      "AID10117",
+      22.467116821,
+      113.964429471,
+      "Shenzhen Bay Bridge - Northbound (4)",
+      "深圳灣公路大橋 - 北行 (4)"
+    ],
+    [
+      "AID10118",
+      22.470291865,
+      113.961674889,
+      "Shenzhen Bay Bridge - Northbound (5)",
+      "深圳灣公路大橋 - 北行 (5)"
+    ],
+    [
+      "AID10119",
+      22.473673558,
+      113.958181395,
+      "Shenzhen Bay Bridge - Northbound (6)",
+      "深圳灣公路大橋 - 北行 (6)"
+    ],
+    [
+      "AID10120",
+      22.421639797,
+      113.994065131,
+      "Shenzhen Bay Bridge - Northbound (7)",
+      "深圳灣公路大橋 - 北行 (7)"
+    ],
+    [
+      "AID10201",
+      22.4766946,
+      113.955154714,
+      "Shenzhen Bay Bridge - Southbound (1)",
+      "深圳灣公路大橋 - 南行 (1)"
+    ],
+    [
+      "AID10202",
+      22.47351138,
+      113.958453715,
+      "Shenzhen Bay Bridge - Southbound (2)",
+      "深圳灣公路大橋 - 南行 (2)"
+    ],
+    [
+      "AID10203",
+      22.470337081,
+      113.961723402,
+      "Shenzhen Bay Bridge - Southbound (3)",
+      "深圳灣公路大橋 - 南行 (3)"
+    ],
+    [
+      "AID10204",
+      22.466629782,
+      113.964886872,
+      "Shenzhen Bay Bridge - Southbound (4)",
+      "深圳灣公路大橋 - 南行 (4)"
+    ],
+    [
+      "AID10205",
+      22.462605611,
+      113.967477412,
+      "Shenzhen Bay Bridge - Southbound (5)",
+      "深圳灣公路大橋 - 南行 (5)"
+    ],
+    [
+      "AID10206",
+      22.458147776,
+      113.969942143,
+      "Shenzhen Bay Bridge - Southbound (6)",
+      "深圳灣公路大橋 - 南行 (6)"
+    ],
+    [
+      "AID10207",
+      22.454755337,
+      113.97228857,
+      "Shenzhen Bay Bridge - Southbound (7)",
+      "深圳灣公路大橋 - 南行 (7)"
+    ],
+    [
+      "AID10208",
+      22.452662458,
+      113.974011226,
+      "Kong Sham Western Highway near Ngau Hom Shek E&amp;M Plant Room - Southbound",
+      "港深西部公路近鰲磡石機電室 - 南行"
+    ],
+    [
+      "AID10209",
+      22.449974701,
+      113.976657612,
+      "Kong Sham Western Highway near Helipad - Southbound",
+      "港深西部公路近直升機停機坪 - 南行"
+    ],
+    [
+      "AID10210",
+      22.447757085,
+      113.979798687,
+      "Kong Sham Western Highway near Ha Tsuen Weigh Station - Southbound",
+      "港深西部公路近廈邨秤車站 - 南行"
+    ],
+    [
+      "AID10211",
+      22.446080716,
+      113.982511461,
+      "Kong Sham Western Highway near San Wai Sewage Treatment Plant - Southbound",
+      "港深西部公路近新圍污水處理廠 - 南行"
+    ],
+    [
+      "AID10212",
+      22.443690172,
+      113.984613135,
+      "Kong Sham Western Highway near Ha Tsuen Road - Southbound",
+      "港深西部公路近廈村路 - 南行"
+    ],
+    [
+      "AID10213",
+      22.439510224,
+      113.985570892,
+      "Kong Sham Western Highway near San Sang San Tsuen - Southbound",
+      "港深西部公路近新生新村 - 南行"
+    ],
+    [
+      "AID10214",
+      22.435093164,
+      113.984576409,
+      "Kong Sham Western Highway near Yick Yuen Road - Southbound (1)",
+      "港深西部公路近亦園路 - 南行 (1)"
+    ],
+    [
+      "AID10215",
+      22.431388603,
+      113.982833046,
+      "Kong Sham Western Highway near Yick Yuen Road - Southbound (2)",
+      "港深西部公路近亦園路 - 南行 (2)"
+    ],
+    [
+      "AID10216",
+      22.425555476,
+      113.98327825,
+      "Kong Sham Western Highway near Mai Yuan Wei Road - Southbound",
+      "港深西部公路近麥園圍路 - 南行"
+    ],
+    [
+      "AID10217",
+      22.423182074,
+      113.984621952,
+      "Kong Sham Western Highway near Tsing Yick Road - Southbound",
+      "港深西部公路近青亦路 - 南行"
+    ],
+    [
+      "AID10218",
+      22.419250545,
+      113.989512929,
+      "Kong Sham Western Highway near Fuk Hang Tsuen - Southbound",
+      "港深西部公路近福亨村 - 南行"
+    ],
+    [
+      "AID90008",
+      22.38977,
+      114.19433,
+      "Tai Po Road - Sha Tin near Wo Che Estate - Westbound",
+      "大埔公路沙田段近禾輋邨 - 西行"
+    ],
+    [
+      "AID90009",
+      22.38577,
+      114.19031,
+      "Tai Po Road - Sha Tin near Lek Yuen Estate - Westbound",
+      "大埔公路沙田段近瀝源邨 - 西行"
+    ],
+    ["BC101F", 22.4732254, 114.0556398, "San Tin Highway near Fairview Park", "新田公路近錦繡花園"],
+    ["BC102F", 22.4927649, 114.0649812, "San Tin Highway near Mai Po", "新田公路近米埔"],
+    ["BC103F", 22.50212205, 114.0816315, "San Sham Road Roundabout", "新深路迴旋處"],
+    ["BC702F", 22.4863216, 114.0584951, "Castle Peak Road near Mai Po", "青山公路近米埔"],
+    [
+      "CK001F",
+      22.31086,
+      114.16573,
+      "Central Kowloon Bypass (Yau Ma Tei Section) YAU MA TEI INTERCHANGE",
+      "中九龍繞道(油麻地段) 油麻地交匯處"
+    ],
+    [
+      "CK002F",
+      22.32284,
+      114.20083,
+      "Central Kowloon Bypass (Yau Ma Tei Section) KAI TAK INTERCHANGE",
+      "中九龍繞道(油麻地段) 啟德交匯處"
+    ],
+    [
+      "CW103F",
+      22.287376332,
+      114.156971946,
+      "Central - Wan Chai Bypass near Central",
+      "中環及灣仔繞道中環入口"
+    ],
+    [
+      "CW803F",
+      22.28988738,
+      114.191701956,
+      "Central - Wan Chai Bypass near City Garden",
+      "中環及灣仔繞道城市花園入口"
+    ],
+    ["FH104F", 22.5040348, 114.0949935, "Fanling Highway near Kwu Tung", "粉嶺公路近古洞"],
+    [
+      "FH106F",
+      22.50053,
+      114.12399,
+      "Fanling Highway near Sheung Shui Roundabout",
+      "粉嶺公路上水迴旋處"
+    ],
+    ["FH107F", 22.49919, 114.12667, "Fanling Highway near Pak Wo Road", "粉嶺公路近百和路"],
+    [
+      "FH706F",
+      22.49162524,
+      114.1386246,
+      "Fanling Highway near MTR Fanling Station",
+      "粉嶺公路近港鐵粉嶺站"
+    ],
+    ["FH707F", 22.487369992, 114.146513995, "FL Hwy-Wo Hop Shek ITC", "粉嶺公路-和合石交匯處"],
+    ["FH708F", 22.48251, 114.15382, "FL Hwy-Bus Interchange", "粉嶺公路-粉嶺公路轉車站"],
+    ["FH711F", 22.46557484, 114.1503591, "Fanling Highway near Hong Lok Yuen", "粉嶺公路近康樂園"],
+    [
+      "H106F",
+      22.2859674,
+      114.1557495,
+      "Connaught Road Central near Exchange Square",
+      "干諾道中近交易廣場"
+    ],
+    ["H107F", 22.28142516, 114.1570698, "Pedder Street", "畢打街"],
+    [
+      "H108F",
+      22.28036864,
+      114.1576522,
+      "Queen's Road Central near Ice House Street",
+      "皇后大道中近雪廠街"
+    ],
+    [
+      "H109F",
+      22.27982723,
+      114.1616694,
+      "Queen's Road Central near Garden Road",
+      "皇后大道中近花園道"
+    ],
+    [
+      "H110F",
+      22.28705,
+      114.15305,
+      "Connaught Road Central near Shun Tak Centre",
+      "干諾道中近信德中心"
+    ],
+    ["H130F", 22.28179051, 114.1323068, "Pok Fu Lam Road near Pokfield Road", "薄扶林道近蒲飛路"],
+    ["H132F2", 22.27763, 114.13078, "Pok Fu Lam Road near Smithfield Road", "薄扶林道近士美菲路"],
+    [
+      "H138F",
+      22.27739,
+      114.15884,
+      "Cotton Tree Drive near Hong Kong Park Sports Centre",
+      "紅棉路近香港公園體育館"
+    ],
+    ["H201F", 22.27783195, 114.1685006, "Hennessy Road near Arsenal Street", "軒尼詩道近軍器廠街"],
+    ["H203F", 22.28011673, 114.1846175, "Yee Wo Street near Hennessy Road", "怡和街近軒尼詩道"],
+    ["H204F", 22.28054134, 114.1744485, "Fleming Road near Harbour Road", "菲林明道近港灣道"],
+    ["H207F", 22.28128179, 114.1819201, "Cross Harbour Tunnel Hong Kong Side", "海底隧道香港入口"],
+    [
+      "H209F",
+      22.27504169,
+      114.1783686,
+      "Queen's Road East near Stubbs Road",
+      "皇后大道東近司徒拔道"
+    ],
+    ["H210F", 22.2747, 114.17936, "Aberdeen Tunnel - Wan Chai Side", "香港仔隧道灣仔入口"],
+    [
+      "H214F",
+      22.27948,
+      114.16624,
+      "Harcourt Road near Red Cross Headquarter",
+      "夏慤道近紅十字會總部"
+    ],
+    [
+      "H215F",
+      22.28192,
+      114.18015,
+      "Gloucester Road near Wan Chai Interchange",
+      "告士打道近灣仔交匯處"
+    ],
+    [
+      "H216F",
+      22.27930409,
+      114.1814057,
+      "Canal Road Flyover near Times Square",
+      "堅拿道天橋近時代廣場"
+    ],
+    [
+      "H222F",
+      22.27971054,
+      114.1765444,
+      "Gloucester Road near Sun Hung Kai Center",
+      "告士打道近新鴻基中心"
+    ],
+    ["H305F", 22.28175082, 114.1912256, "Causeway Road near Hing Fat Street", "高士威道近興發街"],
+    ["H307F", 22.29022115, 114.195273, "King's Road near Tin Chong Street", "英皇道近電廠街"],
+    [
+      "H401F",
+      22.25055947,
+      114.1706947,
+      "Wong Chuk Hang Road near Aberdeen Tunnel",
+      "黃竹坑道近香港仔隧道"
+    ],
+    ["H421F", 22.24986, 114.17557, "Aberdeen Tunnel - Aberdeen Side", "香港仔隧道香港仔入口"],
+    [
+      "H422F1",
+      22.24828309,
+      114.1611004,
+      "Wong Chuk Hang Road near Aberdeen Technical School",
+      "黃竹坑道近香港仔工業學校"
+    ],
+    [
+      "H422F2",
+      22.248255958,
+      114.160644465,
+      "Ap Lei Chau Bridge Road near Aberdeen Police Station",
+      "鴨利洲橋道近香港仔警署"
+    ],
+    ["H429F", 22.24845, 114.1505, "Aberdeen Praya Road near Fish Market", "香港仔海傍道近魚市場"],
+    [
+      "H702F",
+      22.29032691,
+      114.1423865,
+      "Western Harbour Crossing Hong Kong Side",
+      "西區海底隧道香港入口"
+    ],
+    ["H703F", 22.28871049, 114.142678, "Connaught Road West", "干諾道西"],
+    [
+      "H801F",
+      22.29401254,
+      114.2054047,
+      "Island Eastern Corridor near Ka Wah Centre",
+      "東區走廊近嘉華國際中心"
+    ],
+    [
+      "H802F",
+      22.29106727,
+      114.2119641,
+      "Island Eastern Corridor near Hoi Yu Street",
+      "東區走廊近海裕街"
+    ],
+    [
+      "H803F",
+      22.28826553,
+      114.2211432,
+      "Island Eastern Corridor near Quarry Bay Park",
+      "東區走廊近鰂魚涌公園"
+    ],
+    [
+      "H903F",
+      22.27573701,
+      114.1808526,
+      "Morrison Hill Road near Sports Road",
+      "摩利臣山道近體育道"
+    ],
+    [
+      "H904F",
+      22.2793944,
+      114.1813669,
+      "Canal Road Flyover near Gloucester Road",
+      "堅拿道天橋近告士打道"
+    ],
+    [
+      "HH001F",
+      22.47786575,
+      114.1535925,
+      "Heung Yuen Wai Highway near Fanling Highway Interchange",
+      "香園圍公路近粉嶺公路交滙處"
+    ],
+    [
+      "HH002F",
+      22.53048,
+      114.17071,
+      "Heung Yuen Wai Highway near Cheung Shan Tunnel North Portal",
+      "香園圍公路近長山隧道北出入口"
+    ],
+    [
+      "HH003F",
+      22.53909273,
+      114.1618259,
+      "Heung Yuen Wai Highway near Ping Yeung Interchange",
+      "香園圍公路近坪洋交滙處"
+    ],
+    [
+      "HH004F",
+      22.54589147,
+      114.1527062,
+      "Heung Yuen Wai Highway near Lin Ma Hang Road Interchange",
+      "香園圍公路近蓮麻坑路交滙處"
+    ],
+    ["K101F", 22.29458393, 114.1725851, "Salisbury Road near Nathan Road", "梳士巴利道近彌敦道"],
+    ["K102F", 22.29557735, 114.1753702, "Salisbury Road near Chatham Road", "梳士巴利道近漆咸道"],
+    ["K104F", 22.30085, 114.16814, "Canton Road near China HK City", "廣東道近中港城"],
+    ["K106F", 22.30270251, 114.1772723, "Chatham Road near Austin Road", "漆咸道近柯士甸道"],
+    ["K107F", 22.30349, 114.18073, "Cross Harbour Tunnel Kowloon Side", "海底隧道九龍入口"],
+    ["K108F", 22.30582, 114.16712, "Jordan Road near Ferry Street", "佐敦道近渡船街"],
+    [
+      "K109F",
+      22.30557423,
+      114.1788251,
+      "Chatham Road near Princess Margaret Road",
+      "漆咸道近公主道"
+    ],
+    ["K111F", 22.31216628, 114.1668971, "Waterloo Road / Ferry Street", "窩打老道/渡船街"],
+    ["K112F", 22.31317793, 114.1716528, "Waterloo Road near Tung Fong Street", "窩打老道近東方街"],
+    ["K121F", 22.29627254, 114.1692661, "Canton Road near Salisbury Road", "廣東道近梳士巴利道"],
+    ["K123F", 22.31047, 114.17802, "Princess Margaret Road near King's Park", "公主道近京士柏"],
+    [
+      "K202F",
+      22.31981545,
+      114.1728075,
+      "Argyle Street near Yim Po Fong Street",
+      "亞皆老街近染布房街"
+    ],
+    ["K205F", 22.32230774, 114.1686338, "Nathan Road near Lai Chi Kok Road", "彌敦道近荔枝角道"],
+    [
+      "K209F",
+      22.32660644,
+      114.17206,
+      "Boundary Street near Tai Hang Tung Road",
+      "界限街近大坑東道"
+    ],
+    ["K221F", 22.31830685, 114.1635385, "Cherry Street near Hoi Wang Road", "櫻桃街近海泓道"],
+    [
+      "K305F",
+      22.33866944,
+      114.1518975,
+      "Cheung Sha Wan Road near Kwong Cheung Street",
+      "長沙灣道近光昌街"
+    ],
+    ["K325F", 22.3369, 114.14106, "Kwai Chung Road near Mei Fo Sun Chuen", "葵涌道近美孚新邨"],
+    ["K404F", 22.3140446, 114.1874923, "Kai Tak Tunnel Kowloon City Side", "啟德隧道九龍城入口"],
+    ["K405F", 22.32217214, 114.1874347, "Ma Tau Wai Road near Farm Road", "馬頭圍道近農圃道"],
+    ["K408F", 22.31726887, 114.1785729, "Princess Margaret Road/Pui Ching Road", "公主道/培正道"],
+    ["K409F", 22.32128749, 114.1780488, "Princess Margaret Road/Argyle Street", "公主道/亞皆老街"],
+    ["K502F", 22.34014333, 114.1790585, "Waterloo Road/Cornwall Street", "窩打老道/歌和老街"],
+    ["K505F", 22.34290651, 114.1845919, "Lung Cheung Road/Chuk Yuen Road", "龍翔道/竹園道"],
+    [
+      "K506F",
+      22.32769862,
+      114.1905897,
+      "Prince Edward Rd W Flyover nr Olympic Garden",
+      "太子道西天橋近世運公園"
+    ],
+    ["K508F", 22.34132, 114.1991, "Lung Cheung Road/Po Kong Village Road", "龍翔道/蒲崗村道"],
+    [
+      "K521F",
+      22.33257458,
+      114.1961231,
+      "Prince Edward Road East near San Po Kong",
+      "太子道東近新蒲崗"
+    ],
+    [
+      "K602F",
+      22.31013525,
+      114.2292831,
+      "Lei Yue Mun Road near Cha Kwo Ling Road",
+      "鯉魚門道近茶果嶺道"
+    ],
+    ["K607F", 22.32400731, 114.2258911, "Sau Mau Ping Road near Hip Wo Street", "秀茂坪道近協和街"],
+    ["K613F", 22.32535714, 114.2087889, "Kai Cheung Road near Wang Chiu Road", "啟祥道近宏照道"],
+    ["K614F", 22.33399946, 114.20849, "Lung Cheung Road/Clear Water Bay Road", "龍翔道/清水灣道"],
+    ["K621F", 22.3314, 114.2091, "Kwun Tong Road near Lung Cheung Road", "觀塘道近龍翔道"],
+    [
+      "K627F",
+      22.33419,
+      114.22336,
+      "Clear Water Bay Road near Fei Ngo Shan Road",
+      "清水灣道近飛鵝山道"
+    ],
+    ["K701F", 22.30226, 114.23342, "TKO-LTT - Lam Tin Portal", "將軍澳藍田隧道 (藍田入口)"],
+    ["K702F", 22.30029, 114.23069, "TKO-LTT - CKL Rd Roundabout", "將藍隧道茶果嶺道迴旋處"],
+    [
+      "K802F",
+      22.34253,
+      114.15381,
+      "Ching Cheung Road near Caritas Medical Center",
+      "呈祥道近明愛醫院"
+    ],
+    ["K804F", 22.3420935, 114.1647497, "Lung Cheung Road near Chak On Estate", "龍翔道近澤安邨"],
+    [
+      "K809F2",
+      22.31947692,
+      114.2148344,
+      "Kwun Tong Road near Kowloon Bay MTR Station",
+      "觀塘道近九龍灣港鐵站"
+    ],
+    [
+      "K810F",
+      22.31464427,
+      114.2199383,
+      "Kwun Tong Road near Ngua Tau Kok MTR Station",
+      "觀塘道近牛頭角港鐵站"
+    ],
+    [
+      "K811F",
+      22.31209325,
+      114.2341463,
+      "Tseung Kwan O Road near Tsui Ping South Estate",
+      "將軍澳道近翠屏南邨"
+    ],
+    ["K812F", 22.30909, 114.2298, "Kwun Tong Bypass near Laguna City", "觀塘繞道近麗港城"],
+    ["K813F", 22.31230599, 114.2174335, "Kwun Tong Bypass near Lai Yip Street", "觀塘繞道近勵業街"],
+    ["K814F", 22.32452, 114.20426, "Kwun Tong Bypass near Kai Cheung Road", "觀塘繞道近啟祥道"],
+    [
+      "K816F",
+      22.32504352,
+      114.1618295,
+      "West Kowloon Corridor near Nam Cheong Estate",
+      "西九龍走廊近南昌邨"
+    ],
+    ["K901F", 22.30813, 114.16112, "Western Harbour Crossing Kowloon Side", "西區海底隧道九龍入口"],
+    [
+      "K911F",
+      22.31438739,
+      114.1614812,
+      "West Kowloon Hwy - Yau Ma Tei Interchange N",
+      "西九龍公路油麻地北交匯處"
+    ],
+    [
+      "K914F",
+      22.33089245,
+      114.1427454,
+      "West Kowloon Highway near Lai Wan Interchange",
+      "西九龍公路近荔灣交匯處"
+    ],
+    ["K931F", 22.33406, 114.20563, "Tate's Cairn Tunnel Kowloon Side", "大老山隧道九龍入口"],
+    [
+      "K952F",
+      22.30140107,
+      114.2339672,
+      "Eastern Harbour Crossing Kowloon Side",
+      "東區海底隧道九龍入口"
+    ],
+    [
+      "NH101F",
+      22.48802377,
+      114.1464192,
+      "Jockey Club Road near Fanling Highway",
+      "馬會道近粉嶺公路"
+    ],
+    ["NH109F", 22.50041071, 114.1342197, "Jockey Club Road near Ma Sik Road", "馬會道近馬適路"],
+    ["NH113F", 22.50305446, 114.1267355, "San Wan Road near Lung Sum Avenue", "新運路近龍琛路"],
+    ["NH115F", 22.50155, 114.14679, "Sha Tau Kok Road near Ma Sik Road", "沙頭角公路近馬適路"],
+    ["NL022F", 22.30805, 113.93874, "Tung Wing Road", "東榮路"],
+    [
+      "NL121F",
+      22.3249869,
+      114.0204954,
+      "North Lantau Highway near Sunny Bay",
+      "北大嶼山公路近欣澳"
+    ],
+    [
+      "NL124F",
+      22.31008185,
+      113.9904935,
+      "North Lantau Highway near Siu Ho Wan",
+      "北大嶼山公路近小蠔灣"
+    ],
+    ["NL126F", 22.29826, 113.96577, "North Lantau Highway near Pak Mong", "北大嶼山公路近白芒"],
+    ["NL128F", 22.28946, 113.94729, "North Lantau Highway near Tung Chung", "北大嶼山公路近東涌"],
+    [
+      "NL131F",
+      22.31876,
+      113.95529,
+      "HZMB Hong Kong Port Inbound Private Car Clearance Plaza",
+      "港珠澳大橋香港口岸入境客車通關廣場"
+    ],
+    [
+      "NL184F",
+      22.31524,
+      113.95746,
+      "HZMB Hong Kong Port Outbound Private Car Clearance Plaza",
+      "港珠澳大橋香港口岸出境客車通關廣場"
+    ],
+    [
+      "NL206F",
+      22.29964603,
+      113.9709987,
+      "Shun Long Road near North Lantau Highway",
+      "順朗路近北大嶼山公路"
+    ],
+    ["PB106F", 22.3253802, 114.0357825, "Penny's Bay Highway", "竹篙灣公路"],
+    ["RT115F", 22.37616562, 113.9601401, "Lung Mun Road near Wu Chui Road", "龍門路近湖翠路"],
+    [
+      "RT116F",
+      22.38562,
+      113.97526,
+      "Wong Chu Road near Tuen Mun Heung Sze Wui Road",
+      "皇珠路近屯門鄉事會路"
+    ],
+    ["SM933F", 22.37778258, 114.1824479, "Shing Mun Tunnel Road", "城門隧道公路"],
+    ["SM934F", 22.38164, 114.17548, "Shing Mun Tunnel Shatin Side", "城門隧道沙田入口"],
+    ["SM936F", 22.37653656, 114.1230523, "Cheung Pei Shan Road", "象鼻山路"],
+    [
+      "ST106F",
+      22.3779165,
+      114.1998871,
+      "Sha Tin Wai Road/Sha Lek Highway Slip Road",
+      "沙田圍路/沙瀝公路"
+    ],
+    [
+      "ST109F",
+      22.38920413,
+      114.2032781,
+      "Tai Chung Kiu Road near Ravana Garden",
+      "大涌橋路近濱景花園"
+    ],
+    ["ST112F", 22.37139, 114.1787, "Mei Tin Rd nr Che Kung Miu Rd Rbt", "美田路近車公廟路迴旋處"],
+    ["ST114F", 22.38408, 114.18944, "Tai Po Road - Shatin Section", "大埔公路沙田段"],
+    ["ST115F", 22.38907, 114.19813, "Fo Tan Road", "火炭路"],
+    [
+      "ST117F",
+      22.42227,
+      114.22775,
+      "Sai Sha Road near Ma On Shan Sports Ground",
+      "西沙路近馬鞍山運動場"
+    ],
+    ["ST119F", 22.42656, 114.23909, "Sai Sha Road/Kam Ying Road", "西沙路/錦英路"],
+    [
+      "ST701F",
+      22.40698,
+      114.21063,
+      "Tolo Highway near Sha Tin Sewage Treatment Works",
+      "吐露港公路近沙田污水處理廠"
+    ],
+    [
+      "ST703F",
+      22.39488488,
+      114.1996569,
+      "Tai Po Road near MTR Racecourse Station",
+      "大埔公路近港鐵馬場站"
+    ],
+    [
+      "ST712F1",
+      22.39842255,
+      114.2123212,
+      "Tate's Cairn Highway near Shatin Hospital",
+      "大老山公路近沙田醫院"
+    ],
+    [
+      "ST714F",
+      22.38789322,
+      114.2111629,
+      "Tate's Cairn Highway near Tai Shek Kwu",
+      "大老山公路近大石鼓"
+    ],
+    [
+      "ST715F",
+      22.37760035,
+      114.2004308,
+      "Sha Lek Highway near Prince Wales Hospital",
+      "沙瀝公路近威爾斯親王醫院"
+    ],
+    [
+      "ST721F",
+      22.38380417,
+      114.2014612,
+      "Shatin Road near Yuen Chau Kok Park",
+      "沙田路近圓州角公園"
+    ],
+    [
+      "ST725F",
+      22.36913,
+      114.18753,
+      "Lion Rock Tunnel Road near Sun Tin Wai Estate",
+      "獅子山隧道公路近新田圍邨"
+    ],
+    [
+      "ST731F",
+      22.41374312,
+      114.227933,
+      "Ma On Shan Bypass near Heng On Estate",
+      "馬鞍山繞道近恆安邨"
+    ],
+    [
+      "ST732F",
+      22.41757026,
+      114.2332959,
+      "Ma On Shan Bypass near Yiu On Estate",
+      "馬鞍山繞道近耀安邨"
+    ],
+    [
+      "ST748F",
+      22.38372,
+      114.18862,
+      "Tai Po Road (Sha Tin) North Bound near Shatin MTR Station",
+      "大埔公路(沙田段)北行近沙田港鐵站"
+    ],
+    [
+      "ST750F",
+      22.38259,
+      114.18794,
+      "Tai Po Road (Sha Tin) South Bound near Citylink Plaza",
+      "大埔公路(沙田段)南行近連城廣場"
+    ],
+    [
+      "ST922F",
+      22.36499,
+      114.1824,
+      "Lion Rock Tunnel Road near Hung Mui Kuk Road",
+      "獅子山隧道公路近紅梅谷路"
+    ],
+    ["ST942F", 22.38206891, 114.2093748, "Tate's Cairn Tunnel Shatin Side", "大老山隧道沙田入口"],
+    [
+      "SW103F",
+      22.426992,
+      113.982439,
+      "Kong Sham Western Highway near Tsing Chuen Wai",
+      "港深西部公路近青磚圍"
+    ],
+    [
+      "SW108F",
+      22.42438851,
+      113.9971503,
+      "Yuen Long Highway near Tan Kwai Tsuen",
+      "元朗公路近丹桂村"
+    ],
+    [
+      "SW109F",
+      22.42806827,
+      114.0011184,
+      "Yuen Long Highway near Hung Tin Road",
+      "元朗公路近洪天路"
+    ],
+    [
+      "SW111F",
+      22.43783,
+      114.01207,
+      "Yuen Long Highway near Tong Yan San Tsuen Interchange",
+      "元朗公路近唐人新村交匯處"
+    ],
+    [
+      "SW112F",
+      22.43381492,
+      114.0317002,
+      "Yuen Long Highway near Shap Pat Heung",
+      "元朗公路近十八鄉"
+    ],
+    [
+      "SW113F",
+      22.44337572,
+      114.0392287,
+      "Yuen Long Highway near Pok Oi Interchange",
+      "元朗公路近博愛交匯處"
+    ],
+    ["TC001F", 22.31537, 113.959797, "TM-CLK Tunnel Southern Portal", "屯門-赤鱲角隧道南面入口"],
+    [
+      "TC002F",
+      22.372131,
+      113.953067,
+      "Lung Mun Rd Roundabout near TM-CLKL",
+      "龍門路迴旋處近屯門至赤鱲角連接路"
+    ],
+    ["TC003F", 22.36462, 113.94778, "TM-CLK Tunnel Northern Portal", "屯門-赤鱲角隧道北面入口"],
+    ["TC101F", 22.34896, 114.11235, "Cheung Tsing Bridge", "長青橋"],
+    [
+      "TC104F",
+      22.33851168,
+      114.1321335,
+      "Tsing Kwai Highway Near Container Port 4",
+      "青葵公路近四號貨櫃碼頭"
+    ],
+    [
+      "TC302F",
+      22.34472737,
+      114.0932424,
+      "Cheung Tsing Highway near Kam Chuk Kok",
+      "長青公路近金竹角"
+    ],
+    ["TC551F", 22.34523759, 114.0572263, "Kap Shui Mun Bridge", "汲水門橋"],
+    ["TC560F", 22.35110094, 114.074065, "Tsing Ma Bridge", "青馬大橋"],
+    ["TC573F", 22.33733939, 114.0389447, "Lantau Link near Toll Plaza", "青嶼幹線近收費廣場"],
+    ["TC604F", 22.36029874, 114.081767, "Ting Kau Bridge", "汀九橋"],
+    ["TC612F", 22.37038995, 114.0737207, "Tuen Mun Road to Ting Kau Bridge", "屯門公路至汀九橋"],
+    [
+      "TDS10001",
+      22.394415323,
+      114.199414002,
+      "Sha Tin Road near Hong Kong Jockey Club Shatin Staff Quarters - Southbound",
+      "沙田路近香港賽馬會職員宿舍 - 南行"
+    ],
+    [
+      "TDS10002",
+      22.390857395,
+      114.198733663,
+      "Sha Tin Road near New Territories Fire Command Headquarters - Southbound",
+      "沙田路近新界區消防總部 - 南行"
+    ],
+    [
+      "TDS10003",
+      22.380038612,
+      114.200295307,
+      "Sha Tin Road near Prince of Wales Hospital - Southbound",
+      "沙田路近威爾斯親王醫院 - 南行"
+    ],
+    [
+      "TDS10004",
+      22.383451991,
+      114.201373734,
+      "Sha Tin Road near Yuen Chau Kok Park - Southbound",
+      "沙田路近圓洲角公園 - 南行"
+    ],
+    [
+      "TDS10005",
+      22.387732583,
+      114.200529654,
+      "Sha Tin Road near Tai Chung Kiu Road - Southbound",
+      "沙田路近大涌橋路 - 南行"
+    ],
+    [
+      "TDS10006",
+      22.377076785,
+      114.198974255,
+      "Sha Tin Road near Sha Tin Wai Road - Southbound",
+      "沙田路近沙田圍路 - 南行"
+    ],
+    [
+      "TDS10007",
+      22.372138069,
+      114.189924107,
+      "Sha Tin Road near Sha Tin Tau - Southbound",
+      "沙田路近沙田頭 - 南行"
+    ],
+    [
+      "TDS10008",
+      22.373862551,
+      114.193701358,
+      "Sha Tin Road near Pok Hong Estate - Southbound",
+      "沙田路近博康邨 - 南行"
+    ],
+    [
+      "TDS10009",
+      22.374602778,
+      114.196177444,
+      "Sha Tin Road near Shui Chuen O Estate - Southbound",
+      "沙田路近水泉澳邨 - 南行"
+    ],
+    [
+      "TDS10010",
+      22.367857791,
+      114.187195387,
+      "Lion Rock Tunnel Road near Sha Tin Government Primary School - Southbound",
+      "獅子山隧道公路近沙田官立小學 - 南行"
+    ],
+    [
+      "TDS10011",
+      22.364652197,
+      114.182039617,
+      "Lion Rock Tunnel Road near Hung Mui Kuk Road - Southbound",
+      "獅子山隧道公路近紅梅谷路 - 南行"
+    ],
+    [
+      "TDS10012",
+      22.362873239,
+      114.179631724,
+      "Lion Rock Tunnel Road near World-wide Gardens - Southbound",
+      "獅子山隧道公路近世界花園 - 南行"
+    ],
+    [
+      "TDS10013",
+      22.360254403,
+      114.176398642,
+      "Lion Rock Tunnel Road near Union Hospital - Southbound",
+      "獅子山隧道公路近仁安醫院 - 南行"
+    ],
+    [
+      "TDS20001",
+      22.380985076,
+      114.210209614,
+      "Tate's Cairn Highway near Hong Kong School of Motoring - Sha Tin - Southbound",
+      "大老山公路近香港駕駛學院 - 沙田 - 南行"
+    ],
+    [
+      "TDS20002",
+      22.384055365,
+      114.210637606,
+      "Tate's Cairn Highway near Shek Mun Riverside Garden - Southbound",
+      "大老山公路近石門河濱花園 - 南行"
+    ],
+    [
+      "TDS20003",
+      22.387775787,
+      114.211357097,
+      "Tate's Cairn Highway near Sha Tin Transfer Station - Southbound",
+      "大老山公路近沙田廢物轉運站 - 南行"
+    ],
+    [
+      "TDS20004",
+      22.391993368,
+      114.209775246,
+      "Tate's Cairn Highway near Shek Mun Interchange - Southbound",
+      "大老山公路近石門交匯處 - 南行"
+    ],
+    [
+      "TDS20005",
+      22.397501683,
+      114.211194405,
+      "Tate's Cairn Highway near Sha Tin Hospital - Southbound (2)",
+      "大老山公路近沙田醫院 - 南行(2)"
+    ],
+    [
+      "TDS20006",
+      22.400842374,
+      114.213895054,
+      "Tate's Cairn Highway near Sha Tin Hospital - Southbound (1)",
+      "大老山公路近沙田醫院 - 南行(1)"
+    ],
+    [
+      "TDS20007",
+      22.403767277,
+      114.217945656,
+      "Tate's Cairn Highway near Ah Kung Kok Fishermen Village - Southbound",
+      "大老山公路近亞公角漁民新村 - 南行"
+    ],
+    [
+      "TDS20008",
+      22.407181161,
+      114.216518989,
+      "Tate's Cairn Highway near Sha Tin Sewage Treatment Works - Southbound",
+      "大老山公路近沙田污水處理廠 - 南行"
+    ],
+    [
+      "TDS20009",
+      22.411281871,
+      114.212819753,
+      "Tate's Cairn Highway near Hyatt Regency Hong Kong, Sha Tin - Southbound",
+      "大老山公路近香港凱悅酒店 - 沙田 - 南行"
+    ],
+    [
+      "TDS30001",
+      22.412699011,
+      114.062034584,
+      "Tsing Long Highway near Ho Pui - Southbound",
+      "青朗公路近河背 - 南行"
+    ],
+    [
+      "TDS30002",
+      22.424169227,
+      114.064191205,
+      "Tsing Long Highway near Pat Heung Depot - Southbound",
+      "青朗公路近八鄉車廠 - 南行"
+    ],
+    [
+      "TDS30003",
+      22.427781275,
+      114.063994021,
+      "Tsing Long Highway near Kam Sheung Road MTR Station - Southbound (1)",
+      "青朗公路近錦上路港鐵站 - 南行 (1)"
+    ],
+    [
+      "TDS30004",
+      22.433559264,
+      114.061862011,
+      "Tsing Long Highway near Kam Sheung Road MTR Station - Southbound (2)",
+      "青朗公路近錦上路港鐵站 - 南行 (2)"
+    ],
+    [
+      "TDS30005",
+      22.437205378,
+      114.0588282,
+      "Tsing Long Highway near Kam Sheung Road MTR Station - Southbound (3)",
+      "青朗公路近錦上路港鐵站 - 南行 (3)"
+    ],
+    [
+      "TDS30006",
+      22.439577732,
+      114.055251334,
+      "Tsing Long Highway near Au Tau Treatment Works - Southbound",
+      "青朗公路近凹頭濾水廠 - 南行"
+    ],
+    [
+      "TDS30007",
+      22.44325889,
+      114.050993154,
+      "Tsing Long Highway near Yuen Long Highway - Southbound (1)",
+      "青朗公路近元朗公路 - 南行 (1)"
+    ],
+    [
+      "TDS30008",
+      22.448918942,
+      114.048413588,
+      "Tsing Long Highway near Yuen Long Highway - Southbound (2)",
+      "青朗公路近元朗公路 - 南行 (2)"
+    ],
+    [
+      "TDS30009",
+      22.453778196,
+      114.04952637,
+      "Tsing Long Highway near Yuen Long Highway - Southbound (3)",
+      "青朗公路近元朗公路 - 南行 (3)"
+    ],
+    [
+      "TDS90001",
+      22.409457908,
+      114.21192576,
+      "Tolo Highway near Hyatt Regency Hong Kong, Sha Tin - Southbound",
+      "吐露港公路近香港凱悅酒店 - 沙田 - 南行"
+    ],
+    [
+      "TDS90002",
+      22.405990762,
+      114.209224961,
+      "Tolo Highway near The Hong Kong Jockey Club Stables - Southbound",
+      "吐露港公路近香港賽馬會馬房 - 南行"
+    ],
+    [
+      "TDS90003",
+      22.401503587,
+      114.203872798,
+      "Tai Po Road - Sha Tin near Racecourse MTR Station - Southbound",
+      "大埔公路沙田段近馬場港鐵站 - 南行"
+    ],
+    [
+      "TDS90004",
+      22.398677328,
+      114.202085342,
+      "Tai Po Road Sha Tin near Plaza Ascot - Southbound",
+      "大埔公路沙田段近駿景廣場 - 南行"
+    ],
+    [
+      "TDS90005",
+      22.395372481,
+      114.199957985,
+      "Tai Po Road - Sha Tin near Hong Kong Jockey Club Shatin Staff Quarters - Southbound",
+      "大埔公路沙田段近香港賽馬會職員宿舍 - 南行"
+    ],
+    [
+      "TDS90010",
+      22.380049078,
+      114.18610875,
+      "Tai Po Road - Sha Tin near Sha Tin MTR Station - Westbound",
+      "大埔公路沙田段近沙田港鐵站 - 西行"
+    ],
+    [
+      "TDS90011",
+      22.377990258,
+      114.183205316,
+      "Shing Mun Tunnel Road near Hong Kong Heritage Museum - Westbound",
+      "城門隧道公路近香港文化博物館 - 西行"
+    ],
+    [
+      "TDS90012",
+      22.37836062,
+      114.17903972,
+      "Shing Mun Tunnel Road near Mei Lam Estate - Westbound",
+      "城門隧道近美林邨 - 西行"
+    ],
+    [
+      "TDS90013",
+      22.38032929,
+      114.17692293,
+      "Shing Mun Tunnel Road near May Shing Court - Westbound",
+      "城門隧道公路近美城苑 - 西行"
+    ],
+    [
+      "TDS90014",
+      22.38258687,
+      114.172776613,
+      "Shing Mun Tunnel Road near Puguangming Temple - Westbound",
+      "城門隧道近普光明寺 - 西行"
+    ],
+    [
+      "TDS90015",
+      22.381403746,
+      114.169271243,
+      "Shing Mun Tunnel Road near Shun Shin Chee Kit Yin Koon - Westbound",
+      "城門隧道近信善玄宮 - 西行"
+    ],
+    [
+      "TDS90016",
+      22.373755649,
+      114.10162396,
+      "Tuen Mun Road near Tsuen Wan Road - Westbound",
+      "屯門公路近荃灣路 - 西行"
+    ],
+    [
+      "TDS90017",
+      22.372173597,
+      114.098032252,
+      "Tuen Mun Road near Yau Kom Tau Village - Westbound",
+      "屯門公路近油柑頭村 - 西行"
+    ],
+    [
+      "TDS90018",
+      22.369462802,
+      114.094742281,
+      "Tuen Mun Road near Yau Kom Tau Water Treatment Works - Westbound",
+      "屯門公路近油柑頭濾水廠 - 西行"
+    ],
+    [
+      "TDS90019",
+      22.370273244,
+      114.090314282,
+      "Tuen Mun Road near Hanley Villa - Westbound",
+      "屯門公路近恒麗苑 - 西行"
+    ],
+    [
+      "TDS90020",
+      22.369439465,
+      114.084926066,
+      "Tuen Mun Road near Ting Kau - Westbound (1)",
+      "屯門公路近汀九 - 西行(1)"
+    ],
+    [
+      "TDS90021",
+      22.37173893,
+      114.07925416,
+      "Tuen Mun Road near Ting Kau - Westbound (2)",
+      "屯門公路近汀九 - 西行(2)"
+    ],
+    [
+      "TDS90022",
+      22.371049271,
+      114.073865849,
+      "Tuen Mun Road near Ting Kau - Westbound (3)",
+      "屯門公路近汀九 - 西行(3)"
+    ],
+    [
+      "TDS90023",
+      22.367896353,
+      114.071897176,
+      "Tuen Mun Road near Ting Kau - Westbound (4)",
+      "屯門公路近汀九 - 西行(4)"
+    ],
+    [
+      "TDS90024",
+      22.365834816,
+      114.067995634,
+      "Tuen Mun Road near Ting Kau - Westbound (5)",
+      "屯門公路近汀九 - 西行(5)"
+    ],
+    [
+      "TDS90025",
+      22.366682062,
+      114.065606505,
+      "Tuen Mun Road near Sham Tseng - Westbound (1)",
+      "屯門公路近深井 - 西行 (1)"
+    ],
+    [
+      "TDS90026",
+      22.369243987,
+      114.06168187,
+      "Tuen Mun Road near Sham Tseng - Westbound (2)",
+      "屯門公路近深井 - 西行 (2)"
+    ],
+    [
+      "TDS90027",
+      22.368059004,
+      114.058925397,
+      "Tuen Mun Road near Sham Tseng - Westbound (3)",
+      "屯門公路近深井 - 西行 (3)"
+    ],
+    [
+      "TDS90028",
+      22.366791114,
+      114.054062138,
+      "Tuen Mun Road near Sham Tseng - Westbound (4)",
+      "屯門公路近深井 - 西行 (4)"
+    ],
+    [
+      "TDS90029",
+      22.365523102,
+      114.049228095,
+      "Tuen Mun Road near Sham Tseng - Westbound (5)",
+      "屯門公路近深井 - 西行 (5)"
+    ],
+    [
+      "TDS90030",
+      22.36551131,
+      114.045771651,
+      "Tuen Mun Road near Sham Tseng - Westbound (6)",
+      "屯門公路近深井 - 西行 (6)"
+    ],
+    [
+      "TDS90031",
+      22.36420723,
+      114.041296998,
+      "Tuen Mun Road near Hong Kong Garden - Westbound (1)",
+      "屯門公路近豪景花園 - 西行 (1)"
+    ],
+    [
+      "TDS90032",
+      22.361196752,
+      114.037396957,
+      "Tuen Mun Road near Hong Kong Garden - Westbound (2)",
+      "屯門公路近豪景花園 - 西行 (2)"
+    ],
+    [
+      "TDS90033",
+      22.358438992,
+      114.033448282,
+      "Tuen Mun Road near Ka Loon Tsuen - Westbound (1)",
+      "屯門公路近嘉龍村 - 西行 (1)"
+    ],
+    [
+      "TDS90034",
+      22.355887889,
+      114.028460738,
+      "Tuen Mun Road near Ka Loon Tsuen - Westbound (2)",
+      "屯門公路近嘉龍村 - 西行 (2)"
+    ],
+    [
+      "TDS90035",
+      22.356144859,
+      114.023188757,
+      "Tuen Mun Road near Tai Lam - Westbound",
+      "屯門公路近大欖 - 西行"
+    ],
+    [
+      "TDS90036",
+      22.358578989,
+      114.01891428,
+      "Tuen Mun Road near Tuen Mun Road Bus-Bus Interchange - Westbound (1)",
+      "屯門公路近屯門公路巴士轉乘站- 西行(1)"
+    ],
+    [
+      "TDS90037",
+      22.362242269,
+      114.015754755,
+      "Tuen Mun Road near Tuen Mun Road Bus-Bus Interchange - Westbound (2)",
+      "屯門公路近屯門公路巴士轉乘站- 西行(2)"
+    ],
+    [
+      "TDS90038",
+      22.364868193,
+      114.013800208,
+      "Tuen Mun Road near Correctional Services Department Married Staff Quarters - Westbound",
+      "屯門公路近懲教署已婚職員宿舍 - 西行"
+    ],
+    [
+      "TDS90039",
+      22.366634944,
+      114.010623239,
+      "Tuen Mun Road near Tsing Lam Road - Westbound",
+      "屯門公路近青欖路 - 西行"
+    ],
+    [
+      "TDS90040",
+      22.367243065,
+      114.004923187,
+      "Tuen Mun Road near Kwun Fat Street - Westbound",
+      "屯門公路近冠發街 - 西行"
+    ],
+    [
+      "TDS90041",
+      22.368295684,
+      114.001242062,
+      "Tuen Mun Road near Siu Sau Tsuen - Westbound",
+      "屯門公路近小秀村 - 西行"
+    ],
+    [
+      "TDS90042",
+      22.372473616,
+      113.998323939,
+      "Tuen Mun Road near So Kwun Wat Road - Westbound",
+      "屯門公路近掃管笏路 - 西行"
+    ],
+    [
+      "TDS90043",
+      22.375881701,
+      113.99345496,
+      "Tuen Mun Road near Harrow International School Hong Kong - Westbound (1)",
+      "屯門公路近哈羅香港國際學校 - 西行 (1)"
+    ],
+    [
+      "TDS90044",
+      22.375247054,
+      113.991251667,
+      "Tuen Mun Road near Harrow International School Hong Kong- Westbound (2)",
+      "屯門公路近哈羅香港國際學校 - 西行 (2)"
+    ],
+    [
+      "TDS90045",
+      22.376957936,
+      113.987015875,
+      "Tuen Mun Road near Castle Peak Bay Immigration Centre - Westbound",
+      "屯門公路近青山灣入境事務中心 - 西行"
+    ],
+    [
+      "TDS90046",
+      22.381828168,
+      113.981775442,
+      "Tuen Mun Road near Castle Peak Beach - Westbound",
+      "屯門公路近青山灣泳灘 - 西行"
+    ],
+    [
+      "TDS90048",
+      22.397073872,
+      113.976238157,
+      "Tuen Mun Road near San Hui Market - Northbound",
+      "屯門公路近新墟街市 - 北行"
+    ],
+    [
+      "TDS90049",
+      22.399946228,
+      113.97677788,
+      "Tuen Mun Road near San Hui Playground - Northbound",
+      "屯門公路近新墟遊樂場 - 北行"
+    ],
+    [
+      "TDS90051",
+      22.406567138,
+      113.978060095,
+      "Tuen Mun Road near Fung Tei Light Rail Stop - Northbound",
+      "屯門公路近輕鐵鳳地站 - 北行"
+    ],
+    [
+      "TDS90052",
+      22.410207419,
+      113.978880456,
+      "Tuen Mun Road near Siu Hong MTR Station - Northbound (1)",
+      "屯門公路近港鐵兆康站 - 北行(1)"
+    ],
+    [
+      "TDS90053",
+      22.412402753,
+      113.979644624,
+      "Tuen Mun Road near Siu Hong MTR Station - Northbound (2)",
+      "屯門公路近港鐵兆康站 - 北行(2)"
+    ],
+    [
+      "TDS90055",
+      22.415926227,
+      113.988555837,
+      "Yuen Long Highway near Kong Sham Western Highway - Eastbound (1)",
+      "元朗公路近港深西部公路 - 東行 (1)"
+    ],
+    [
+      "TDS90056",
+      22.418405069,
+      113.99245704,
+      "Yuen Long Highway near Kong Sham Western Highway - Eastbound (2)",
+      "元朗公路近港深西部公路 - 東行 (2)"
+    ],
+    [
+      "TDS90057",
+      22.423510913,
+      113.995675066,
+      "Yuen Long Highway near Kong Sham Western Highway - Eastbound (3)",
+      "元朗公路近港深西部公路 - 東行 (3)"
+    ],
+    [
+      "TDS90058",
+      22.425094115,
+      113.99825674,
+      "Yuen Long Highway near Tan Kwai Tsuen - Eastbound",
+      "元朗公路近丹桂村 - 東行"
+    ],
+    [
+      "TDS90059",
+      22.427814973,
+      114.000710764,
+      "Yuen Long Highway near Shui Fu Road - Eastbound",
+      "元朗公路近水庫路 - 東行"
+    ],
+    [
+      "TDS90060",
+      22.43194387,
+      114.002541452,
+      "Yuen Long Highway near Hung Tin Road - Eastbound (1)",
+      "元朗公路近洪天路 - 東行 (1)"
+    ],
+    [
+      "TDS90061",
+      22.436183051,
+      114.006198351,
+      "Yuen Long Highway near Hung Tin Road - Eastbound (2)",
+      "元朗公路近洪天路 - 東行 (2)"
+    ],
+    [
+      "TDS90062",
+      22.437487762,
+      114.010344689,
+      "Yuen Long Highway near Tong Yan San Tsuen Road - Eastbound",
+      "元朗公路近唐人新村路 - 東行"
+    ],
+    [
+      "TDS90063",
+      22.437933782,
+      114.013802399,
+      "Yuen Long Highway near Tong Yan San Tsuen Interchange - Eastbound",
+      "元朗公路近唐人新村交匯處 - 東行"
+    ],
+    [
+      "TDS90064",
+      22.436384988,
+      114.018262961,
+      "Yuen Long Highway near Lam Hau Tsuen - Eastbound",
+      "元朗公路近欖口村 - 東行"
+    ],
+    [
+      "TDS90065",
+      22.435206495,
+      114.022907581,
+      "Yuen Long Highway near Kung Um Road - Eastbound",
+      "元朗公路近公庵路 - 東行"
+    ],
+    [
+      "TDS90066",
+      22.434317263,
+      114.028008368,
+      "Yuen Long Highway near Sham Chung Tsuen - Eastbound",
+      "元朗公路近深涌村 - 東行"
+    ],
+    [
+      "TDS90067",
+      22.434728735,
+      114.033651732,
+      "Yuen Long Highway near Shap Pat Heung Interchange - Eastbound (1)",
+      "元朗公路近十八鄉交匯處 - 東行 (1)"
+    ],
+    [
+      "TDS90068",
+      22.437675922,
+      114.037378943,
+      "Yuen Long Highway near Shap Pat Heung Interchange - Eastbound (2)",
+      "元朗公路近十八鄉交匯處 - 東行 (2)"
+    ],
+    [
+      "TDS90069",
+      22.441488506,
+      114.039405446,
+      "Yuen Long Highway near Pok Oi Interchange - Eastbound (1)",
+      "元朗公路近博愛交匯處 - 東行 (1)"
+    ],
+    [
+      "TDS90070",
+      22.446518966,
+      114.040002806,
+      "Yuen Long Highway near Pok Oi Interchange - Eastbound (2)",
+      "元朗公路近博愛交匯處 - 東行 (2)"
+    ],
+    [
+      "TDS90071",
+      22.449042046,
+      114.044304052,
+      "Yuen Long Highway near Long Fai Road - Eastbound",
+      "元朗公路近朗暉路 - 東行"
+    ],
+    [
+      "TDS90072",
+      22.452359442,
+      114.048293838,
+      "Yuen Long Highway near Tsing Long Highway - Eastbound",
+      "元朗公路近青朗公路 - 東行"
+    ],
+    [
+      "TDS90073",
+      22.455992087,
+      114.051360565,
+      "San Tin Highway near Sha Po Tsuen - Northbound",
+      "新田公路近沙埔村 - 北行"
+    ],
+    [
+      "TDS90074",
+      22.46016517,
+      114.052687863,
+      "San Tin Highway near Mo Fan Heung - Northbound",
+      "新田公路近模範鄉 - 北行"
+    ],
+    [
+      "TDS90075",
+      22.464256707,
+      114.053675252,
+      "San Tin Highway near Pok Wai - Northbound",
+      "新田公路近壆圍 - 北行"
+    ],
+    [
+      "TDS90076",
+      22.468420502,
+      114.054691783,
+      "San Tin Highway near Kam Pok Road East - Northbound",
+      "新田公路近錦壆路東 - 北行"
+    ],
+    [
+      "TDS90077",
+      22.472783037,
+      114.055815084,
+      "San Tin Highway near Fairview Park Boulevard - Northbound",
+      "新田公路近錦綉花園大道 - 北行"
+    ],
+    [
+      "TDS90078",
+      22.477814453,
+      114.057802688,
+      "San Tin Highway near Chun Shin Road - Northbound",
+      "新田公路近真善路 - 北行"
+    ],
+    [
+      "TDS90079",
+      22.481734039,
+      114.058333785,
+      "San Tin Highway near Geranium Path - Northbound",
+      "新田公路近洋葵徑 - 北行"
+    ],
+    [
+      "TDS90080",
+      22.484939971,
+      114.058525405,
+      "San Tin Highway near Palm Springs Boulevard - Northbound",
+      "新田公路近加州花園大道 - 北行"
+    ],
+    [
+      "TDS90081",
+      22.490152025,
+      114.060610306,
+      "San Tin Highway near Mai Po San Tsuen - Northbound",
+      "新田公路近米埔新村 - 北行"
+    ],
+    [
+      "TDS90082",
+      22.492520891,
+      114.064709317,
+      "San Tin Highway near San Tin Soccer Pitch - Northbound",
+      "新田公路近新田足球場 - 北行"
+    ],
+    [
+      "TDS90083",
+      22.493534847,
+      114.068440234,
+      "San Tin Highway near Mai Po Lung - Northbound",
+      "新田公路近米埔隴 - 北行"
+    ],
+    [
+      "TDS90084",
+      22.495118969,
+      114.074250464,
+      "San Tin Highway near Tsing Lung Tsuen - Northbound",
+      "新田公路近青龍村 - 北行"
+    ],
+    [
+      "TDS90085",
+      22.497586935,
+      114.078534433,
+      "San Tin Highway near Man Tin Cheung Park - Northbound",
+      "新田公路近文天祥公園 - 北行"
+    ],
+    [
+      "TDS90086",
+      22.501932844,
+      114.082370227,
+      "Fanling Highway near San Tin Interchange - Eastbound",
+      "粉嶺公路近新田交匯處 - 東行"
+    ],
+    [
+      "TDS90087",
+      22.503650575,
+      114.085770629,
+      "Fanling Highway near Chau Tau Tsuen - Eastbound (1)",
+      "粉嶺公路近洲頭村 - 東行 (1)"
+    ],
+    [
+      "TDS90088",
+      22.504230638,
+      114.08959946,
+      "Fanling Highway near Chau Tau Tsuen - Eastbound (2)",
+      "粉嶺公路近洲頭村 - 東行 (2)"
+    ],
+    [
+      "TDS90089",
+      22.503845247,
+      114.095158845,
+      "Fanling Highway near Kwu Tung - Eastbound (1)",
+      "粉嶺公路近古洞 - 東行 (1)"
+    ],
+    [
+      "TDS90090",
+      22.503504325,
+      114.099687987,
+      "Fanling Highway near Kwu Tung - Eastbound (2)",
+      "粉嶺公路近古洞 - 東行 (2)"
+    ],
+    [
+      "TDS90091",
+      22.503208164,
+      114.103633959,
+      "Fanling Highway near Kwu Tung - Eastbound (3)",
+      "粉嶺公路近古洞 - 東行 (3)"
+    ],
+    [
+      "TDS90092",
+      22.502866987,
+      114.108124186,
+      "Fanling Highway near Kwu Tung - Eastbound (4)",
+      "粉嶺公路近古洞 - 東行 (4)"
+    ],
+    [
+      "TDS91001",
+      22.373004964,
+      114.099187235,
+      "Tuen Mun Road near Yau Kom Tau Village - Eastbound",
+      "屯門公路近油柑頭村 - 東行"
+    ],
+    [
+      "TDS91002",
+      22.370915827,
+      114.093003424,
+      "Tuen Mun Road near Yau Kom Tau No. 2 Fresh Water Service Reservoir - Eastbound",
+      "屯門公路近油柑頭二號配水庫 - 東行"
+    ],
+    [
+      "TDS91003",
+      22.369740041,
+      114.089566984,
+      "Tuen Mun Road near Hanley Villa - Eastbound",
+      "屯門公路近恒麗苑 - 東行"
+    ],
+    [
+      "TDS91004",
+      22.36949436,
+      114.086188256,
+      "Tuen Mun Road near Ting Kau - Eastbound (1)",
+      "屯門公路近汀九 - 東行 (1)"
+    ],
+    [
+      "TDS91005",
+      22.370927935,
+      114.082206421,
+      "Tuen Mun Road near Ting Kau - Eastbound (2)",
+      "屯門公路近汀九 - 東行 (2)"
+    ],
+    [
+      "TDS91006",
+      22.371421625,
+      114.077225083,
+      "Tuen Mun Road near Ting Kau - Eastbound (3)",
+      "屯門公路近汀九 - 東行 (3)"
+    ],
+    [
+      "TDS91007",
+      22.370200024,
+      114.073274195,
+      "Tuen Mun Road near Ting Kau - Eastbound (4)",
+      "屯門公路近汀九 - 東行 (4)"
+    ],
+    [
+      "TDS91008",
+      22.366685719,
+      114.07106309,
+      "Tuen Mun Road near Ting Kau - Eastbound (5)",
+      "屯門公路近汀九 - 東行 (5)"
+    ],
+    [
+      "TDS91009",
+      22.366528736,
+      114.065888194,
+      "Tuen Mun Road near Sham Tseng - Eastbound (1)",
+      "屯門公路近深井 - 東行 (1)"
+    ],
+    [
+      "TDS91010",
+      22.368549782,
+      114.063303904,
+      "Tuen Mun Road near Sham Tseng - Eastbound (2)",
+      "屯門公路近深井 - 東行 (2)"
+    ],
+    [
+      "TDS91011",
+      22.368357364,
+      114.059410613,
+      "Tuen Mun Road near Sham Tseng - Eastbound (3)",
+      "屯門公路近深井 - 東行 (3)"
+    ],
+    [
+      "TDS91012",
+      22.366908937,
+      114.05462517,
+      "Tuen Mun Road near Sham Tseng - Eastbound (4)",
+      "屯門公路近深井 - 東行 (4)"
+    ],
+    [
+      "TDS91013",
+      22.365678396,
+      114.051499896,
+      "Tuen Mun Road near Sham Tseng - Eastbound (5)",
+      "屯門公路近深井 - 東行 (5)"
+    ],
+    [
+      "TDS91014",
+      22.365719905,
+      114.046878299,
+      "Tuen Mun Road near Sham Tseng - Eastbound (6)",
+      "屯門公路近深井 - 東行 (6)"
+    ],
+    [
+      "TDS91015",
+      22.364831701,
+      114.042937231,
+      "Tuen Mun Road near Hong Kong Garden - Eastbound (1)",
+      "屯門公路近豪景花園 - 東行 (1)"
+    ],
+    [
+      "TDS91016",
+      22.360862288,
+      114.037008937,
+      "Tuen Mun Road near Hong Kong Garden - Eastbound (2)",
+      "屯門公路近豪景花園 - 東行 (2)"
+    ],
+    [
+      "TDS91017",
+      22.357697618,
+      114.032468472,
+      "Tuen Mun Road near Ka Loon Tsuen - Eastbound (1)",
+      "屯門公路近嘉龍村 - 東行 (1)"
+    ],
+    [
+      "TDS91018",
+      22.356203387,
+      114.02783906,
+      "Tuen Mun Road near Ka Loon Tsuen - Eastbound (2)",
+      "屯門公路近嘉龍村 - 東行 (2)"
+    ],
+    [
+      "TDS91019",
+      22.357037622,
+      114.021867416,
+      "Tuen Mun Road near Tai Lam - Eastbound",
+      "屯門公路近大欖 - 東行"
+    ],
+    [
+      "TDS91020",
+      22.359400073,
+      114.018204618,
+      "Tuen Mun Road near Tuen Mun Road Bus-Bus Interchange - Eastbound (1)",
+      "屯門公路近屯門公路巴士轉乘站 - 東行 (1)"
+    ],
+    [
+      "TDS91021",
+      22.36309946,
+      114.015045014,
+      "Tuen Mun Road near Tuen Mun Road Bus-Bus Interchange - Eastbound (2)",
+      "屯門公路近屯門公路巴士轉乘站 - 東行 (2)"
+    ],
+    [
+      "TDS91022",
+      22.365292265,
+      114.013440477,
+      "Tuen Mun Road near Correctional Services Department Married Staff Quarters - Eastbound",
+      "屯門公路近懲教署已婚職員宿舍 - 東行"
+    ],
+    [
+      "TDS91023",
+      22.366885398,
+      114.008302437,
+      "Tuen Mun Road near Kwun Fat Street - Eastbound",
+      "屯門公路近冠發街 - 東行"
+    ],
+    [
+      "TDS91024",
+      22.367196453,
+      114.003554241,
+      "Tuen Mun Road near The Aegean - Eastbound",
+      "屯門公路近愛琴灣 - 東行"
+    ],
+    [
+      "TDS91025",
+      22.369919756,
+      113.999938961,
+      "Tuen Mun Road near Siu Sau Tsuen - Eastbound",
+      "屯門公路近小秀村 - 東行"
+    ],
+    [
+      "TDS91026",
+      22.373890404,
+      113.997419129,
+      "Tuen Mun Road near So Kwun Wat Road - Eastbound",
+      "屯門公路近掃管笏路 - 東行"
+    ],
+    [
+      "TDS91027",
+      22.375736596,
+      113.9929114,
+      "Tuen Mun Road near Harrow International School Hong Kong - Eastbound (1)",
+      "屯門公路近哈羅香港國際學校 - 東行 (1)"
+    ],
+    [
+      "TDS91028",
+      22.37504729,
+      113.990300373,
+      "Tuen Mun Road near Harrow International School Hong Kong - Eastbound (2)",
+      "屯門公路近哈羅香港國際學校 - 東行 (2)"
+    ],
+    [
+      "TDS91029",
+      22.377372927,
+      113.986665754,
+      "Tuen Mun Road near Castle Peak Bay Immigration Centre - Eastbound",
+      "屯門公路近青山灣入境事務中心 - 東行"
+    ],
+    [
+      "TDS91030",
+      22.381629778,
+      113.982008764,
+      "Tuen Mun Road near Castle Peak Beach - Eastbound",
+      "屯門公路近青山灣泳灘 - 東行"
+    ],
+    [
+      "TDS91031",
+      22.383830874,
+      113.980073332,
+      "Tuen Mun Road near Tuen Mun Siu Lun Government Complex - Southbound",
+      "屯門公路近屯門兆麟政府綜合大樓 - 南行"
+    ],
+    [
+      "TDS91032",
+      22.386231854,
+      113.979147452,
+      "Tuen Mun Road near Chi Lok Fa Yuen - Southbound",
+      "屯門公路近置樂花園 - 南行"
+    ],
+    [
+      "TDS91035",
+      22.400443371,
+      113.977155919,
+      "Tuen Mun Road near San Hui Playground - Southbound",
+      "屯門公路近新墟遊樂場 - 南行"
+    ],
+    [
+      "TDS91037",
+      22.406982885,
+      113.978341152,
+      "Tuen Mun Road near Fung Tei Light Rail Stop - Southbound",
+      "屯門公路近輕鐵鳳地站 - 南行"
+    ],
+    [
+      "TDS91038",
+      22.412466251,
+      113.979877631,
+      "Tuen Mun Road near Siu Hong MTR Station - Souththbound",
+      "屯門公路近港鐵兆康站 - 南行"
+    ],
+    [
+      "TDS91040",
+      22.416415741,
+      113.990167478,
+      "Yuen Long Highway near Kong Sham Western Highway - Westbound (1)",
+      "元朗公路近港深西部公路 - 西行 (1)"
+    ],
+    [
+      "TDS91041",
+      22.419516267,
+      113.992853801,
+      "Yuen Long Highway near Kong Sham Western Highway - Westbound (2)",
+      "元朗公路近港深西部公路 - 西行 (2)"
+    ],
+    [
+      "TDS91042",
+      22.422742223,
+      113.99469504,
+      "Yuen Long Highway near Kong Sham Western Highway - Westbound (3)",
+      "元朗公路近港深西部公路 - 西行 (3)"
+    ],
+    [
+      "TDS91043",
+      22.426766732,
+      114.00006129,
+      "Yuen Long Highway near Shui Fu Road - Westbound",
+      "元朗公路近水庫路 - 西行"
+    ],
+    [
+      "TDS91044",
+      22.431175969,
+      114.002251,
+      "Yuen Long Highway near Hung Tin Road - Westbound (1)",
+      "元朗公路近洪天路 - 西行 (1)"
+    ],
+    [
+      "TDS91045",
+      22.435124582,
+      114.004402561,
+      "Yuen Long Highway near Hung Tin Road - Westbound (2)",
+      "元朗公路近洪天路 - 西行 (2)"
+    ],
+    [
+      "TDS91046",
+      22.43706158,
+      114.008654944,
+      "Yuen Long Highway near Tong Yan San Tsuen Road - Westbound",
+      "元朗公路近唐人新村路 - 西行"
+    ],
+    [
+      "TDS91047",
+      22.43794237,
+      114.013365252,
+      "Yuen Long Highway near Tong Yan San Tsuen Interchange - Westbound",
+      "元朗公路近唐人新村交匯處 - 西行"
+    ],
+    [
+      "TDS91048",
+      22.436574255,
+      114.017883897,
+      "Yuen Long Highway near Lam Hau Tsuen - Westbound",
+      "元朗公路近欖口村 - 西行"
+    ],
+    [
+      "TDS91049",
+      22.435278321,
+      114.022470373,
+      "Yuen Long Highway near Kung Um Road - Westbound",
+      "元朗公路近公庵路 - 西行"
+    ],
+    [
+      "TDS91050",
+      22.434389121,
+      114.027590593,
+      "Yuen Long Highway near Sham Chung Village - Westbound",
+      "元朗公路近深涌村 - 西行"
+    ],
+    [
+      "TDS91051",
+      22.434176562,
+      114.032175785,
+      "Yuen Long Highway near Shap Pat Heung Interchange - Westbound (1)",
+      "元朗公路近十八鄉交匯處 - 西行 (1)"
+    ],
+    [
+      "TDS91052",
+      22.437929025,
+      114.037670115,
+      "Yuen Long Highway near Shap Pat Heung Interchange - Westbound (2)",
+      "元朗公路近十八鄉交匯處 - 西行 (2)"
+    ],
+    [
+      "TDS91053",
+      22.441858753,
+      114.039405081,
+      "Yuen Long Highway near Pok Oi Interchange - Westbound (1)",
+      "元朗公路近博愛交匯處 - 西行 (1)"
+    ],
+    [
+      "TDS91054",
+      22.445985949,
+      114.039741031,
+      "Yuen Long Highway near Pok Oi Interchange - Westbound (2)",
+      "元朗公路近博愛交匯處 - 西行 (2)"
+    ],
+    [
+      "TDS91055",
+      22.448778921,
+      114.042798488,
+      "Yuen Long Highway near Long Fai Road - Westbound",
+      "元朗公路近朗暉路 - 西行"
+    ],
+    [
+      "TDS91056",
+      22.448718794,
+      114.046567937,
+      "Yuen Long Highway near Tsing Long Highway - Westbound (1)",
+      "元朗公路近青朗公路 - 西行 (1)"
+    ],
+    [
+      "TDS91057",
+      22.452116337,
+      114.049197572,
+      "Yuen Long Highway near Tsing Long Highway - Westbound (2)",
+      "元朗公路近青朗公路 - 西行 (2)"
+    ],
+    [
+      "TDS91058",
+      22.455395739,
+      114.050923909,
+      "San Tin Highway near Sha Po Tsuen - Southbound",
+      "新田公路近沙埔村 - 南行"
+    ],
+    [
+      "TDS91059",
+      22.459722598,
+      114.052581385,
+      "San Tin Highway near Mo Fan Heung - Southbound",
+      "新田公路近模範鄉 - 南行"
+    ],
+    [
+      "TDS91060",
+      22.463868325,
+      114.053578435,
+      "San Tin Highway near Pok Wai - Southbound",
+      "新田公路近壆圍 - 南行"
+    ],
+    [
+      "TDS91061",
+      22.467995992,
+      114.054585276,
+      "San Tin Highway near Kam Pok Road East - Southbound",
+      "新田公路近錦壆路東 - 南行"
+    ],
+    [
+      "TDS91062",
+      22.473225607,
+      114.055921582,
+      "San Tin Highway near Fairview Park Boulevard - Southbound",
+      "新田公路近錦綉花園大道 - 南行"
+    ],
+    [
+      "TDS91063",
+      22.47738991,
+      114.05764758,
+      "San Tin Highway near Chun Shin Road - Southbound",
+      "新田公路近真善路 - 南行"
+    ],
+    [
+      "TDS91064",
+      22.481291528,
+      114.05830501,
+      "San Tin Highway near Geranium Path - Southbound",
+      "新田公路近洋葵徑 - 南行"
+    ],
+    [
+      "TDS91065",
+      22.485373451,
+      114.058554189,
+      "San Tin Highway near Palm Springs Boulevard - Southbound",
+      "新田公路近加州花園大道 - 南行"
+    ],
+    [
+      "TDS91066",
+      22.489808645,
+      114.060299623,
+      "San Tin Highway near Mai Po Shan Tsuen - Southbound",
+      "新田公路近米埔新村 - 南行"
+    ],
+    [
+      "TDS91067",
+      22.49238511,
+      114.064242964,
+      "San Tin Highway near San Tin Soccer Pitch - Southbound",
+      "新田公路近新田足球場 - 南行"
+    ],
+    [
+      "TDS91068",
+      22.493933164,
+      114.069907354,
+      "San Tin Highway near Mai Po Lung - Southbound",
+      "新田公路近米埔隴 - 南行"
+    ],
+    [
+      "TDS91069",
+      22.495372411,
+      114.075183223,
+      "San Tin Highway near Tsing Lung Tsuen - Southbound",
+      "新田公路近青龍村 - 南行"
+    ],
+    [
+      "TDS91070",
+      22.497198456,
+      114.078252877,
+      "San Tin Highway near Man Tin Cheung Park - Southbound",
+      "新田公路近文天祥公園 - 南行"
+    ],
+    [
+      "TDS91071",
+      22.500532187,
+      114.080767618,
+      "San Tin Highway near San Tin Interchange - Southbound",
+      "新田公路近新田交匯處 - 南行"
+    ],
+    [
+      "TDS91072",
+      22.502701129,
+      114.083574824,
+      "Fanling Highway near Chau Tau Tsuen - Westbound (1)",
+      "粉嶺公路近洲頭村 - 西行 (1)"
+    ],
+    [
+      "TDS91073",
+      22.504203029,
+      114.088647034,
+      "Fanling Highway near Chau Tau Tsuen - Westbound (2)",
+      "粉嶺公路近洲頭村 - 西行 (2)"
+    ],
+    [
+      "TDS91074",
+      22.503890127,
+      114.094624285,
+      "Fanling Highway near Kwu Tung - Westbound (1)",
+      "粉嶺公路近古洞 - 西行 (1)"
+    ],
+    [
+      "TDS91075",
+      22.503540204,
+      114.099182591,
+      "Fanling Highway near Kwu Tung - Westbound (2)",
+      "粉嶺公路近古洞 - 西行 (2)"
+    ],
+    [
+      "TDS91076",
+      22.503091464,
+      114.105179299,
+      "Fanling Highway near Kwu Tung - Westbound (3)",
+      "粉嶺公路近古洞 - 西行 (3)"
+    ],
+    [
+      "TDS91077",
+      22.502633227,
+      114.110583132,
+      "Fanling Highway near Kwu Tung - Westbound (4)",
+      "粉嶺公路近古洞 - 西行 (4)"
+    ],
+    [
+      "TDSAPR10001",
+      22.24863379,
+      114.149711299,
+      "Aberdeen Praya Road near Aberdeen Wholesale Fish Market - Eastbound",
+      "香港仔海傍道近香港仔魚類批發市場 - 東行"
+    ],
+    [
+      "TDSAPR20001",
+      22.24840797,
+      114.149391207,
+      "Aberdeen Praya Road near Aberdeen Wholesale Fish Market - Westbound",
+      "香港仔海傍道近香港仔魚類批發市場 - 西行"
+    ],
+    [
+      "TDSCPRHSK10001",
+      22.422424567,
+      113.985506884,
+      "Castle Peak Rd-Lam Tei near Lam Tei Pet Garden - Northbound",
+      "青山公路藍地段近藍地寵物公園 - 北行"
+    ],
+    [
+      "TDSCPRHSK10002",
+      22.427098439,
+      113.989890937,
+      "Castle Peak Rd-Hung Shui Kui near Shun Tat Street - Northbound",
+      "青山公路洪水橋段近順達街 - 北行"
+    ],
+    [
+      "TDSCPRHSK10003",
+      22.430678882,
+      113.993723034,
+      "Castle Peak Rd-Hung Shui Kui near Tin Ha Road - Northbound",
+      "青山公路洪水橋段近田廈路 - 北行"
+    ],
+    [
+      "TDSCPRHSK10004",
+      22.434513633,
+      113.998953806,
+      "Castle Peak Rd-Hung Shui Kiu near Hung Shui Kiu Light Rail Stop - Northbound",
+      "青山公路洪水橋段近洪水橋輕鐵站 - 北行"
+    ],
+    [
+      "TDSCPRHSK20001",
+      22.425769511,
+      113.988639699,
+      "Castle Peak Rd-Hung Shui Kui near Shun Tat Street - Southbound",
+      "青山公路洪水橋段近順達街 - 南行"
+    ],
+    [
+      "TDSCPRHSK20002",
+      22.429602759,
+      113.992403399,
+      "Castle Peak Rd-Hung Shui Kui near Tin Ha Road - Southbound",
+      "青山公路洪水橋段近田廈路 - 南行"
+    ],
+    [
+      "TDSCPRHSK20003",
+      22.432342965,
+      113.995925876,
+      "Castle Peak Rd-Hung Shui Kui near Hung Shui Kiu Main Street - Southbound",
+      "青山公路洪水橋段近洪水橋大街 - 南行"
+    ],
+    [
+      "TDSCPRKC10001",
+      22.370287141,
+      114.12218081,
+      "Castle Peak Rd-Kwai Chung near Shing Mun Road - Eastbound",
+      "青山公路葵涌段近城門道 - 東行"
+    ],
+    [
+      "TDSCPRKC10002",
+      22.370858067,
+      114.128472362,
+      "Castle Peak Rd-Kwai Chung near Kwok Shui Road Park - Eastbound",
+      "青山公路葵涌段近國瑞路公園 - 東行"
+    ],
+    [
+      "TDSCPRKC10003",
+      22.360122667,
+      114.135369307,
+      "Castle Peak Rd-Kwai Chung near Yip Shing Street Playground - Southbound",
+      "青山公路葵涌段近業成街遊樂場 - 南行"
+    ],
+    [
+      "TDSCPRKC10004",
+      22.352978875,
+      114.13299289,
+      "Castle Peak Rd-Kwai Chung near Tai Wo Interchange - Southbound",
+      "青山公路葵涌段近大窩交匯處 - 南行"
+    ],
+    [
+      "TDSCPRKC20001",
+      22.370323423,
+      114.122656561,
+      "Castle Peak Rd-Tseun Wan near Texaco Road Flyover - Westbound",
+      "青山公路荃灣段近德士古道天橋 - 西行"
+    ],
+    [
+      "TDSCPRKC20002",
+      22.370903338,
+      114.128870437,
+      "Castle Peak Rd-Kwai Chung near Kwok Shui Road Park - Westbound (1)",
+      "青山公路葵涌段近國瑞路公園 - 西行 (1)"
+    ],
+    [
+      "TDSCPRKC20003",
+      22.370804494,
+      114.130559928,
+      "Castle Peak Rd-Kwai Chung near Kwok Shui Road Park - Westbound (2)",
+      "青山公路葵涌段近國瑞路公園 - 西行 (2)"
+    ],
+    [
+      "TDSCPRKC20004",
+      22.359246488,
+      114.134534616,
+      "Castle Peak Rd-Kwai Chung near Central Kwai Chung Park - Northbound (1)",
+      "青山公路葵涌段近中葵涌公園 - 北行 (1)"
+    ],
+    [
+      "TDSCPRKC20005",
+      22.355055981,
+      114.133283493,
+      "Castle Peak Rd-Kwai Chung near Central Kwai Chung Park - Northbound (2)",
+      "青山公路葵涌段近中葵涌公園 - 北行 (2)"
+    ],
+    [
+      "TDSCPRLT10001",
+      22.417155144,
+      113.981599882,
+      "Castle Peak Rd-Lam Tei near Lam Tei Interchange - Northbound",
+      "青山公路藍地段近藍地交匯處 - 北行"
+    ],
+    [
+      "TDSCPRLT10002",
+      22.420155385,
+      113.983373152,
+      "Castle Peak Rd-Lam Tei near Miu Fat Buddhist Monastery - Northbound",
+      "青山公路藍地段近妙法寺 - 北行"
+    ],
+    [
+      "TDSCPRLT20001",
+      22.419052799,
+      113.982646216,
+      "Castle Peak Rd-Lam Tei near Lam Tei Main Street - Southbound",
+      "青山公路藍地段近藍地大街 - 南行"
+    ],
+    [
+      "TDSCPRLT20002",
+      22.420462768,
+      113.983664114,
+      "Castle Peak Rd-Lam Tei near Fuk Hang Playground - Southbound",
+      "青山公路藍地段近福亨遊樂場 - 南行"
+    ],
+    [
+      "TDSCPRPS10001",
+      22.435852179,
+      114.000817191,
+      "Castle Peak Rd-Ping Shan near Hung Tin Road - Eastbound",
+      "青山公路屏山段近洪天路 - 東行"
+    ],
+    [
+      "TDSCPRPS10002",
+      22.438801029,
+      114.005398583,
+      "Castle Peak Rd-Ping Shan near Fui Sha Wai - Eastbound",
+      "青山公路屏山段近灰沙圍 - 東行"
+    ],
+    [
+      "TDSCPRPS10003",
+      22.441008158,
+      114.00892219,
+      "Castle Peak Rd-Ping Shan near Tong Yan San Tsuen Playground - Eastbound",
+      "青山公路屏山段近唐人新村遊樂場 - 東行"
+    ],
+    [
+      "TDSCPRPS10004",
+      22.442826802,
+      114.01234922,
+      "Castle Peak Rd-Ping Shan near Ping Shan Light Rail Stop - Eastbound",
+      "青山公路屏山段近屏山輕鐵站 - 東行"
+    ],
+    [
+      "TDSCPRPS20001",
+      22.436738585,
+      114.002127473,
+      "Castle Peak Rd-Ping Shan near Hung Tin Road - Westbound",
+      "青山公路屏山段近洪天路 - 西行"
+    ],
+    [
+      "TDSCPRPS20002",
+      22.439045273,
+      114.005796567,
+      "Castle Peak Rd-Ping Shan near Fui Sha Wai - Westbound",
+      "青山公路屏山段近灰沙圍 - 西行"
+    ],
+    [
+      "TDSCPRPS20003",
+      22.441288595,
+      114.009397857,
+      "Castle Peak Rd-Ping Shan near Tong Yan San Tsuen Playground - Westbound",
+      "青山公路屏山段近唐人新村遊樂場 - 西行"
+    ],
+    [
+      "TDSCPRPS20004",
+      22.443805923,
+      114.016156179,
+      "Castle Peak Rd-Ping Shan near Long Tin Road - Westbound",
+      "青山公路屏山段近朗天路 - 西行"
+    ],
+    [
+      "TDSIEC10001",
+      22.280405414,
+      114.164308606,
+      "Harcourt Road near Tim Mei Avenue - Eastbound",
+      "夏愨道近添美道 - 東行"
+    ],
+    [
+      "TDSIEC10002",
+      22.27961101,
+      114.168946816,
+      "Harcourt Road near The Hong Kong Academy for Performing Arts - Eastbound",
+      "夏愨道近香港演藝學院 - 東行"
+    ],
+    [
+      "TDSIEC10003",
+      22.279258949,
+      114.172517612,
+      "Gloucestor Road near Gloucester Road Garden - Eastbound",
+      "告士打道近告士打道花園 - 東行"
+    ],
+    [
+      "TDSIEC10004",
+      22.279719569,
+      114.176719096,
+      "Gloucestor Road near Stewart Road - Eastbound",
+      "告士打道近史釗域道 - 東行"
+    ],
+    [
+      "TDSIEC20001",
+      22.279430569,
+      114.174302997,
+      "Gloucestor Road near Fleming Road - Westbound",
+      "告士打道近菲林明道 - 西行"
+    ],
+    [
+      "TDSIEC20002",
+      22.280153033,
+      114.178261914,
+      "Gloucestor Road near Wan Chai Sport Ground - Westbound",
+      "告士打道近灣仔運動場 - 西行"
+    ],
+    [
+      "TDSJCR10001",
+      22.493739325,
+      114.142977733,
+      "Jockey Club Road near Fanling Government Primary School - Southbound",
+      "馬會道近粉嶺官立小學 - 南行"
+    ],
+    [
+      "TDSJCR10002",
+      22.489685318,
+      114.146195311,
+      "Jockey Club Road near Fanling Highway - Southbound",
+      "馬會道近粉嶺公路 - 南行"
+    ],
+    [
+      "TDSJCR20001",
+      22.493513642,
+      114.143347074,
+      "Jockey Club Road near Fanling Government Primary School - Northbound",
+      "馬會道近粉嶺官立小學 - 北行"
+    ],
+    [
+      "TDSJCR20002",
+      22.488628785,
+      114.146321874,
+      "Jockey Club Road near Fanling Highway - Northbound",
+      "馬會道近粉嶺公路 - 北行"
+    ],
+    [
+      "TDSLFR10001",
+      22.386968688,
+      113.969018249,
+      "Lung Fu Road near Wong Chu Road - Eastbound",
+      "龍富路近皇珠路 - 東行"
+    ],
+    [
+      "TDSLFR10002",
+      22.386023294,
+      113.971214235,
+      "Wong Chu Road near Hoi Wong Road - Eastbound",
+      "皇珠路近海皇路 - 東行"
+    ],
+    [
+      "TDSLFR10003",
+      22.38561288,
+      113.975176727,
+      "Wong Chu Road near Tuen Mun Heung Sze Wui Road - Eastbound",
+      "皇珠路近屯門鄉事會路 - 東行"
+    ],
+    [
+      "TDSLFR20001",
+      22.38632026,
+      113.970398112,
+      "Wong Chu Road near Hoi Wong Road - Westbound",
+      "皇珠路近海皇路 - 西行"
+    ],
+    [
+      "TDSLFR20002",
+      22.385640407,
+      113.975526266,
+      "Wong Chu Road near Tuen Mun Heung Sze Wui Road - Westbound",
+      "皇珠路近屯門鄉事會路 - 西行"
+    ],
+    [
+      "TDSLTR10001",
+      22.45102316,
+      114.00917244,
+      "Long Tin Road near Tin Fuk Road - Southbound",
+      "朗天路近天福路 - 南行"
+    ],
+    [
+      "TDSLTR10002",
+      22.447288214,
+      114.012722837,
+      "Long Tin Road near Yung Yuen Road - Southbound",
+      "朗天路近庸園路 - 南行"
+    ],
+    [
+      "TDSLTR10003",
+      22.444583041,
+      114.016660444,
+      "Long Tin Road near Shui Pin Wai Interchange - Southbound",
+      "朗天路近水邊圍交匯處 - 南行"
+    ],
+    [
+      "TDSLTR10004",
+      22.441539509,
+      114.016382221,
+      "Long Tin Road near Tong Yan San Tsuen Interchange - Southbound",
+      "朗天路近唐人新村交匯處 - 南行"
+    ],
+    [
+      "TDSLTR20001",
+      22.450264898,
+      114.009455087,
+      "Long Tin Road near Tin Fuk Road - Northbound",
+      "朗天路近天福路 - 北行"
+    ],
+    [
+      "TDSLTR20002",
+      22.447901152,
+      114.011614622,
+      "Long Tin Road near Yung Yuen Road - Northbound",
+      "朗天路近庸園路 - 北行"
+    ],
+    [
+      "TDSLTR20003",
+      22.445052574,
+      114.016611332,
+      "Long Tin Road near Shui Pin Wai Interchange - Northbound",
+      "朗天路近水邊圍交匯處 - 北行"
+    ],
+    [
+      "TDSLTR20004",
+      22.441096903,
+      114.016266157,
+      "Long Tin Road near Tong Yan San Tsuen Interchange - Northbound",
+      "朗天路近唐人新村交匯處 - 北行"
+    ],
+    [
+      "TDSMOSB10001",
+      22.414727061,
+      114.229137769,
+      "Ma On Shan Bypass near Hang Fai Street Park - Eastbound",
+      "馬鞍山繞道近恆輝街公園 - 東行"
+    ],
+    [
+      "TDSMOSB10002",
+      22.418653597,
+      114.234219059,
+      "Ma On Shan Bypass near Ma On Shan Fire Station - Eastbound",
+      "馬鞍山繞道近馬鞍山消防局 - 東行"
+    ],
+    [
+      "TDSMOSB10003",
+      22.422679526,
+      114.238727604,
+      "Ma On Shan Bypass near Ma On Shan Service Reservoir - Eastbound",
+      "馬鞍山繞道近馬鞍山配水庫 - 東行"
+    ],
+    [
+      "TDSMOSB10004",
+      22.425107125,
+      114.242769412,
+      "Ma On Shan Bypass near Lee On Estate - Eastbound",
+      "馬鞍山繞道近利安邨 - 東行"
+    ],
+    [
+      "TDSMOSB10005",
+      22.428753717,
+      114.246850824,
+      "Ma On Shan Bypass near Cheung Muk Tau - Eastbound",
+      "馬鞍山繞道近樟木頭 - 東行"
+    ],
+    [
+      "TDSMOSB20001",
+      22.414600568,
+      114.229341685,
+      "Ma On Shan Bypass near Hang Fai Street Park - Westbound",
+      "馬鞍山繞道近恆輝街公園 - 西行"
+    ],
+    [
+      "TDSMOSB20002",
+      22.417407867,
+      114.23285876,
+      "Ma On Shan Bypass near Ma On Shan Fire Station - Westbound",
+      "馬鞍山繞道近馬鞍山消防局 - 西行"
+    ],
+    [
+      "TDSMOSB20003",
+      22.42078397,
+      114.236483062,
+      "Ma On Shan Bypass near Ma On Shan Service Reservoir - Westbound",
+      "馬鞍山繞道近馬鞍山配水庫 - 西行"
+    ],
+    [
+      "TDSMOSB20004",
+      22.424105093,
+      114.241904461,
+      "Ma On Shan Bypass near Lee On Estate - Westbound",
+      "馬鞍山繞道近利安邨 - 西行"
+    ],
+    [
+      "TDSMOSB20005",
+      22.427851209,
+      114.245597332,
+      "Ma On Shan Bypass near Wu Kai Sha MTR Station - Westbound",
+      "馬鞍山繞道近烏溪沙港鐵站 - 西行"
+    ],
+    [
+      "TDSMOSB20006",
+      22.429249626,
+      114.248599518,
+      "Ma On Shan Bypass near Cheung Muk Tau - Westbound",
+      "馬鞍山繞道近樟木頭 - 西行"
+    ],
+    [
+      "TDSMOSR10001",
+      22.404272858,
+      114.21844111,
+      "Ma On Shan Road near Ah Kung Kok Fishermen Village - Northbound",
+      "馬鞍山路近亞公角漁民新村 - 北行"
+    ],
+    [
+      "TDSMOSR10002",
+      22.408191049,
+      114.222317413,
+      "Ma On Shan Road near Tai Shui Hang MTR Station - Northbound",
+      "馬鞍山路近大水坑港鐵站 - 北行"
+    ],
+    [
+      "TDSMOSR10003",
+      22.412813677,
+      114.225689135,
+      "Ma On Shan Road near Hang Tai Road - Northbound",
+      "馬鞍山路近恆泰路 - 北行"
+    ],
+    [
+      "TDSMOSR20001",
+      22.408660389,
+      114.223181947,
+      "Ma On Shan Road near Tai Shui Hang MTR Station - Southbound",
+      "馬鞍山路近大水坑港鐵站 - 南行"
+    ],
+    [
+      "TDSMOSR20002",
+      22.413102523,
+      114.226116585,
+      "Ma On Shan Road near Hang Tai Road - Southbound",
+      "馬鞍山路近恆泰路 - 南行"
+    ],
+    [
+      "TDSNCWBR10001",
+      22.333085093,
+      114.218565565,
+      "New Clear Water Bay Road near St. Joseph's Anglo-Chinese School - Eastbound",
+      "新清水灣道近聖若瑟英文中學 - 東行"
+    ],
+    [
+      "TDSNCWBR10002",
+      22.331955694,
+      114.220749267,
+      "New Clear Water Bay Road near Shun Lee Disciplined Services Quarters - Eastbound (1)",
+      "新清水灣道近順利紀律部隊宿舍 - 東行 (1)"
+    ],
+    [
+      "TDSNCWBR10003",
+      22.332975778,
+      114.222098846,
+      "New Clear Water Bay Road near Shun Lee Disciplined Services Quarters - Eastbound (2)",
+      "新清水灣道近順利紀律部隊宿舍 - 東行 (2)"
+    ],
+    [
+      "TDSNCWBR10004",
+      22.334140318,
+      114.223526149,
+      "New Clear Water Bay Road near New Clear Water Bay Road Sitting-out Area - Eastbound",
+      "新清水灣道近新清水灣道休憩處 - 東行"
+    ],
+    [
+      "TDSNCWBR20001",
+      22.331720894,
+      114.220768607,
+      "New Clear Water Bay Road near Shun Lee Disciplined Services Quarters - Westbound (1)",
+      "新清水灣道近順利紀律部隊宿舍 - 西行 (1)"
+    ],
+    [
+      "TDSNCWBR20002",
+      22.333039076,
+      114.221797952,
+      "New Clear Water Bay Road near Shun Lee Disciplined Services Quarters - Westbound (2)",
+      "新清水灣道近順利紀律部隊宿舍 - 西行 (2)"
+    ],
+    [
+      "TDSNCWBR20003",
+      22.334104007,
+      114.224176505,
+      "New Clear Water Bay Road near New Clear Water Bay Road Sitting-out Area - Westbound",
+      "新清水灣道近新清水灣道休憩處 - 西行"
+    ],
+    [
+      "TDSNCWBR20004",
+      22.334553553,
+      114.230534751,
+      "New Clear Water Bay Road near On Sau Road - Westbound",
+      "新清水灣道近安秀道 - 西行"
+    ],
+    [
+      "TDSPBH10001",
+      22.329946801,
+      114.032526165,
+      "Penny's Bay Highway near North Lantau Highway - Southbound",
+      "竹篙灣公路近北大嶼山公路 - 南行"
+    ],
+    [
+      "TDSPBH10002",
+      22.325497565,
+      114.035743549,
+      "Penny's Bay Highway near Inspiration Lake Recreation Centre - Southbound",
+      "竹篙灣公路近迪欣湖活動中心 - 南行"
+    ],
+    [
+      "TDSPBH20001",
+      22.328231642,
+      114.033255921,
+      "Penny's Bay Highway near North Lantau Highway - Northbound",
+      "竹篙灣公路近北大嶼山公路 - 北行"
+    ],
+    [
+      "TDSPBH20002",
+      22.32480302,
+      114.036676054,
+      "Penny's Bay Highway near Inspiration Lake Recreation Centre - Northbound",
+      "竹篙灣公路近迪欣湖活動中心 - 北行"
+    ],
+    [
+      "TDSPERE10001",
+      22.327951406,
+      114.191453617,
+      "Prince Edward Road East near Tak Ku Ling Road - Northbound",
+      "太子道東近打鼓嶺道 - 北行"
+    ],
+    [
+      "TDSPERE10002",
+      22.331463916,
+      114.195249343,
+      "Prince Edward Road East near Lee Kau Yan Memorial School - Northbound",
+      "太子道東近李求恩紀念中學 - 北行"
+    ],
+    [
+      "TDSPERE20001",
+      22.329152349,
+      114.192783552,
+      "Prince Edward Road East near Regal Oriental Hotel - Southbound",
+      "太子道東近富豪東方酒店 - 南行"
+    ],
+    [
+      "TDSPERE20002",
+      22.331274298,
+      114.195035769,
+      "Prince Edward Road East near Lee Kau Yan Memorial School - Southbound",
+      "太子道東近李求恩紀念中學 - 南行"
+    ],
+    [
+      "TDSSPWR10001",
+      22.254790407,
+      114.138320543,
+      "Pok Fu Lam Road near St. Paul's College Primary School - Eastbound",
+      "薄扶林道近聖保羅書院小學 - 東行"
+    ],
+    [
+      "TDSSPWR10002",
+      22.250474414,
+      114.141241787,
+      "Shek Pai Wan Road near Wah Kwai Estate - Eastbound",
+      "石排灣道近華貴邨 - 東行"
+    ],
+    [
+      "TDSSPWR10003",
+      22.24939152,
+      114.145035205,
+      "Shek Pai Wan Road near Shek Pai Wan Road Playground - Eastbound",
+      "石排灣道近石排灣道遊樂場 - 東行"
+    ],
+    [
+      "TDSSPWR20001",
+      22.25236165,
+      114.140455502,
+      "Shek Pai Wan Road near Wah Fu Road - Westbound",
+      "石排灣道近華富道 - 西行"
+    ],
+    [
+      "TDSSPWR20002",
+      22.249932624,
+      114.141474752,
+      "Shek Pai Wan Road near Wah Kwai Estate - Westbound",
+      "石排灣道近華貴邨 - 西行"
+    ],
+    [
+      "TDSSPWR20003",
+      22.249238002,
+      114.145054642,
+      "Shek Pai Wan Road near Shek Pai Wan Road Playground - Westbound",
+      "石排灣道近石排灣道遊樂場 - 西行"
+    ],
+    [
+      "TDSTCKR10001",
+      22.376960327,
+      114.190487736,
+      "Tai Chung Kui Road near Shing Mun River Promenade Garden No. 1 - Northbound",
+      "大涌橋路近城門河第一海濱花園 - 北行"
+    ],
+    [
+      "TDSTCKR10002",
+      22.381276514,
+      114.194653856,
+      "Tai Chung Kiu Road near Sha Tin Wai Road - Northbound",
+      "大涌橋路近沙田圍路 - 北行"
+    ],
+    [
+      "TDSTCKR10003",
+      22.38265803,
+      114.196003771,
+      "Tai Chung Kiu Road near Kong Pui Street Rest Garden - Northbound",
+      "大涌橋路近崗背街休憩花園 - 北行"
+    ],
+    [
+      "TDSTCKR10004",
+      22.387922171,
+      114.200888982,
+      "Tai Chung Kiu Road near Sha Tin Road - Northbound",
+      "大涌橋路近沙田路 - 北行"
+    ],
+    [
+      "TDSTCKR20001",
+      22.380454817,
+      114.193906066,
+      "Tai Chung Kiu Road near Sha Tin Wai Road - Southbound",
+      "大涌橋路近沙田圍路 - 南行"
+    ],
+    [
+      "TDSTCKR20002",
+      22.382387147,
+      114.195722134,
+      "Tai Chung Kiu Road near Kong Pui Street Rest Garden - Southbound",
+      "大涌橋路近崗背街休憩花園 - 南行"
+    ],
+    [
+      "TDSTCKR20003",
+      22.386594818,
+      114.199975955,
+      "Tai Chung Kiu Road near Sha Tin Road - Southbound",
+      "大涌橋路近沙田路 - 南行"
+    ],
+    [
+      "TDSTCKR20004",
+      22.388274251,
+      114.201617348,
+      "Tai Chung Kui Road near Shing Mun River Promenade Garden No. 2 - Southbound",
+      "大涌橋路近城門河第二海濱花園 - 南行"
+    ],
+    [
+      "TDSTKR10001",
+      22.459516106,
+      114.198744432,
+      "Ting Kok Road near Fortune Garden - Eastbound",
+      "汀角路近雅景花園 - 東行"
+    ],
+    [
+      "TDSTKR10002",
+      22.460771823,
+      114.194809737,
+      "Ting Kok Road near Golf Park Golf Driving Range - Eastbound",
+      "汀角路近珀麗高爾夫球會高爾夫練習場 - 東行"
+    ],
+    [
+      "TDSTKR10003",
+      22.46221721,
+      114.189330165,
+      "Ting Kok Road near Dai Kwai Street - Eastbound",
+      "汀角路近大貴街 - 東行"
+    ],
+    [
+      "TDSTKR10004",
+      22.462217425,
+      114.186153071,
+      "Ting Kok Road near Ting Hing Road - Eastbound",
+      "汀角路近汀慶路 - 東行"
+    ],
+    [
+      "TDSTKR10005",
+      22.459815469,
+      114.183286774,
+      "Ting Kok Road near Dai Fu Street Substation - Eastbound",
+      "汀角路近大富街變電站 - 東行"
+    ],
+    [
+      "TDSTKR10006",
+      22.45911119,
+      114.180119433,
+      "Ting Kok Road near Fung Yuen Road - Eastbound",
+      "汀角路近鳳園路 - 東行"
+    ],
+    [
+      "TDSTKR10007",
+      22.457259981,
+      114.177544772,
+      "Ting Kok Road near Yue Kok Village Sitting-out Area - Eastbound",
+      "汀角路近魚角村休憩處 - 東行"
+    ],
+    [
+      "TDSTKR10008",
+      22.45600466,
+      114.1714046,
+      "Ting Kok Road near Chung Nga Road - Eastbound",
+      "汀角路近頌雅路 - 東行"
+    ],
+    [
+      "TDSTKR20001",
+      22.460138572,
+      114.203000024,
+      "Ting Kok Road near Sam Mun Tsai Road - Westbound",
+      "汀角路近三門仔路 - 西行"
+    ],
+    [
+      "TDSTKR20002",
+      22.459696928,
+      114.197112222,
+      "Ting Kok Road near Fortune Garden - Westbound",
+      "汀角路近雅景花園 - 西行"
+    ],
+    [
+      "TDSTKR20003",
+      22.461566793,
+      114.191963099,
+      "Ting Kok Road near Lo Fai Road - Westbound",
+      "汀角路近露輝路 - 西行"
+    ],
+    [
+      "TDSTKR20004",
+      22.462217365,
+      114.187134375,
+      "Ting Kok Road near Ting Hing Road - Westbound",
+      "汀角路近汀慶路 - 西行"
+    ],
+    [
+      "TDSTKR20005",
+      22.460790723,
+      114.184054366,
+      "Ting Kok Road near Dai Fu Street Substation - Westbound",
+      "汀角路近大富街變電站 - 西行"
+    ],
+    [
+      "TDSTKR20006",
+      22.459093114,
+      114.180770382,
+      "Ting Kok Road near Dai Fat Street - Westbound",
+      "汀角路近大發街 - 西行"
+    ],
+    [
+      "TDSTKR20007",
+      22.458018538,
+      114.177661363,
+      "Ting Kok Road near Yue Kok - Westbound",
+      "汀角路近魚角 - 西行"
+    ],
+    [
+      "TDSTKR20008",
+      22.456645913,
+      114.176952123,
+      "Ting Kok Road near Dai Fuk Street - Westbound",
+      "汀角路近大福街 - 西行"
+    ],
+    [
+      "TDSTKR20009",
+      22.455688667,
+      114.174348387,
+      "Ting Kok Road near On Po Road - Westbound",
+      "汀角路近安埔路 - 西行"
+    ],
+    [
+      "TDSTPR10001",
+      22.446197669,
+      114.174591426,
+      "Tai Po Road - Yuen Chau Tsai near Kwong Wang Street - Souhtbound",
+      "大埔公路元洲仔段近廣宏街 - 南行"
+    ],
+    [
+      "TDSTPR10002",
+      22.442106867,
+      114.179477877,
+      "Tai Po Road - Tai Po Kau near Tai Po Kau Fresh Water Pumping Station - Souhtbound",
+      "大埔公路大埔滘段近大埔滘食水抽水站 - 南行"
+    ],
+    [
+      "TDSTPR10003",
+      22.437465129,
+      114.182596035,
+      "Tai Po Road - Tai Po Kau near Yat Yiu Avenue - Southbound",
+      "大埔公路大埔滘段近逸遙路 - 南行"
+    ],
+    [
+      "TDSTPR10004",
+      22.433834792,
+      114.184732945,
+      "Tai Po Road - Tai Po Kau near Lai Chi Hang - Southbound",
+      "大埔公路大埔滘段近荔枝坑 - 南行"
+    ],
+    [
+      "TDSTPR10005",
+      22.432705906,
+      114.186180241,
+      "Tai Po Road - Tai Po Kau near Tai Po Kau Garden - Souhtbound",
+      "大埔公路大埔滘段近大埔滘花園 - 南行"
+    ],
+    [
+      "TDSTPR10006",
+      22.432714637,
+      114.190405758,
+      "Tai Po Road - Tai Po Kau near Tai Po Kau Park - Southbound",
+      "大埔公路大埔滘段近大埔滘公園 - 南行"
+    ],
+    [
+      "TDSTPR10007",
+      22.431567394,
+      114.194291146,
+      "Tai Po Road - Tai Po Kau near Japanese International School - Southbound",
+      "大埔公路大埔滘段近香港日本人學校大埔校 - 南行"
+    ],
+    [
+      "TDSTPR10008",
+      22.429309541,
+      114.196350146,
+      "Tai Po Road - Tai Po Kau near Po Leung Kuk Tin Ka Ping Millennium Primary School - Southbound",
+      "大埔公路大埔滘段近保良局田家炳千禧小學 - 南行"
+    ],
+    [
+      "TDSTPR10009",
+      22.425101309,
+      114.196602103,
+      "Tai Po Road - Tai Po Kau near Cheung Shue Tan Road - Southbound",
+      "大埔公路大埔滘段近樟樹灘路 - 南行"
+    ],
+    [
+      "TDSTPR10010",
+      22.422410234,
+      114.196543444,
+      "Tai Po Road - Tai Po Kau near Dragon Fountain - Southbound",
+      "大埔公路大埔滘段近觀海崇庭 - 南行"
+    ],
+    [
+      "TDSTPR10011",
+      22.419637717,
+      114.197805732,
+      "Tai Po Road - Ma Liu Shui near Tai Po Mei - Southbound",
+      "大埔公路馬料水段近大埔尾 - 南行"
+    ],
+    [
+      "TDSTPR10012",
+      22.419483853,
+      114.200321352,
+      "Tai Po Road - Ma Liu Shui near Chek Nai Ping - Souhtbound",
+      "大埔公路馬料水段近赤泥坪 - 南行"
+    ],
+    [
+      "TDSTPR10013",
+      22.417704357,
+      114.203487421,
+      "Tai Po Road - Ma Liu Shui near University Avenue - Southbound",
+      "大埔公路馬料水段近大學道 - 南行"
+    ],
+    [
+      "TDSTPR10014",
+      22.415401168,
+      114.205895713,
+      "Tai Po Road - Ma Liu Shui near De Yucca - Southbound",
+      "大埔公路馬料水段近雍雅山 - 南行"
+    ],
+    [
+      "TDSTPR10015",
+      22.409620696,
+      114.210808895,
+      "Tai Po Road - Ma Liu Shui near Hyatt Regency Hong Kong, Sha Tin - Southbound",
+      "大埔公路馬料水段近香港凱悅酒店 - 南行"
+    ],
+    [
+      "TDSTPR10016",
+      22.405873625,
+      114.207904107,
+      "Tai Po Road - Ma Liu Shui near Kau To Shan Road - Southbound",
+      "大埔公路馬料水段近九肚山路 - 南行"
+    ],
+    [
+      "TDSTPR20001",
+      22.44241391,
+      114.178963014,
+      "Tai Po Road - Tai Po Kau near Tai Po Kau Fresh Water Pumping Station - Northbound",
+      "大埔公路大埔滘段近大埔滘食水抽水站 - 北行"
+    ],
+    [
+      "TDSTPR20002",
+      22.439894329,
+      114.182440706,
+      "Tai Po Road - Tai Po Kau near Yin Tse Lane - Northbound",
+      "大埔公路大埔滘段近燕子里 - 北行"
+    ],
+    [
+      "TDSTPR20003",
+      22.435920882,
+      114.183567376,
+      "Tai Po Road - Tai Po Kau near Lai Chi Hang - Northbound",
+      "大埔公路大埔滘段近荔枝坑 - 北行"
+    ],
+    [
+      "TDSTPR20004",
+      22.432606291,
+      114.190162902,
+      "Tai Po Road - Tai Po Kau near Tai Po Kau Park - Northbound",
+      "大埔公路大埔滘段近大埔滘公園 - 北行"
+    ],
+    [
+      "TDSTPR20005",
+      22.431729973,
+      114.194009468,
+      "Tai Po Road - Tai Po Kau near Japanese International School - Northbound",
+      "大埔公路大埔滘段近香港日本人學校大埔校 - 北行"
+    ],
+    [
+      "TDSTPR20006",
+      22.429670775,
+      114.196223919,
+      "Tai Po Road - Tai Po Kau near Po Leung Kuk Tin Ka Ping Millennium Primary School - Northbound",
+      "大埔公路大埔滘段近保良局田家炳千禧小學 - 北行"
+    ],
+    [
+      "TDSTPR20007",
+      22.426419787,
+      114.196369169,
+      "Tai Po Road - Tai Po Kau near Cheung Shue Tan Road - Northbound",
+      "大埔公路大埔滘段近樟樹灘路 - 北行"
+    ],
+    [
+      "TDSTPR20008",
+      22.42323203,
+      114.196359009,
+      "Tai Po Road - Tai Po Kau near Dragon Fountain - Northbound",
+      "大埔公路大埔滘段近觀海崇庭 - 北行"
+    ],
+    [
+      "TDSTPR20009",
+      22.420071393,
+      114.196096318,
+      "Tai Po Road - Tai Po Kau near Tai Po Mei - Northbound",
+      "大埔公路大埔滘段近大埔尾 - 北行"
+    ],
+    [
+      "TDSTPR20010",
+      22.419375723,
+      114.198641002,
+      "Tai Po Road - Ma Liu Shui near Chek Nai Ping - Northbound",
+      "大埔公路馬料水段近赤泥坪 - 北行"
+    ],
+    [
+      "TDSTPR20011",
+      22.417948315,
+      114.202652167,
+      "Tai Po Road - Ma Liu Shui near University Avenue - Northbound",
+      "大埔公路馬料水段近大學道 - 北行"
+    ],
+    [
+      "TDSTPR20012",
+      22.415681166,
+      114.205594679,
+      "Tai Po Road - Ma Liu Shui near De Yucca - Northbound",
+      "大埔公路馬料水段近雍雅山 - 北行"
+    ],
+    [
+      "TDSTPR20013",
+      22.412438495,
+      114.209420704,
+      "Tai Po Road - Ma Liu Shui near University MTR Station - Northbound",
+      "大埔公路馬料水段近大學港鐵站 - 北行"
+    ],
+    [
+      "TDSTPR20014",
+      22.406794354,
+      114.209827293,
+      "Tai Po Road - Ma Liu Shui near Sha Tin Sewage Treatment Works - Northbound",
+      "大埔公路馬料水段近沙田污水處理廠 - 北行"
+    ],
+    [
+      "TDSTPTWR10001",
+      22.451100973,
+      114.167907351,
+      "Tai Po Tai Wo Road near Tai Po Arts Centre - Eastbound",
+      "大埔太和路近大埔藝術中心 - 東行"
+    ],
+    [
+      "TDSTPTWR10002",
+      22.451101159,
+      114.172405447,
+      "Tai Po Tai Wo Road near New Territories North Regional Police Headquarters - Eastbound",
+      "大埔太和路近新界北總區警察總部 - 東行"
+    ],
+    [
+      "TDSTPTWR20001",
+      22.451074042,
+      114.171569949,
+      "Tai Po Tai Wo Road near New Territories North Regional Police Headquarters - Westbound",
+      "大埔太和路近新界北總區警察總部 - 西行"
+    ],
+    [
+      "TDSTPTWR20002",
+      22.451028976,
+      114.176417788,
+      "Tai Po Tai Wo Road near Yuen Shin Park - Westbound",
+      "大埔太和路近完善公園 - 西行"
+    ],
+    [
+      "TDSTTR10001",
+      22.405219749,
+      113.969399021,
+      "Tsing Tin Road near Tsing Tin Playground - Eastbound",
+      "青田路近青田遊樂場 - 東行"
+    ],
+    [
+      "TDSTTR10002",
+      22.405171566,
+      113.974128773,
+      "Tsing Tin Road near Tuen Mun Tang Shiu Kin Sports Ground - Eastbound",
+      "青田路近屯門鄧肇堅運動場 - 東行"
+    ],
+    [
+      "TDSTTR10003",
+      22.405787855,
+      113.975905159,
+      "Tsing Tin Road near Tuen Mun Hospital - Eastbound",
+      "青田路近屯門醫院 - 東行"
+    ],
+    [
+      "TDSTTR20001",
+      22.405319693,
+      113.969874755,
+      "Tsing Tin Road near Tsing Tin Playground - Westbound",
+      "青田路近青田遊樂場 - 西行"
+    ],
+    [
+      "TDSTTR20002",
+      22.405770228,
+      113.976254813,
+      "Tsing Tin Road near Tuen Mun Hospital - Westbound",
+      "青田路近屯門醫院 - 西行"
+    ],
+    [
+      "TDSTYR10001",
+      22.462357204,
+      113.993380249,
+      "Tin Ying Road near Tin Wah Road - Northbound",
+      "天影路近天華路 - 北行"
+    ],
+    [
+      "TDSTYR10002",
+      22.46837449,
+      113.996073452,
+      "Tin Ying Road near Tin Sau Road - Northbound",
+      "天影路近天秀路 - 北行"
+    ],
+    [
+      "TDSTYR10003",
+      22.470606178,
+      113.997129648,
+      "Tin Ying Road near Tin Yuet Road - Northbound",
+      "天影路近天月路 - 北行"
+    ],
+    [
+      "TDSTYR20001",
+      22.466594577,
+      113.995249888,
+      "Tin Ying Road near Tin Sau Road - Southbound",
+      "天影路近天秀路 - 南行"
+    ],
+    [
+      "TDSTYR20002",
+      22.47096761,
+      113.997323511,
+      "Tin Ying Road near Tin Yuet Road - Southbound",
+      "天影路近天月路 - 南行"
+    ],
+    [
+      "TDSTYR20003",
+      22.471595587,
+      114.001763145,
+      "Tin Ying Road near Lau Fau Shan Fire Station Cum Ambulance Depot - Westbound",
+      "天影路近流浮山消防局暨救護站 - 西行"
+    ],
+    [
+      "TDSYSR10001",
+      22.446477629,
+      114.176845252,
+      "Yuen Shin Road near Yuen Chau Tsai Park - Northbound",
+      "完善路近元洲仔公園 - 北行"
+    ],
+    [
+      "TDSYSR10002",
+      22.45193202,
+      114.17727272,
+      "Yuen Shin Road near Tai Po Tai Wo Road - Northbound",
+      "完善路近大埔太和路 - 北行"
+    ],
+    [
+      "TDSYSR10003",
+      22.453999989,
+      114.17799166,
+      "Yuen Shin Road near Dai Fat Street - Northbound",
+      "完善路近大發街 - 北行"
+    ],
+    [
+      "TDSYSR20001",
+      22.450387814,
+      114.177068699,
+      "Yuen Shin Road near Tai Po Tai Wo Road - Southbound",
+      "完善路近大埔太和路 - 南行"
+    ],
+    [
+      "TDSYSR20002",
+      22.452952459,
+      114.177719624,
+      "Yuen Shin Road near Dai Fat Street - Southbound",
+      "完善路近大發街 - 南行"
+    ],
+    [
+      "TDSYSR20003",
+      22.456104084,
+      114.177651636,
+      "Yuen Shin Road near Dai Fuk Street - Southbound",
+      "完善路近大福街 - 南行"
+    ],
+    [
+      "TH101F",
+      22.41242,
+      114.21251,
+      "Tolo Highway near Ma Liu Shui Interchange",
+      "吐露港公路近馬料水交匯處"
+    ],
+    [
+      "TH110F",
+      22.43822255,
+      114.1968177,
+      "Tolo Highway near HK Science Park",
+      "吐露港公路近香港科學園"
+    ],
+    [
+      "TH114F",
+      22.44478893,
+      114.1776419,
+      "Tolo Highway near Island House Interchange",
+      "吐露港公路近元洲仔交匯處"
+    ],
+    ["TH701F", 22.45417, 114.15138, "Tolo Highway near Mui Shue Hang", "吐露港公路近梅樹坑"],
+    ["TH703F", 22.44067912, 114.1592719, "Tolo Highway near Ma Wo", "吐露港公路近馬窩"],
+    ["TI101F", 22.43566, 114.00056, "Castle Peak Road near Hung Shui Kiu", "青山公路近洪水橋"],
+    ["TK101F", 22.32604763, 114.2511576, "Po Lam Road North near Po Hong Road", "寶琳北路近寶康路"],
+    [
+      "TK105F",
+      22.31746,
+      114.26142,
+      "Po Shun Road near Tseung Kwan O Swimming Pool",
+      "寶順路近將軍澳游泳池"
+    ],
+    ["TK110F", 22.30529, 114.25469, "Chui Ling Road near Po Shun Road", "翠嶺路近寶順路"],
+    ["TK701F", 22.29197, 114.26573, "Cross Bay Bridge near Lohas Park", "跨灣大橋近日出康城"],
+    ["TK702F", 22.29777, 114.25578, "Tseung Lam Highway near Tiu Keng Leng", "將藍公路近調景嶺"],
+    [
+      "TK904F",
+      22.31734805,
+      114.2576851,
+      "Tseung Kwan O Tunnel - Tseung Kwan O Side",
+      "將軍澳隧道將軍澳入口"
+    ],
+    [
+      "TL101F",
+      22.43755,
+      114.05799,
+      "Tsing Long Highway near Ko Po San Tsuen",
+      "青朗公路近高埔新村"
+    ],
+    ["TL102F", 22.41030489, 114.0605797, "Tai Lam Tunnel - Yuen Long Side", "大欖隧道元朗入口"],
+    ["TL103F", 22.37542451, 114.0669298, "Tai Lam Tunnel - Ting Kau Side", "大欖隧道汀九入口"],
+    ["TM101F", 22.37340927, 113.9654167, "Wu Chui Road near Wu King Road", "湖翠路近湖景路"],
+    [
+      "TM103F",
+      22.38336855,
+      113.9643918,
+      "Lung Mun Road near Tuen Mun Recreation and Sports Centre",
+      "龍門路近屯門康樂體育中心"
+    ],
+    ["TM118F", 22.39405567, 113.974611, "Pui To Road near Tuen Mun Park", "杯渡路近屯門公園"],
+    ["TP102F", 22.45688973, 114.1773116, "Yuen Shin Road near Ting Kok Road", "完善路近汀角路"],
+    [
+      "TP105F",
+      22.45119145,
+      114.172114,
+      "Tai Po Tai Wo Road near Nam Wan Road",
+      "大埔太和路近南運路"
+    ],
+    [
+      "TP112F",
+      22.45219287,
+      114.1586098,
+      "Tai Po Tai Wo Road near Tai Po Road- Tai Wo",
+      "大埔太和路近大埔公路-大窩"
+    ],
+    [
+      "TP113F",
+      22.46264873,
+      114.1489023,
+      "Fanling Highway near Hong Lok Yuen Road",
+      "粉嶺公路近康樂園路"
+    ],
+    ["TP114F", 22.44660398, 114.1719393, "Nam Wan Road near Kwong Fuk Road", "南運路近廣福道"],
+    ["TR101F", 22.37383, 114.10208, "Tuen Mun Road - Chai Wan Kok", "屯門公路-柴灣角"],
+    [
+      "TR103F",
+      22.37033628,
+      114.0899744,
+      "Tuen Mun Road - Yau Kom Tau Section",
+      "屯門公路-油柑頭段"
+    ],
+    ["TR105F", 22.37129549, 114.0777009, "Tuen Mun Road - Ting Kau Section", "屯門公路-汀九段"],
+    ["TR107F", 22.36559198, 114.0694813, "Tuen Mun Road - Sham Tseng Section", "屯門公路-深井段"],
+    [
+      "TR108F",
+      22.36947897,
+      114.0619535,
+      "Tuen Mun Road - Sham Tseng Interchange",
+      "屯門公路-深井交匯處"
+    ],
+    [
+      "TR111F",
+      22.36486675,
+      114.0416459,
+      "Tuen Mun Road - near Tsing Lung Tau",
+      "屯門公路 -近青龍頭"
+    ],
+    ["TR114F", 22.3582, 114.01926, "Tuen Mun Road - Tai Lam Kok Section", "屯門公路-大欖角段"],
+    ["TR116F", 22.36741164, 114.002117, "Tuen Mun Road - Siu Lam Section", "屯門公路-小欖段"],
+    ["TR119F", 22.38313566, 113.9801811, "Tuen Mun Road - Sam Shing Hui", "屯門公路-三聖墟"],
+    ["TR704F", 22.39807653, 113.9764601, "Tuen Mun Road near Tsing Yin Street", "屯門公路近青賢街"],
+    [
+      "TR706F",
+      22.41137289,
+      113.9793256,
+      "Tuen Mun Road near MTR Siu Hong Station",
+      "屯門公路近港鐵兆康站"
+    ],
+    ["TS101F", 22.34330086, 114.0938645, "Nam Wan Tunnel - Sai Tso Wan Side", "南灣隧道西草灣入口"],
+    [
+      "TS102F",
+      22.33475496,
+      114.1066537,
+      "Nam Wan Tunnel- Stonecutters Bridge side",
+      "南灣隧道昂船洲大橋入口"
+    ],
+    ["TS104F", 22.34238857, 114.1437231, "Tsing Sha Highway near Lai Chi Kok", "青沙公路近荔枝角"],
+    [
+      "TS105F",
+      22.36758712,
+      114.1714857,
+      "Sha Tin Heights Tunnel - Sha Tin Side",
+      "沙田嶺隧道沙田入口"
+    ],
+    [
+      "TW102F",
+      22.3409156088,
+      114.132377954,
+      "Kwai Chung Road near Container Terminal",
+      "葵涌道近貨櫃碼頭"
+    ],
+    [
+      "TW103F",
+      22.36338,
+      114.11713,
+      "Tsuen Wan Road near Tsuen Tsing Interchange",
+      "荃灣路近荃青交匯處"
+    ],
+    [
+      "TW105F",
+      22.35524257,
+      114.1231284,
+      "Kwai Tsing Road near Tsing Yi Bridge",
+      "葵青路近青衣大橋"
+    ],
+    [
+      "TW108F",
+      22.36080797,
+      114.1315632,
+      "Kwai Chung Road near Kwai Hing MTR Station",
+      "葵涌道近葵興港鐵站"
+    ],
+    [
+      "TW109F",
+      22.3648908,
+      114.1353776,
+      "Castle Peak Road near Wo Yi Hop Road",
+      "青山公路近和宜合道"
+    ],
+    ["TW112F", 22.37245862, 114.1362978, "Wo Yi Hop Road near Lei Shu Road", "和宜合道近梨樹路"],
+    [
+      "TW116F",
+      22.36698179,
+      114.1216578,
+      "Texaco Road Flyover near Sha Tsui Road",
+      "德士古道天橋近沙咀道"
+    ],
+    [
+      "TW117F",
+      22.37020629,
+      114.1234625,
+      "Castle Peak Road near Texaco Road North",
+      "青山公路近德士古道北"
+    ],
+    ["TW120F", 22.37055, 114.10837, "Tsuen Wan Road near Tai Chung Road", "荃灣路近大涌道"],
+    ["TW121F", 22.34794, 114.1107, "Tsing Kwai Highway/Cheung Tsing Tunnel", "青葵公路/長青隧道"],
+    [
+      "TW701F",
+      22.37667801,
+      114.1145851,
+      "Cheung Pei Shan Road near Mei Wan Street",
+      "象鼻山路近美環街"
+    ],
+    ["YL101F", 22.44640711, 114.0165806, "Long Tin Road near Long Ping Road", "朗天路近朗屏路"],
+    ["YL106F", 22.44445, 114.03153, "Castle Peak Road nearYuen Long", "青山公路近元朗"],
+    [
+      "YL111F",
+      22.44465535,
+      114.0361091,
+      "Castle Peak Road near Pok Oi Interchange",
+      "青山公路近博愛交匯處"
+    ]
+  ]
+}

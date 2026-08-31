@@ -3,6 +3,7 @@ import IconAlarmClock from "~icons/lineicons/alarm-clock";
 import IconArrowBothDirectionVertical from "~icons/lineicons/arrow-both-direction-vertical-1";
 import IconBookmark from "~icons/lineicons/bookmark";
 import IconBus from "~icons/lineicons/bus";
+import IconCamera from "~icons/lineicons/camera";
 import IconChevronLeft from "~icons/lineicons/chevron-left";
 import IconChevronRight from "~icons/lineicons/chevron-right";
 import IconCloudDownload from "~icons/lineicons/cloud-download";
@@ -157,6 +158,7 @@ export function BackspaceIcon(props: IconProps): JSX.Element {
 }
 export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
 export const BusIcon = wrap(IconBus as IconComponent);
+export const CameraIcon = wrap(IconCamera as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
 export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);
 export const TrainIcon = wrap(IconTrain as IconComponent);

@@ -1,10 +1,12 @@
 import { useParams } from "@tanstack/solid-router";
 import { uniqBy } from "es-toolkit";
-import { For, Show, createMemo } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { Chip, EmptyState, SectionLabel, StopCode } from "~/components/Chrome";
 import { Page, RowCard, Section } from "~/components/Layout";
-import { WalkIcon } from "~/components/Icons";
+import { CameraSheet } from "~/components/CameraSheet";
+import { CameraIcon, WalkIcon } from "~/components/Icons";
 import { RouteLine } from "~/components/RouteRow";
+import { nearestCamera } from "~/data/cameras";
 import { useDb } from "~/data/context";
 import { NotFound } from "~/routes/NotFound";
 import { routesAtCluster } from "~/data/db";
@@ -55,6 +57,13 @@ export default function StopDetail() {
     return here && s ? distanceM(here, s.location) : null;
   };
 
+  /** The department's camera in sight of this kerb, where there is one. */
+  const camera = () => {
+    const s = stop();
+    return s ? nearestCamera(s.location) : null;
+  };
+  const [cameraOpen, setCameraOpen] = createSignal(false);
+
   return (
     <Page>
       <Show when={stop()} fallback={<NotFound kind="stop" />}>
@@ -86,7 +95,30 @@ export default function StopDetail() {
                   {routes().length} {lang() === "zh" ? "條路線" : "routes"}
                 </span>
               </Chip>
+              {/* A chip that does something, so it presses like one of the
+                  app's buttons rather than reading like another fact. */}
+              <Show when={camera()}>
+                <button
+                  type="button"
+                  onClick={() => setCameraOpen(true)}
+                  class="app-press inline-flex h-[1.6rem] w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground"
+                >
+                  <CameraIcon size={12} />
+                  {t("trafficCamera", lang())}
+                </button>
+              </Show>
             </div>
+
+            <Show when={camera()}>
+              {(near) => (
+                <CameraSheet
+                  open={cameraOpen()}
+                  onClose={() => setCameraOpen(false)}
+                  near={near()}
+                  lang={lang()}
+                />
+              )}
+            </Show>
 
             <Section>
               <SectionLabel

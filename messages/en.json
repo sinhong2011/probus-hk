@@ -310,5 +310,8 @@
   "zoom_out": "Zoom out",
   "whole_network": "Whole network",
   "no_station_picked": "No station picked",
-  "lines_here": "Lines here"
+  "lines_here": "Lines here",
+  "traffic_camera": "Traffic snapshot",
+  "camera_failed": "The picture didn't load",
+  "camera_source": "Pictures from the Transport Department, refreshed every two minutes"
 }

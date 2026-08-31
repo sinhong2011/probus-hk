@@ -310,5 +310,8 @@
   "zoom_out": "縮細",
   "whole_network": "睇晒成個網絡",
   "no_station_picked": "未揀車站",
-  "lines_here": "經過嘅綫"
+  "lines_here": "經過嘅綫",
+  "traffic_camera": "交通快拍",
+  "camera_failed": "載唔到張相",
+  "camera_source": "相片嚟自運輸署，每兩分鐘更新一次"
 }

@@ -11,6 +11,7 @@ import {
 } from "~/components/Chrome";
 import { Alert } from "~/components/Alert";
 import { AlertSheet } from "~/components/AlertSheet";
+import { CameraSheet } from "~/components/CameraSheet";
 import { GroupSheet } from "~/components/GroupSheet";
 import { Modal } from "~/components/Modal";
 import { RollingNumber } from "~/components/RollingNumber";
@@ -20,6 +21,7 @@ import {
   AlarmIcon,
   BookmarkIcon,
   BusIcon,
+  CameraIcon,
   CloseIcon,
   ExchangeIcon,
   FlagIcon,
@@ -34,6 +36,7 @@ import { NotFound } from "~/routes/NotFound";
 import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { useInView } from "~/lib/inView";
+import { nearestCamera, type NearbyCamera } from "~/data/cameras";
 import { reverseRoute, routeAt, routeStops } from "~/data/db";
 import { lineName, lineRank, stationLines } from "~/data/rail";
 import { railFare } from "~/data/railFares";
@@ -513,6 +516,8 @@ function StopRow(props: {
   /** Hands the page a bookmark to make, once it has asked where it belongs. */
   onGroup: (entry: PendingSave) => void;
   onShare: () => void;
+  /** Hands the page a traffic camera near this stop, to open in a sheet. */
+  onCamera: (near: NearbyCamera) => void;
   /** Hands the page the operator's notice for this stop, to open in full. */
   onNotice: (notice: Bilingual) => void;
   /** The ride being planned: this stop's part in it, if it has one. */
@@ -629,6 +634,10 @@ function StopRow(props: {
   const nameParts = () => splitStopName(stripStopCode(pick(props.stop.name, props.lang)));
   const fare = () => fareAt(props.route.fares, props.seq);
   const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
+
+  /* Asked only for the open row, which is what makes the camera index load
+     lazily: a page of forty closed rows never fetches it at all. */
+  const camera = () => (props.open ? nearestCamera(props.stop.location) : null);
   const db = useDb();
   /*
    * Where the next train is going. The line's terminus is on the plate at the
@@ -1229,6 +1238,23 @@ function StopRow(props: {
               <ShareIcon size={16} />
             </button>
 
+            {/* Only where the department has a camera within sight of the
+                kerb: a button that opens somebody else's junction would teach
+                riders not to press it. */}
+            <Show when={camera()}>
+              {(near) => (
+                <button
+                  type="button"
+                  aria-label={t("trafficCamera", props.lang)}
+                  title={t("trafficCamera", props.lang)}
+                  onClick={() => props.onCamera(near())}
+                  class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+                >
+                  <CameraIcon size={16} />
+                </button>
+              )}
+            </Show>
+
             <a
               {...useLinkProps(stopLink(props.stopId))}
               aria-label={t("openStop", props.lang)}
@@ -1343,6 +1369,11 @@ export default function RouteDetail() {
     null,
   );
   const [alertOpen, setAlertOpen] = createSignal(false);
+
+  /* The camera outlives its row the way the alert sheet does: the sheet is
+     the page's, so closing the row underneath does not tear it down. */
+  const [cameraNear, setCameraNear] = createSignal<NearbyCamera | null>(null);
+  const [cameraOpen, setCameraOpen] = createSignal(false);
   /**
    * The operator notice a row asked to have opened, and the stop it is about.
    * It outlives its own dialog, like the alert sheet above: a target cleared on
@@ -1801,6 +1832,10 @@ export default function RouteDetail() {
                   }
                   onGroup={askGroup}
                   onShare={() => shareStop(seq(), stripStopCode(pick(entry.stop.name, lang())))}
+                  onCamera={(near) => {
+                    setCameraNear(near);
+                    setCameraOpen(true);
+                  }}
                   onNotice={(text) =>
                     showNotice(stripStopCode(pick(entry.stop.name, lang())), text)
                   }
@@ -1986,6 +2021,17 @@ export default function RouteDetail() {
                     seq={target().seq}
                     stopId={target().id}
                     stopName={target().name}
+                    lang={lang()}
+                  />
+                )}
+              </Show>
+
+              <Show when={cameraNear()}>
+                {(near) => (
+                  <CameraSheet
+                    open={cameraOpen()}
+                    onClose={() => setCameraOpen(false)}
+                    near={near()}
                     lang={lang()}
                   />
                 )}
