@@ -314,9 +314,12 @@ export function SplitPage(props: {
        */}
       <div
         class={[
+          /* One phone gap for both modes: the search screen flips between
+             them as a query comes and goes, and unequal gaps nudged its
+             field and tabs twelve pixels on the first keystroke. */
           props.mainFills
             ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-10"
-            : "grid gap-6 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
+            : "grid gap-3 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
           /*
            * The list's cap is what actually hands the map its width: the map
            * takes whatever the list leaves. At 46rem the list swallowed a
@@ -339,7 +342,7 @@ export function SplitPage(props: {
           class={
             props.mainFills
               ? "app-scroll flex min-h-0 flex-col gap-3 overflow-y-auto [&>*]:shrink-0 lg:h-full lg:gap-6"
-              : "app-scroll flex flex-col gap-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:[&>*]:shrink-0"
+              : "app-scroll flex flex-col gap-3 lg:h-full lg:min-h-0 lg:gap-6 lg:overflow-y-auto lg:[&>*]:shrink-0"
           }
         >
           {props.aside}
@@ -352,7 +355,7 @@ export function SplitPage(props: {
             "app-scroll flex min-w-0 flex-col lg:h-full lg:min-h-0",
             props.mainFills
               ? "min-h-0 gap-3 overflow-hidden lg:gap-8"
-              : "gap-6 pb-2 lg:gap-8 lg:overflow-y-auto lg:pb-0 lg:[&>*]:shrink-0",
+              : "gap-3 pb-2 lg:gap-8 lg:overflow-y-auto lg:pb-0 lg:[&>*]:shrink-0",
           ]}
         >
           {props.children}

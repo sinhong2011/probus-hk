@@ -368,6 +368,12 @@ export default function Search() {
               }}
               value={query()}
               onInput={(e) => setQuery(e.currentTarget.value)}
+              /* On a phone the dial is this field's keyboard: touching the
+                 field while the sheet is away is asking to type, so it asks
+                 the sheet back up. */
+              onFocus={() => {
+                if (!wide()) setDialOpen(true);
+              }}
               /* On a phone this field shows the number the dial is typing; on
                  a desktop it also takes what the keyboard types. It says so:
                  a placeholder promising stops and places on a screen whose
