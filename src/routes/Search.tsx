@@ -6,7 +6,7 @@ import { CategoryIcon } from "~/components/CategoryIcon";
 import { Page } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
-import { Drawer, DrawerHeader } from "~/components/Drawer";
+import { Drawer } from "~/components/Drawer";
 import {
   BackspaceIcon,
   ChevronRightIcon,
@@ -173,6 +173,61 @@ function RouteItem(props: {
           </button>
         )}
       </Show>
+    </div>
+  );
+}
+
+/**
+ * A sheet's header: the name in the middle, the cross in the corner.
+ *
+ * `DrawerHeader`'s twin, and deliberately not a change to it: the sheets that
+ * one serves are panels a rider works in - settings, a sort order, a station -
+ * where a left-ranged title is a heading over a form. These two are lists
+ * handed up over the screen, and a list handed up is a dialog: its name goes
+ * where a dialog's goes.
+ *
+ * The cross keeps the house position and weight, and the title keeps a lane
+ * clear of it at both ends so a long name is centred on the sheet rather than
+ * on what the cross leaves.
+ */
+function SheetHeader(props: {
+  title: string;
+  lang: Lang;
+  onClose: () => void;
+  /** The line under the title: a count, an action, what the sheet is for. */
+  children?: JSX.Element;
+}) {
+  return (
+    <div class="relative flex shrink-0 flex-col items-center gap-0.5 px-12 pb-3 pt-3.5">
+      <h2 class="truncate text-base font-medium text-foreground">{props.title}</h2>
+      <Show when={props.children}>
+        <div class="flex items-center gap-2 text-sm text-muted-foreground">{props.children}</div>
+      </Show>
+      <button
+        type="button"
+        onClick={props.onClose}
+        aria-label={t("close", props.lang)}
+        /* The sheet's corner, not the header's: the drag handle's strip sits
+           above this row, so a cross measured from here hung level with the
+           title instead of hugging the top right the way a dialog's does. */
+        class="app-press absolute -top-2 right-2 flex size-8 items-center justify-center rounded-md text-foreground opacity-70 transition-opacity duration-state active:opacity-100"
+      >
+        {/* The stroked cross the app's own `DrawerHeader` draws, not the
+            icon set's filled xmark: at this size the filled one is a blob,
+            and every other sheet in the app closes with this one. */}
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -863,10 +918,10 @@ export default function Search() {
         <div class="flex flex-col">
           {/* The house sheet header: the name, and the cross tucked into the
               corner rather than given a row of its own. */}
-          <DrawerHeader
+          <SheetHeader
             title={t("recent", lang())}
+            lang={lang()}
             onClose={() => setSheet(undefined)}
-            closeLabel={t("close", lang())}
           >
             <button
               type="button"
@@ -878,7 +933,7 @@ export default function Search() {
             >
               {t("clearQuery", lang())}
             </button>
-          </DrawerHeader>
+          </SheetHeader>
           <div class="px-3.5 pb-4">
             <Card>
               <RouteRows
@@ -906,7 +961,7 @@ export default function Search() {
           {/* Clear of the grab handle above it: the pad is what the thumb is
               aiming at, and the top row of keys sat close enough to the bar
               to catch a drag meant for the sheet. */}
-          <div class="relative mx-auto mt-[10px] w-full px-4 pb-3 pt-7">
+          <div class="relative mx-auto mt-[10px] w-full px-4 pb-3 pt-6">
             {/* The way out, and nothing else - a keypad does not need to be
                 told it is a keypad. In the sheet's own corner at the weight
                 the app's other sheets close at: a filled circle the size of a
@@ -915,9 +970,20 @@ export default function Search() {
               type="button"
               aria-label={t("close", lang())}
               onClick={() => setDialOpen(false)}
-              class="app-press absolute right-2 top-0 z-10 flex size-8 items-center justify-center rounded-md text-foreground opacity-60 transition-opacity duration-state active:opacity-100"
+              class="app-press absolute -top-2.5 right-2 z-10 flex size-8 items-center justify-center rounded-md text-foreground opacity-70 transition-opacity duration-state active:opacity-100"
             >
-              <CloseIcon size={15} />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
+              </svg>
             </button>
             {keypad()}
           </div>
@@ -1079,10 +1145,10 @@ function Categories(props: {
         class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
       >
         <div class="flex flex-col">
-          <DrawerHeader
+          <SheetHeader
             title={t("categories", props.lang)}
+            lang={props.lang}
             onClose={() => setAllOpen(false)}
-            closeLabel={t("close", props.lang)}
           />
           <div class="px-3.5 pb-4">
             <Card>
