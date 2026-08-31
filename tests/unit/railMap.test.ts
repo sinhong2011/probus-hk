@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAP_EDGES, MAP_STATIONS } from "~/data/railMap";
+import { LIGHT_RAIL_SHAPE, MAP_BENDS, MAP_EDGES, MAP_STATIONS } from "~/data/railMap";
 
 /**
  * The schematic map's geometry is generated once and then corrected by hand,
@@ -59,13 +59,41 @@ describe("the schematic map's geometry", () => {
     expect(tooClose).toEqual([]);
   });
 
-  it("runs every segment at a multiple of 45 degrees", () => {
+  /*
+   * A segment may turn between its stations - the elbows in `MAP_BENDS` - and
+   * then it is every leg of the way that has to be on the grid, not the line
+   * from one station to the other.
+   */
+  const legsOf = (a: string, b: string): [number, number][] => {
+    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    const via = MAP_BENDS[key] ?? [];
+    const from = byId.get(a)!;
+    const to = byId.get(b)!;
+    return [[from.x, from.y], ...(a < b ? via : [...via].reverse()), [to.x, to.y]];
+  };
+
+  it("runs every leg of every segment at a multiple of 45 degrees", () => {
     const bent = edges
-      .filter(
-        (e) => skew(byId.get(e.a)!.x, byId.get(e.a)!.y, byId.get(e.b)!.x, byId.get(e.b)!.y) > 0.5,
-      )
+      .filter((e) => {
+        const legs = legsOf(e.a, e.b);
+        return legs.some(
+          (p, i) => i > 0 && skew(legs[i - 1]![0], legs[i - 1]![1], p[0], p[1]) > 0.5,
+        );
+      })
       .map((e) => `${e.line} ${e.a}-${e.b}`);
     expect(bent).toEqual([]);
+  });
+
+  it("bends only segments that exist", () => {
+    const segments = new Set(edges.map((e) => (e.a < e.b ? `${e.a}:${e.b}` : `${e.b}:${e.a}`)));
+    expect(Object.keys(MAP_BENDS).filter((key) => !segments.has(key))).toEqual([]);
+  });
+
+  it("draws the light rail's shape on the grid", () => {
+    const off = LIGHT_RAIL_SHAPE.flatMap((shape) =>
+      shape.filter((p, i) => i > 0 && skew(shape[i - 1]![0], shape[i - 1]![1], p[0], p[1]) > 0.5),
+    );
+    expect(off).toEqual([]);
   });
 
   it("gives every segment a length to draw", () => {

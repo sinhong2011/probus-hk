@@ -299,3 +299,36 @@ export function railStations(): string[] {
 export function servicesAt(station: string): string[] {
   return Object.keys(RAIL_LINES).filter((service) => RAIL_LINES[service]?.includes(station));
 }
+
+/** The lines the heavy rail runs, one per family of services, in table order. */
+export function railLineCodes(): string[] {
+  return [...new Set(Object.keys(RAIL_LINES).map(lineOf))];
+}
+
+/**
+ * Every station on a line, in order, with its branches folded in: a branch's
+ * own stations follow the last station it shares with the trunk, so LOHAS
+ * Park comes after Tseung Kwan O and Lok Ma Chau after Sheung Shui. The line
+ * as a rider lists it, rather than as the services that run on it.
+ */
+export function stationsOnLine(line: string): string[] {
+  const services = Object.keys(RAIL_LINES)
+    .filter((service) => lineOf(service) === line)
+    .map((service) => RAIL_LINES[service] as string[])
+    .sort((a, b) => b.length - a.length);
+  const [trunk = [], ...branches] = services;
+  const out = [...trunk];
+  for (const branch of branches) {
+    let after = -1;
+    for (const code of branch) {
+      const at = out.indexOf(code);
+      if (at >= 0) {
+        after = at;
+        continue;
+      }
+      after += 1;
+      out.splice(after, 0, code);
+    }
+  }
+  return out;
+}

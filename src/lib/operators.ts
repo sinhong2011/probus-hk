@@ -44,8 +44,10 @@ export const OPERATORS: Record<Company, OperatorStyle> = {
   lightRail: {
     name: { zh: "輕鐵", en: "Light Rail" },
     short: { zh: "輕鐵", en: "LR" },
-    color: "#7baf3c",
-    ink: "#0d1806",
+    // The railway's own gold, not a green: on the network map the light rail
+    // runs beside the Kwun Tong line's green, and they have to read apart.
+    color: "#d3a809",
+    ink: "#231c02",
   },
   lrtfeeder: {
     name: { zh: "港鐵巴士", en: "MTR Bus" },

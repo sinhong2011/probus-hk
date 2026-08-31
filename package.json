@@ -15,7 +15,8 @@
     "e2e:ui": "playwright test --ui",
     "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "fares": "bun scripts/build-rail-fares.ts",
-    "railmap": "bun scripts/build-rail-map.ts"
+    "railmap": "bun scripts/build-rail-map.ts",
+    "raillabels": "bun scripts/check-rail-labels.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

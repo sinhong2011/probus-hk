@@ -93,12 +93,17 @@ const railRoute = createRoute({
 const railMapRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/rail/map",
-  // What the map is showing: a station or a line, so a shared link and a
-  // reload open the same sheet, and the back button closes it.
+  // What the map is showing: a station, a line, or the list of every line,
+  // so a shared link and a reload open the same sheet.
   validateSearch: (search: Record<string, unknown>) => {
     const station = asText(search.station);
     const line = asText(search.line);
-    return { ...(station ? { station } : {}), ...(line ? { line } : {}) };
+    const lines = search.lines === true || search.lines === "1" || search.lines === 1;
+    return {
+      ...(station ? { station } : {}),
+      ...(line ? { line } : {}),
+      ...(lines ? { lines: true as const } : {}),
+    };
   },
   component: lazyScreen(() => import("~/routes/RailMap")),
 });

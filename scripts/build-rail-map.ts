@@ -16,6 +16,14 @@
  * strung along the runs between anchors, which is arithmetic: take an
  * octilinear path and space them evenly along it.
  *
+ * A line may also turn *between* two stations. The railway's own map is mostly
+ * rows and columns joined by wide curves, and the curve is rarely at a station:
+ * the Kwun Tong line leaves Kowloon Bay eastwards and is heading south by the
+ * time it reaches Ngau Tau Kok. Drawn only with corners at stations that is a
+ * diagonal, and a map of diagonals is a wiring diagram. So a segment between
+ * two anchors may carry elbows, set by hand in `BENDS`, and a run whose spaced
+ * stations straddle its one corner gets that corner as an elbow automatically.
+ *
  * Because the anchors are the input, the failures are legible. A run that
  * cannot be drawn names the two anchors whose relationship is impossible, and
  * that pair is the only thing anyone has to think about.
@@ -31,72 +39,85 @@ const OUT = fileURLToPath(new URL("../src/data/railMap.ts", import.meta.url));
 /** The ten heavy-rail lines, in the order the railway's own map lists them. */
 const LINE_ORDER = ["TWL", "KTL", "ISL", "TKL", "TCL", "TML", "EAL", "SIL", "DRL", "AEL"];
 
+type Point = [number, number];
+
 /**
  * Hand-set positions, one square per hop, x east and y south.
  *
  * The y axis is banded so the regions cannot collide: the New Territories have
- * 0-22, Kowloon 24-36, the harbour 36-44, Hong Kong Island 44 and below. An
+ * 0-20, Kowloon 22-35, the harbour 36-44, Hong Kong Island 46 and below. An
  * earlier layout left Tai Wai two squares from Mong Kok, a ten-kilometre error
  * and the kind the eye catches at a glance.
+ *
+ * The shape follows the railway's own map where it can: East Rail is one
+ * straight spine down x=34 from the border to Hung Hom; Nathan Road is a pair
+ * of parallel verticals at x=30; the Kwun Tong line runs east along a row and
+ * turns down a column; the Island line runs the north shore and turns south
+ * after Sai Wan Ho; Tseung Kwan O rises from Quarry Bay and turns in to Yau
+ * Tong. Where the official map bends between stations, `BENDS` does too.
  */
-const ANCHORS: Record<string, [number, number]> = {
-  // East Rail: the spine down the middle of the New Territories.
-  LOW: [32, 0],
-  LMC: [28, 2],
-  SHS: [32, 2],
-  TAW: [32, 16],
-  KOT: [36, 20],
-  LOF: [38, 20],
-  WTS: [40, 22],
-  MKK: [36, 26],
-  HUH: [36, 32],
-  EXC: [36, 40],
+const ANCHORS: Record<string, Point> = {
+  // East Rail: the spine down the middle of the map. Lok Ma Chau hangs off
+  // Sheung Shui to the west; Exhibition Centre turns in to Admiralty.
+  LOW: [34, 0],
+  SHS: [34, 2],
+  LMC: [30, 4],
+  TAW: [34, 16],
+  KOT: [34, 20],
+  MKK: [34, 26],
+  HUH: [34, 32],
+  EXC: [34, 40],
 
-  // Tsuen Wan line: one flat row west, then straight down Nathan Road.
+  // Tsuen Wan line: one flat row west, then straight down Nathan Road, which
+  // the Kwun Tong line joins at Prince Edward from Shek Kip Mei.
   TSW: [10, 24],
   LAK: [18, 24],
   MEF: [22, 24],
   PRE: [30, 24],
-  SKM: [32, 24],
+  SKM: [32, 22],
   MOK: [30, 26],
   YMT: [30, 28],
   JOR: [30, 30],
   TST: [30, 32],
 
   // Hong Kong Island: one straight rule along the north shore, set far enough
-  // south that a real coastline fits in the water between it and Kowloon.
+  // south that a real coastline fits in the water between it and Kowloon, and
+  // turning south after Sai Wan Ho the way the shore does.
   KET: [16, 46],
   CEN: [28, 46],
   ADM: [30, 46],
   NOP: [45, 46],
   QUB: [48, 46],
-  CHW: [63, 46],
-  LET: [30, 52],
-  SOH: [26, 52],
+  SWH: [54, 46],
+  SKW: [57, 49],
+  CHW: [57, 55],
+  OCP: [30, 49],
+  WCH: [30, 52],
+  LET: [28, 54],
+  SOH: [24, 54],
 
-  // Kowloon, and the run east along the far shore.
-  HOM: [34, 32],
-  WHA: [32, 34],
-  TKW: [36, 30],
-  SUW: [38, 28],
-  KAT: [40, 26],
-  DIH: [42, 24],
-  HIK: [42, 16],
-  CHH: [46, 24],
-  KOB: [50, 24],
-  NTK: [54, 24],
-  KWT: [56, 26],
-  LAT: [58, 28],
-  YAT: [62, 32],
-  TIK: [64, 32],
-  TKO: [66, 30],
-  POA: [66, 26],
-  LHP: [68, 32],
+  // Kowloon east: the Kwun Tong row at y=20 turns down a column at x=49 and
+  // comes in to Yau Tong; Tuen Ma drops from Diamond Hill down x=41.5 and
+  // turns west along y=30 into Ho Man Tin.
+  HOM: [36, 30],
+  WHA: [38, 32],
+  TKW: [41.5, 28],
+  KAT: [41.5, 23],
+  DIH: [41.5, 20],
+  HIK: [37.5, 16],
+  CHH: [44, 20],
+  KOB: [46.5, 20],
+  NTK: [49, 23],
+  LAT: [49, 29],
+  YAT: [52, 32],
+  TIK: [55, 32],
+  TKO: [58, 32],
+  POA: [58, 26],
+  LHP: [58, 35],
 
   // Tuen Ma: the long western arm, through west Kowloon, and up the east.
-  // Tuen Mun to Tin Shui Wai is one vertical, with the light rail trunk one
-  // square east of it and the Tuen Mun and Tin Shui Wai meshes hung off its
-  // ends - so the arm is placed for the tram network it threads through.
+  // Tuen Mun to Tin Shui Wai is one vertical with the light rail hung off it;
+  // Ma On Shan is a column beside East Rail that turns along the top.
   TUM: [8, 19],
   SIH: [8, 13],
   TIS: [8, 6],
@@ -104,9 +125,12 @@ const ANCHORS: Record<string, [number, number]> = {
   YUL: [16, 6],
   KSR: [16, 18],
   NAC: [22, 28],
-  AUS: [22, 36],
-  ETS: [32, 36],
-  WKS: [48, 0],
+  AUS: [22, 34],
+  ETS: [32, 34],
+  CKT: [38, 12],
+  CIO: [38, 6],
+  SHM: [41, 4],
+  WKS: [53, 4],
 
   // Light Rail, one square per hop. Sixty-odd stops in a mesh with almost no
   // straight runs, so nearly all of them are judgements and nearly all are
@@ -191,6 +215,78 @@ const ANCHORS: Record<string, [number, number]> = {
   AWE: [0, 32],
 };
 
+/**
+ * Where a line turns between two anchored stations: the elbows, in order from
+ * the first station named to the second. Each leg has to be octilinear, and
+ * the script says so if one is not.
+ */
+const BENDS: Record<`${string}>${string}`, Point[]> = {
+  // Sheung Shui to Lok Ma Chau: down, then west along the border.
+  "SHS>LMC": [[32, 4]],
+  // Exhibition Centre to Admiralty: East Rail turns in off its spine.
+  "EXC>ADM": [[34, 42]],
+  // Sai Wan Ho to Shau Kei Wan: the Island line turns south.
+  "SWH>SKW": [[57, 46]],
+  // Quarry Bay to Yau Tong: up out of the harbour, then in to the junction.
+  "QUB>YAT": [[48, 36]],
+  // Kowloon Bay to Ngau Tau Kok: the row becomes a column.
+  "KOB>NTK": [[49, 20]],
+  // Yau Ma Tei to Ho Man Tin: off Nathan Road and east, over East Rail.
+  "YMT>HOM": [[32, 30]],
+  // Ho Man Tin to To Kwa Wan: east, then up the Kai Tak column.
+  "HOM>TKW": [[41.5, 30]],
+  // City One to Shek Mun: the Ma On Shan column becomes the top row.
+  "CIO>SHM": [[38, 4]],
+};
+
+/**
+ * The light rail as the railway's own map draws it when it is not the subject:
+ * a few loops in its colour, no stops, hung off the Tuen Ma stations it feeds.
+ * The diagram shows this until the rider zooms into the network, when the
+ * sixty-eight stops take over. Each shape is a polyline in grid squares that
+ * begins and ends at a station, so a loop closes under the station's marker
+ * rather than turning a rounded corner there and standing off it.
+ */
+const LIGHT_RAIL_SHAPE: Point[][] = [
+  // Tin Shui Wai: the loop north of the station.
+  [
+    [8, 6],
+    [8, 0],
+    [4, 0],
+    [4, 6],
+    [8, 6],
+  ],
+  // The Yuen Long arm, a row under the Tuen Ma line.
+  [
+    [8, 6],
+    [10, 8],
+    [14, 8],
+    [16, 6],
+  ],
+  // The trunk beside the Tuen Ma line, Tin Shui Wai down to Tuen Mun.
+  [
+    [8, 6],
+    [9, 7],
+    [9, 18],
+    [8, 19],
+  ],
+  // Tuen Mun: the loop west of the trunk, and the town south of the station.
+  [
+    [8, 13],
+    [4, 13],
+    [4, 19],
+    [8, 19],
+  ],
+  [
+    [8, 19],
+    [8, 23],
+    [2, 23],
+    [2, 17],
+    [4, 17],
+    [4, 19],
+  ],
+];
+
 /** Nothing may sit closer than this to anything else, in squares. */
 const CLEARANCE = 1.4;
 /**
@@ -201,6 +297,8 @@ const CLEARANCE = 1.4;
 const LIGHT_RAIL_CLEARANCE = 0.9;
 /** Nor this close to a station on another landmass: that gap is water. */
 const CHANNEL = 3.5;
+/** An elbow this close to a station that is not one of its own ends is on it. */
+const ELBOW_CLEARANCE = 1;
 
 interface Stop {
   location: { lat: number; lng: number };
@@ -211,7 +309,6 @@ interface Route {
   co: string[];
   stops: Record<string, string[]>;
 }
-type Point = [number, number];
 type Land = "lantau" | "island" | "mainland";
 
 type Db = { routeList: Record<string, Route>; stopList: Record<string, Stop> };
@@ -403,7 +500,34 @@ function spaceAlong(path: Point[], count: number): Point[] {
 }
 
 const at = new Map<string, Point>(Object.entries(ANCHORS));
+/** Elbows on a segment, keyed by its two stations in id order, in that order. */
+const bends = new Map<string, Point[]>();
 const failures: string[] = [];
+
+const pairKey = (a: string, b: string) => (a < b ? `${a}:${b}` : `${b}:${a}`);
+const setBend = (from: string, to: string, points: Point[]) =>
+  bends.set(pairKey(from, to), from < to ? points : [...points].reverse());
+
+for (const [key, points] of Object.entries(BENDS)) {
+  const [from, to] = key.split(">") as [string, string];
+  if (!stations.has(from) || !stations.has(to))
+    failures.push(`bend ${key} names a station not on the map`);
+  else if (!neighbours.get(from)?.has(to))
+    failures.push(`bend ${key} is not a segment of any line`);
+  else setBend(from, to, points);
+}
+
+/**
+ * Where the one corner of a path falls between two consecutive stations, that
+ * corner is an elbow on their segment. Answers the elbow, or null where the
+ * pair is straight, or false where not even the corner makes it drawable.
+ */
+function elbowBetween(path: Point[], a: Point, b: Point): Point | null | false {
+  if (octilinear(a, b)) return null;
+  const corner = path[1];
+  if (path.length !== 3 || !corner) return false;
+  return octilinear(a, corner) && octilinear(corner, b) ? corner : false;
+}
 
 for (const chain of runs()) {
   const first = chain[0]!;
@@ -417,17 +541,32 @@ for (const chain of runs()) {
 
   const between = chain.slice(1, -1);
   if (between.length === 0) {
-    if (!octilinear(head, tail))
+    const via = bends.get(pairKey(first, last)) ?? [];
+    const all = [head, ...via, tail];
+    if (!all.every((p, i) => i === 0 || octilinear(all[i - 1]!, p)))
       failures.push(`${first}[${head}] - ${last}[${tail}] is off the grid`);
     continue;
   }
 
+  /*
+   * Every candidate path is tried and the one that needs the fewest elbows
+   * wins: stations that land on the corner themselves draw as a corner at a
+   * station, which is what a printed map does where it can.
+   */
   const placed = paths(head, tail)
-    .map((path) => spaceAlong(path, between.length))
-    .find((points) => {
+    .map((path) => {
+      const points = spaceAlong(path, between.length);
       const all = [head, ...points, tail];
-      return all.every((p, i) => i === 0 || octilinear(all[i - 1]!, p));
-    });
+      const elbows: (Point | null)[] = [];
+      for (let i = 1; i < all.length; i++) {
+        const elbow = elbowBetween(path, all[i - 1]!, all[i]!);
+        if (elbow === false) return null;
+        elbows.push(elbow);
+      }
+      return { points, elbows };
+    })
+    .filter((candidate) => candidate !== null)
+    .sort((p, q) => p.elbows.filter(Boolean).length - q.elbows.filter(Boolean).length)[0];
 
   if (!placed) {
     failures.push(
@@ -435,7 +574,10 @@ for (const chain of runs()) {
     );
     continue;
   }
-  between.forEach((id, i) => at.set(id, placed[i]!));
+  between.forEach((id, i) => at.set(id, placed.points[i]!));
+  placed.elbows.forEach((elbow, i) => {
+    if (elbow) setBend(chain[i]!, chain[i + 1]!, [elbow]);
+  });
 }
 
 /* Every rule the drawing depends on, checked here as well as in the unit test:
@@ -443,7 +585,12 @@ for (const chain of runs()) {
 for (const e of edgeList) {
   const a = at.get(e.a);
   const b = at.get(e.b);
-  if (a && b && !octilinear(a, b)) failures.push(`bent ${e.line} ${e.a}[${a}] - ${e.b}[${b}]`);
+  if (!a || !b) continue;
+  const all = [a, ...(bends.get(pairKey(e.a, e.b)) ?? []), b];
+  for (let i = 1; i < all.length; i++) {
+    if (!octilinear(all[i - 1]!, all[i]!))
+      failures.push(`bent ${e.line} ${e.a}[${a}] - ${e.b}[${b}] at ${all[i - 1]} - ${all[i]}`);
+  }
 }
 
 const ids = [...stations].sort();
@@ -459,6 +606,25 @@ for (let i = 0; i < ids.length; i++) {
     else if (landOf(ids[i]!) !== landOf(ids[j]!) && d < CHANNEL) {
       failures.push(`${ids[i]} and ${ids[j]} leave only ${d.toFixed(2)} of water`);
     }
+  }
+}
+
+for (const [key, points] of bends) {
+  const [from, to] = key.split(":");
+  for (const elbow of points) {
+    for (const id of ids) {
+      if (id === from || id === to) continue;
+      const p = at.get(id);
+      if (p && Math.hypot(p[0] - elbow[0], p[1] - elbow[1]) < ELBOW_CLEARANCE)
+        failures.push(`elbow ${elbow} on ${from}-${to} sits on ${id}`);
+    }
+  }
+}
+
+for (const shape of LIGHT_RAIL_SHAPE) {
+  for (let i = 1; i < shape.length; i++) {
+    if (!octilinear(shape[i - 1]!, shape[i]!))
+      failures.push(`light rail shape leg ${shape[i - 1]} - ${shape[i]} is off the grid`);
   }
 }
 
@@ -492,6 +658,8 @@ const lines = ORDER.filter((code) => onLine.has(code)).map((code) => ({
   code,
   edges: edgeList.filter((e) => e.line === code).map((e) => [e.a, e.b] as const),
 }));
+
+const point = (p: Point) => `[${p[0]}, ${p[1]}]`;
 
 /*
  * Emitted as source rather than JSON in public/, because a typed module is what
@@ -555,14 +723,34 @@ const ts =
         `  ${l.code}: [\n` + l.edges.map(([a, b]) => `    ["${a}", "${b}"],`).join("\n") + `\n  ],`,
     )
     .join("\n") +
-  `\n};\n`;
+  `\n};\n\n` +
+  `/**\n` +
+  ` * Where a segment turns between its two stations: the elbows, keyed by the\n` +
+  ` * stations in id order and listed in that order. A segment not here is\n` +
+  ` * straight. Every line through the pair shares the same elbows.\n` +
+  ` */\n` +
+  `export const MAP_BENDS: Record<string, [number, number][]> = {\n` +
+  [...bends.entries()]
+    .sort(([p], [q]) => (p < q ? -1 : 1))
+    .map(([key, points]) => `  "${key}": [${points.map(point).join(", ")}],`)
+    .join("\n") +
+  `\n};\n\n` +
+  `/**\n` +
+  ` * The light rail reduced to its shape, for the zooms at which its stops are\n` +
+  ` * not drawn: a few loops off the Tuen Ma stations it feeds, the way the\n` +
+  ` * railway's own map draws it. Each begins and ends at a station.\n` +
+  ` */\n` +
+  `export const LIGHT_RAIL_SHAPE: [number, number][][] = [\n` +
+  LIGHT_RAIL_SHAPE.map((shape) => `  [${shape.map(point).join(", ")}],`).join("\n") +
+  `\n];\n`;
 
 writeFileSync(OUT, ts);
 
 const anchored = Object.keys(ANCHORS).length;
 console.log(
   `railMap.ts: ${placed.length} stations, ${edgeList.length} edges, ${lines.length} lines\n` +
-    `  ${anchored} anchored by hand, ${placed.length - anchored} routed between them\n` +
+    `  ${anchored} anchored by hand, ${placed.length - anchored} routed between them, ` +
+    `${bends.size} segments with elbows\n` +
     `  every segment on the grid, nothing closer than ${CLEARANCE} squares ` +
     `(${LIGHT_RAIL_CLEARANCE} around light rail)`,
 );

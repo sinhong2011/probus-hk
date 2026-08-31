@@ -104,6 +104,7 @@ const MESSAGES = {
   recent: m.recent,
   removeRecent: m.remove_recent,
   allKinds: m.all_kinds,
+  allLines: m.all_lines,
   kindBus: m.kind_bus,
   kindMinibus: m.kind_minibus,
   kindRail: m.kind_rail,
