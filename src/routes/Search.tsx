@@ -1,14 +1,6 @@
-import { useLinkProps } from "@tanstack/solid-router";
+import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
-import {
-  Card,
-  EmptyState,
-  FareTag,
-  Hairline,
-  ScreenTitle,
-  SectionLabel,
-  StopCode,
-} from "~/components/Chrome";
+import { Card, EmptyState, FareTag, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
 import { SplitPage } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
@@ -97,7 +89,7 @@ function RouteItem(props: {
       <a
         {...useLinkProps(routeLink(props.route.key))}
         class={[
-          "mb-tap flex min-w-0 grow items-center gap-3 py-2.5 pl-3.5",
+          "app-tap flex min-w-0 grow items-center gap-3 py-2.5 pl-3.5",
           props.onRemove ? "pr-1" : "pr-3.5",
         ]}
       >
@@ -147,7 +139,7 @@ function RouteItem(props: {
             aria-label={t("removeRecent", props.lang)}
             title={t("removeRecent", props.lang)}
             onClick={() => remove()()}
-            class="mb-press mr-1.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+            class="app-press mr-1.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
           >
             <CloseIcon size={14} />
           </button>
@@ -177,8 +169,52 @@ function RouteList(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: s
 export default function Search() {
   const db = useDb();
   const lang = settings.lang;
-  const [query, setQuery] = createSignal("");
-  const [tab, setTab] = createSignal<Tab>("recent");
+  const params = useSearch({ from: "/search" });
+  const navigate = useNavigate();
+
+  /*
+   * The field is the source of truth while a thumb is on the dial - a signal
+   * takes two presses in one frame, a router round-trip might not - and the
+   * URL follows it, so a reload lands on the same list and a search can be
+   * sent to someone. The field follows the URL right back, which is what
+   * makes the back button and a shared link type into it.
+   */
+  const urlQuery = () => (params().q === undefined ? "" : String(params().q));
+  const [query, setQuery] = createSignal(urlQuery());
+  const tab = (): Tab => params().tab ?? "recent";
+  const setTab = (id: Tab) =>
+    void navigate({
+      to: "/search",
+      search: (prev) => {
+        const { tab: _, ...rest } = prev;
+        return id === "recent" ? rest : { ...rest, tab: id };
+      },
+      replace: true,
+    });
+
+  createEffect(
+    () => query(),
+    (q) => {
+      if (urlQuery() === q) return;
+      void navigate({
+        to: "/search",
+        search: (prev) => {
+          const { q: _, ...rest } = prev;
+          if (q === "") return rest;
+          // As a number when it is all digits, so the address reads ?q=290
+          // rather than a JSON-quoted %22290%22.
+          return { ...rest, q: /^\d+$/.test(q) ? Number(q) : q };
+        },
+        replace: true,
+      });
+    },
+  );
+  createEffect(
+    () => urlQuery(),
+    (q) => {
+      if (q !== query()) setQuery(q);
+    },
+  );
 
   /*
    * Whether this is a window with a keyboard of its own. On a phone the dial
@@ -280,26 +316,22 @@ export default function Search() {
            and centred, and a full-bleed surface left stranded margins on a
            tablet. It rises into place with the page - the one thing on the
            screen that is not content, arriving as the fixture it is. */
-        <div class="mb-rise px-3 pb-2">
-          <div class="mx-auto w-full max-w-[27rem] rounded-2xl border border-border bg-card p-3 shadow-card">
+        <div class="app-rise px-3 pb-2">
+          <div class="mx-auto w-full max-w-[27rem] rounded-2xl bg-card p-3 shadow-card">
             {keypad(false)}
           </div>
         </div>
       }
       aside={
         <>
-          <ScreenTitle title={t("searchRoutes", lang())} pinned={false} />
+          {/* The switch IS the title, at every width - 搜尋/規劃 says what the
+              screen is better than a heading above it could. Full width, so
+              it lines up with the field under it. */}
+          <ModeSwitch lang={lang()} />
 
-          <div class="-mt-2.5">
-            <ModeSwitch lang={lang()} />
-          </div>
-
-          <div
-            class="-mt-2.5 flex h-13 items-center gap-3 rounded-2xl border-[1.5px] bg-card px-3.5"
-            style={{ "border-color": query() ? "var(--primary-border)" : "var(--border)" }}
-          >
+          <div class="flex h-11 items-center gap-3 rounded-2xl bg-card px-3.5 shadow-card">
             <span class="text-primary">
-              <SearchIcon size={19} />
+              <SearchIcon size={17} />
             </span>
             <input
               ref={(el: HTMLInputElement) => {
@@ -347,16 +379,13 @@ export default function Search() {
               </button>
             </Show>
           </div>
-
           {/* The same dial as the phone's, in the same frame: a desktop is a
               window a rider looks up a route number in too, and a strip of
               small shortcuts made them aim at a different pad on every
               screen. */}
           <div class="-mt-1 hidden flex-col gap-2 lg:flex">
             <SectionLabel>{t("routeNumber", lang())}</SectionLabel>
-            <div class="rounded-2xl border border-border bg-card p-3 shadow-card">
-              {keypad(true)}
-            </div>
+            <div class="rounded-2xl bg-card p-3 shadow-card">{keypad(true)}</div>
           </div>
         </>
       }
@@ -369,7 +398,7 @@ export default function Search() {
           role="tablist"
           aria-label={t("routes", lang())}
           data-search-tabs
-          class="mb-scroll -mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:flex-wrap lg:px-0"
+          class="app-scroll -mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:flex-wrap lg:px-0"
         >
           <For each={tabs()}>
             {(entry) => {
@@ -381,7 +410,7 @@ export default function Search() {
                   aria-selected={on() ? "true" : "false"}
                   onClick={() => setTab(entry.id)}
                   class={[
-                    "mb-press flex h-8 shrink-0 items-center rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
+                    "app-press flex h-8 shrink-0 items-center rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
                     {
                       "bg-primary text-primary-foreground": on(),
                       "bg-secondary text-muted-foreground hover:text-foreground": !on(),
@@ -434,7 +463,7 @@ export default function Search() {
                       </Show>
                       <a
                         {...useLinkProps(stopLink(match.stopId))}
-                        class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+                        class="app-tap flex items-center gap-3 px-3.5 py-2.5"
                       >
                         {/* The name once, in the language being read, and the
                             pole code beside it - which is both what tells two
@@ -506,7 +535,7 @@ function RecentView(props: { lang: Lang; routes: KeyedRoute[]; onForget: (key: s
             {(item) => (
               <a
                 {...useLinkProps(browseLink(item.id))}
-                class="mb-press flex flex-col gap-1.5 rounded-xl border border-border bg-card p-3 shadow-card"
+                class="app-press flex flex-col gap-1.5 rounded-xl bg-card p-3 shadow-card"
               >
                 <span
                   class="h-1 w-7 rounded-full"
@@ -577,9 +606,9 @@ function Keypad(props: {
           order === undefined ? undefined : { "animation-delay": `${Math.min(order, 7) * 30}ms` }
         }
         class={[
-          "mb-press flex items-center justify-center font-bold transition-colors duration-press",
+          "app-press flex items-center justify-center font-bold transition-colors duration-press",
           size,
-          { "mb-pop": order !== undefined },
+          { "app-pop": order !== undefined },
           {
             "bg-secondary text-foreground active:bg-primary active:text-primary-foreground":
               enabled(),
@@ -606,7 +635,7 @@ function Keypad(props: {
       disabled={disabled}
       onClick={onClick}
       class={[
-        "mb-press flex items-center justify-center rounded-xl transition-colors duration-press",
+        "app-press flex items-center justify-center rounded-xl transition-colors duration-press",
         size,
         {
           "bg-secondary text-muted-foreground active:bg-destructive active:text-white": !disabled,
@@ -647,7 +676,7 @@ function Keypad(props: {
           )}
         </div>
         <div
-          class="mb-scroll grid w-[31%] shrink-0 grid-cols-2 content-start gap-2 overflow-y-auto"
+          class="app-scroll grid w-[31%] shrink-0 grid-cols-2 content-start gap-2 overflow-y-auto"
           style={{ "max-height": "calc(4 * 2.75rem + 3 * 0.5rem)" }}
           data-keypad-letters
         >

@@ -41,9 +41,28 @@ const nearbyRoute = createRoute({
   component: lazyScreen(() => import("~/routes/Nearby")),
 });
 
+/** The search screen's list modes, as its URL is allowed to name them. */
+const SEARCH_TABS = ["recent", "all", "bus", "minibus", "rail", "ferry"] as const;
+
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
+  /*
+   * What the screen was showing - the typed query and the list's mode - so a
+   * reload lands on the same list and a search can be sent to someone. The
+   * default tab stays out of the address: /search means the same screen it
+   * always has.
+   */
+  validateSearch: (search: Record<string, unknown>) => {
+    // A query of digits travels as the number it looks like - `?q=1`, not
+    // `?q=%221%22`. It is kept as one here too: normalising it to a string
+    // would put the quotes straight back when the URL is written.
+    const q =
+      asText(search.q) ??
+      (typeof search.q === "number" && Number.isFinite(search.q) ? search.q : undefined);
+    const tab = SEARCH_TABS.find((id) => id === search.tab && id !== "recent");
+    return { ...(q !== undefined && { q }), ...(tab && { tab }) };
+  },
   component: lazyScreen(() => import("~/routes/Search")),
 });
 

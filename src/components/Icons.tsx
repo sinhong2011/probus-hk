@@ -8,7 +8,6 @@ import IconChevronRight from "~icons/lineicons/chevron-right";
 import IconCloudDownload from "~icons/lineicons/cloud-download";
 import IconCheck from "~icons/lineicons/checkmark";
 import IconCog from "~icons/lineicons/cog";
-import IconEraser from "~icons/lineicons/eraser";
 import IconExpand from "~icons/lineicons/expand-square-4";
 import IconFlag from "~icons/lineicons/flag-1";
 import IconFunnel from "~icons/lineicons/funnel-1";
@@ -127,7 +126,35 @@ export const ThumbtackIcon = wrap(IconPin as IconComponent);
 export const PlusIcon = wrap(IconPlus as IconComponent);
 export const CloseIcon = wrap(IconXmark as IconComponent);
 export const ExpandIcon = wrap(IconExpand as IconComponent);
-export const BackspaceIcon = wrap(IconEraser as IconComponent);
+/**
+ * The keyboard's own delete key - a tag pointing back at the last character
+ * with a cross inside it. An eraser was reading as "wipe everything", which
+ * is the clear key's job, and Lineicons has no backspace, so it is drawn here
+ * at the weight the set is drawn at.
+ */
+export function BackspaceIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <path d="M9.2 5.5h9.3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9.2a1.5 1.5 0 0 1-1.1-.5L3.7 13a1.5 1.5 0 0 1 0-2l4.4-5a1.5 1.5 0 0 1 1.1-.5Z" />
+      <path d="m11.5 9.5 5 5" />
+      <path d="m16.5 9.5-5 5" />
+    </svg>
+  );
+}
 export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
 export const BusIcon = wrap(IconBus as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
