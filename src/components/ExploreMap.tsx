@@ -1,12 +1,8 @@
-import {
-  AttributionControl,
-  LngLatBounds,
-  Map as MlMap,
-  type ExpressionSpecification,
-} from "maplibre-gl";
+import { LngLatBounds, Map as MlMap, type ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
 import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { MinusIcon, PinIcon, PlusIcon } from "~/components/Icons";
 import { useDb } from "~/data/context";
 import { fetchRouteShape, type Position } from "~/data/waypoints";
 import type { Journey, Leg } from "~/data/planner";
@@ -16,8 +12,10 @@ import { whenIdleAfter } from "~/lib/idle";
 import { measureLine, measureStops, sliceLine, stitchLines } from "~/lib/alongLine";
 import {
   MAP_ACCENT,
+  MAP_CONTROL,
   MAP_PRIMARY,
   MAP_STYLES,
+  addFoldedAttribution,
   lineColour,
   prefersDark,
   upsertSource,
@@ -175,7 +173,7 @@ function buildStage(dark: boolean): Stage {
      * with the list floating over it, and a finger on the map means the map.
      */
   });
-  instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
+  addFoldedAttribution(instance);
   return { instance, host, dark };
 }
 
@@ -672,6 +670,18 @@ export function ExploreMap(props: {
   };
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // The stage answers to gestures, but a mouse has no pinch and no position:
+  // the same corner controls the route map wears, in the same coat.
+  const zoomStep = (delta: number) => {
+    const instance = map();
+    if (instance) instance.zoomTo(instance.getZoom() + delta, { duration: 240 });
+  };
+  const recentre = () => {
+    const instance = map();
+    const me = props.me;
+    if (instance && me) instance.easeTo({ center: [me.lng, me.lat], zoom: 15, duration: 500 });
+  };
+
   /*
    * Where the camera goes, and when it is allowed to move at all.
    *
@@ -728,6 +738,45 @@ export function ExploreMap(props: {
             {t("mapUnavailable", props.lang)}
           </span>
         </div>
+      </Show>
+
+      <Show when={usable()}>
+        {/* A pair, spaced as one: in and out are halves of one control. */}
+        <div class="absolute right-2.5 top-2.5 z-10 flex flex-col gap-1">
+          <button
+            type="button"
+            aria-label={t("mapZoomIn", props.lang)}
+            onClick={() => zoomStep(1)}
+            class={MAP_CONTROL}
+          >
+            <PlusIcon size={15} />
+          </button>
+          <button
+            type="button"
+            aria-label={t("mapZoomOut", props.lang)}
+            onClick={() => zoomStep(-1)}
+            class={MAP_CONTROL}
+          >
+            <MinusIcon size={15} />
+          </button>
+        </div>
+        {/* Where am I, at the same corner it holds on the route map - lifted
+            clear of whatever sheet is resting over the stage. */}
+        <Show when={props.me}>
+          <div
+            class="absolute right-2.5 z-10"
+            style={{ bottom: `calc(${(props.insetFraction ?? 0) * 100}% + 0.625rem)` }}
+          >
+            <button
+              type="button"
+              aria-label={t("mapMyLocation", props.lang)}
+              onClick={recentre}
+              class={MAP_CONTROL}
+            >
+              <PinIcon size={15} />
+            </button>
+          </div>
+        </Show>
       </Show>
 
       {/*
