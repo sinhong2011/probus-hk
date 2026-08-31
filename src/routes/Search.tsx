@@ -815,7 +815,14 @@ export default function Search() {
         open={openedSheet()}
         onClose={() => setOpenedSheet(false)}
         label={t("recent", lang())}
-        class="max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
+        /* A dialog: it is a list to pick from, so it takes the scrim, the
+           Escape and the tap outside. */
+        modal
+        /* `z-50`, because on a phone the dial is already up in a sheet of its
+           own at `z-40` and this one is asked for from above it - a history
+           opened behind the keypad it was reached from is a history nobody
+           can see. */
+        class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
       >
         <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
           <div class="flex items-center justify-between gap-3">
