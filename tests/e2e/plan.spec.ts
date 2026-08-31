@@ -106,7 +106,7 @@ test("planning and searching share one tab", async ({ page }) => {
   await expect(page).toHaveURL(/\/plan/);
   await expect(tabs.getByRole("link", { name: "搜尋" })).toHaveAttribute("aria-current", "page");
 
-  // Exact: the search screen now has a 最近搜尋 tab of its own.
+  // Exact: the results card carries its own row of 搜尋-adjacent chips.
   await page.getByRole("tab", { name: "搜尋", exact: true }).click();
   await expect(page).toHaveURL(/\/search/);
 });

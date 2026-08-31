@@ -42,7 +42,7 @@ const nearbyRoute = createRoute({
 });
 
 /** The search screen's list modes, as its URL is allowed to name them. */
-const SEARCH_TABS = ["recent", "all", "bus", "minibus", "rail", "ferry"] as const;
+const SEARCH_TABS = ["all", "bus", "minibus", "rail", "ferry", "stops", "dest"] as const;
 
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -60,7 +60,10 @@ const searchRoute = createRoute({
     const q =
       asText(search.q) ??
       (typeof search.q === "number" && Number.isFinite(search.q) ? search.q : undefined);
-    const tab = SEARCH_TABS.find((id) => id === search.tab && id !== "recent");
+    // `all` is the default and stays out of the address, and `recent` is gone
+    // altogether - the recents are the field's own history now, not a mode of
+    // the list, so an old link carrying `?tab=recent` lands on the whole list.
+    const tab = SEARCH_TABS.find((id) => id === search.tab && id !== "all");
     return { ...(q !== undefined && { q }), ...(tab && { tab }) };
   },
   component: lazyScreen(() => import("~/routes/Search")),

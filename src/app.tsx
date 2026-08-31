@@ -8,6 +8,7 @@ import { installAlertEffects } from "~/stores/alerts";
 import { installClock } from "~/stores/clock";
 import { installFrequentEffects } from "~/stores/frequent";
 import { installSavedEffects } from "~/stores/saved";
+import { installSearchEffects } from "~/stores/searches";
 import { installTripEffects } from "~/stores/trips";
 import { installSettingsEffects } from "~/stores/settings";
 import { installDismissedEffects } from "~/stores/dismissed";
@@ -30,6 +31,7 @@ export function App() {
   installTripEffects();
   installAlertEffects();
   installFrequentEffects();
+  installSearchEffects();
   installClock();
   installLiveEffects();
   installArrivalsEffects();

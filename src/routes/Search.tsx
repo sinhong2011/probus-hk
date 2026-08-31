@@ -1,5 +1,6 @@
 import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { Card, EmptyState, FareTag, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
 import { CategoryIcon } from "~/components/CategoryIcon";
 import { Page } from "~/components/Layout";
@@ -22,7 +23,6 @@ import { CATEGORIES, categorySamples } from "~/data/categories";
 import {
   allRoutes,
   nextRouteChars,
-  routeAt,
   searchDestinations,
   searchRoutes,
   searchStops,
@@ -31,7 +31,7 @@ import type { KeyedRoute, RouteDb } from "~/data/types";
 import { concessionFare, formatFare } from "~/lib/format";
 import { pick, stripStopCode, t, type Lang, type MessageKey } from "~/lib/i18n";
 import { kindOf, operatorShort, type Kind } from "~/lib/operators";
-import { frequent } from "~/stores/frequent";
+import { searches } from "~/stores/searches";
 import { settings } from "~/stores/settings";
 
 /**
@@ -51,16 +51,24 @@ import { settings } from "~/stores/settings";
  * are browsable with nothing typed, and all of them narrow as you type.
  */
 
-/** The list's modes, in the order the tabs run. */
-type Tab = "recent" | "all" | Kind;
+/**
+ * The list's modes, in the order the tabs run.
+ *
+ * The kinds cut the routes down; `stops` and `dest` are the other two things a
+ * typed word can be, promoted from blocks buried under the routes to modes of
+ * their own. A rider who types 旺角 means a place, and the routes numbered near
+ * it were standing between them and the twelve stops called that.
+ */
+type Tab = "all" | Kind | "stops" | "dest";
 
 const TABS: { id: Tab; label: MessageKey }[] = [
-  { id: "recent", label: "recent" },
   { id: "all", label: "allKinds" },
   { id: "bus", label: "kindBus" },
   { id: "minibus", label: "kindMinibus" },
   { id: "rail", label: "kindRail" },
   { id: "ferry", label: "kindFerry" },
+  { id: "stops", label: "stopsMatched" },
+  { id: "dest", label: "toLabel" },
 ];
 
 /**
@@ -165,43 +173,69 @@ function RouteItem(props: {
   );
 }
 
-/** A list of routes, one card, with a hairline between rows. */
-function RouteList(props: {
-  routes: KeyedRoute[];
-  lang: Lang;
-  onRemove?: (key: string) => void;
-  /**
-   * On a wide window, take the height the pane gives and scroll the rows
-   * inside the card rather than letting the card run past the window.
-   *
-   * A card whose own top and bottom edges scroll out of view stops reading as
-   * a card - the list simply bleeds off both ends of the screen. Held to the
-   * pane, the frame stays put and only its contents move, which is also what
-   * keeps the tabs above it in reach of a rider halfway down four thousand
-   * routes. A phone has no pane to hold it to: there the page scrolls.
-   */
-  fills?: boolean;
-}) {
+/**
+ * The rows of a list of routes, hairlined - and nothing else. The frame around
+ * them belongs to whoever is drawing the list: the results and the field's own
+ * history are two lists inside two different cards, and a list that brought its
+ * own card could not be either of them.
+ */
+function RouteList(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: string) => void }) {
   return (
-    <Card class={props.fills ? "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" : ""}>
-      <div
-        class={
-          props.fills
-            ? "app-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
-            : ""
-        }
-      >
-        <VirtualRows items={props.routes} estimate={64} divided>
-          {(route) => (
-            <RouteItem
-              route={route}
-              lang={props.lang}
-              onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
-            />
-          )}
-        </VirtualRows>
-      </div>
-    </Card>
+    <VirtualRows items={props.routes} estimate={64} divided>
+      {(route) => (
+        <RouteItem
+          route={route}
+          lang={props.lang}
+          onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
+        />
+      )}
+    </VirtualRows>
+  );
+}
+
+/**
+ * The same rows without the virtualiser.
+ *
+ * Two virtualisers cannot share a scroller. Each one measures where it starts
+ * inside that scroller and then places its rows absolutely from there, so the
+ * second measures its own offset before the first has finished measuring its
+ * rows - and draws four hundred pixels of routes on top of the stops between
+ * them. The list that needs a virtualiser is the one with four thousand rows
+ * in it; the destination matches are capped at twenty and can simply be rows.
+ */
+function RouteRows(props: { routes: KeyedRoute[]; lang: Lang }) {
+  return (
+    <For each={props.routes}>
+      {(route, index) => (
+        <>
+          <Show when={index() > 0}>
+            <Hairline />
+          </Show>
+          <RouteItem route={route} lang={props.lang} />
+        </>
+      )}
+    </For>
+  );
+}
+
+/**
+ * A seam inside the results card, naming the block under it.
+ *
+ * The blocks used to be separate cards with a `SectionLabel` on the page
+ * between them. Inside one frame that label has to carry the join itself, so
+ * it takes the rule above it - except at the very top of the card, where there
+ * is nothing to be joined to.
+ */
+function SeamLabel(props: { children: JSX.Element; first?: boolean }) {
+  return (
+    <div
+      class={[
+        "bg-secondary/40 px-3.5 py-1.5 text-[0.69rem] font-bold uppercase tracking-[0.08em] text-faint-foreground",
+        props.first ? "" : "border-t border-border",
+      ]}
+    >
+      {props.children}
+    </div>
   );
 }
 
@@ -220,13 +254,13 @@ export default function Search() {
    */
   const urlQuery = () => (params().q === undefined ? "" : String(params().q));
   const [query, setQuery] = createSignal(urlQuery());
-  const tab = (): Tab => params().tab ?? "recent";
+  const tab = (): Tab => params().tab ?? "all";
   const setTab = (id: Tab) =>
     void navigate({
       to: "/search",
       search: (prev) => {
         const { tab: _, ...rest } = prev;
-        return id === "recent" ? rest : { ...rest, tab: id };
+        return id === "all" ? rest : { ...rest, tab: id };
       },
       replace: true,
     });
@@ -276,39 +310,27 @@ export default function Search() {
     }
     return present;
   });
+  /*
+   * Which chips are on the row. The kinds this database has at all, and the
+   * two query-shaped ones only while the query has actually found some: a
+   * 車站 chip that answers nothing is a chip a rider presses once and learns
+   * to distrust.
+   */
   const tabs = () =>
-    TABS.filter((entry) => entry.id === "recent" || entry.id === "all" || kinds().has(entry.id));
+    TABS.filter((entry) => {
+      if (entry.id === "stops") return stops().length > 0;
+      if (entry.id === "dest") return destinations().length > 0;
+      return entry.id === "all" || kinds().has(entry.id);
+    });
 
   /** The routes the typed number matches - or all of them, when nothing is typed. */
   const matched = createMemo(() =>
     empty() ? everything() : searchRoutes(db(), query(), Number.POSITIVE_INFINITY),
   );
 
-  const recentRoutes = createMemo(() =>
-    frequent.recent(30).flatMap((key) => {
-      const route = routeAt(db(), key);
-      return route ? [route] : [];
-    }),
-  );
-  const recentMatched = createMemo(() => {
-    if (empty()) return recentRoutes();
-    const q = query().trim().toUpperCase();
-    return recentRoutes().filter((route) => route.route.toUpperCase().startsWith(q));
-  });
-
-  /*
-   * Typing while looking at recent searches narrows them, until nothing
-   * recent matches - then the list falls through to everything, because a
-   * rider typing a number wants that number, not an empty card. The tab
-   * itself is left alone, so clearing the field brings the recents back.
-   */
-  const shownTab = (): Tab =>
-    tab() === "recent" && !empty() && recentMatched().length === 0 ? "all" : tab();
-
   const listed = createMemo<KeyedRoute[]>(() => {
-    const mode = shownTab();
-    if (mode === "recent") return recentMatched();
-    if (mode === "all") return matched();
+    const mode = tab();
+    if (mode === "all" || mode === "stops" || mode === "dest") return matched();
     return matched().filter((route) => route.co[0] && kindOf(route.co[0]) === mode);
   });
 
@@ -321,8 +343,22 @@ export default function Search() {
     return found.filter((r) => !already.has(r.key));
   });
 
+  /* What the pressed chip is showing. `all` is everything the query found; a
+     kind cuts the routes and drops the other two blocks, because a rider who
+     asked for 巴士 did not ask for a list of stops. */
+  const showRoutes = () => tab() !== "stops" && tab() !== "dest";
+  const showStops = () => tab() === "all" || tab() === "stops";
+  const showDest = () => tab() === "all" || tab() === "dest";
+
+  /** How many the pressed chip found - the number at the end of its row. */
+  const found = () =>
+    tab() === "stops" ? stops().length : tab() === "dest" ? destinations().length : listed().length;
+
+  /** Nothing under the chip that is pressed - which is not the same as nothing at all. */
   const nothing = () =>
-    !empty() && listed().length === 0 && stops().length === 0 && destinations().length === 0;
+    (!showRoutes() || listed().length === 0) &&
+    (!showStops() || stops().length === 0) &&
+    (!showDest() || destinations().length === 0);
 
   const allowed = createMemo(() => nextRouteChars(db(), query()));
   const letters = createMemo(() => keypadLetters(db()));
@@ -347,6 +383,33 @@ export default function Search() {
      when the rider wants the list - the sheet replaces the tab bar as the
      thing the thumb is using, the way the app's other sheets do. */
   const [dialOpen, setDialOpen] = createSignal(true);
+
+  /*
+   * A search the rider stopped on is a search they meant.
+   *
+   * Tapping a result records the words that found it, but plenty of searches
+   * end without a tap: a rider dials 118, reads the three of them, and goes
+   * back to the road. That is still a question they asked and will ask again,
+   * so a query that has been left alone for a couple of seconds and has found
+   * something goes into the history too. The delay is what keeps 1 and 11 out
+   * of it on the way to 118 - each is replaced long before it settles.
+   */
+  createEffect(
+    () => [query(), listed().length + stops().length + destinations().length] as const,
+    ([q, hits]) => {
+      if (q.trim() === "" || hits === 0) return;
+      const timer = window.setTimeout(() => searches.remember(q), 2000);
+      return () => window.clearTimeout(timer);
+    },
+  );
+
+  /*
+   * Whether the field is being used. The history hangs off the field the way
+   * any search box's does - it appears when a rider is in the box with nothing
+   * typed, and the first keystroke replaces it with what that keystroke found.
+   */
+  const [typing, setTyping] = createSignal(false);
+  const historyOpen = () => typing() && empty() && searches.recent().length > 0;
 
   return (
     <Page
@@ -401,56 +464,140 @@ export default function Search() {
           <Categories lang={lang()} class="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1" />
 
           <div class="order-3 flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-2 lg:gap-6">
-            <div class="flex h-11 items-center gap-3 rounded-2xl border border-border bg-card px-3.5 shadow-card">
-              <span class="text-primary">
-                <SearchIcon size={17} />
-              </span>
-              <input
-                ref={(el: HTMLInputElement) => {
-                  /* A window with a real keyboard should not ask for a click
-                   before it will take a letter. Focusing raises no keyboard on
-                   a phone because no phone is this wide. Once the database
-                   is read, not on the next frame: on a cold start the ref
-                   runs while the database is still loading and the screen is
-                   held off the page, and focusing a node that is not in the
-                   document does nothing. An effect that reads the database is
-                   held with the screen and runs once it is on the page. */
-                  createEffect(
-                    () => db(),
-                    () => {
-                      if (window.matchMedia("(min-width: 64rem)").matches) el.focus();
-                    },
-                  );
-                }}
-                value={query()}
-                onInput={(e) => setQuery(e.currentTarget.value)}
-                /* The field takes real typing at every width - stop names and
-                 places, not just numbers - so on a phone it raises the
-                 keyboard like any field. The dial sheet steps aside for it:
-                 two keyboards at once is one too many, and the dock's button
-                 brings the dial back when the number is the way in. */
-                onFocus={() => {
-                  if (!wide()) setDialOpen(false);
-                }}
-                placeholder={t("searchAnything", lang())}
-                aria-label={t("searchAnything", lang())}
-                enterkeyhint="search"
-                autocomplete="off"
-                autocorrect="off"
-                spellcheck={false}
-                class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
-              />
-              <Show when={query()}>
-                <button
-                  type="button"
-                  aria-label="clear"
-                  onClick={clear}
-                  class="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+            <div class="relative">
+              <div class="flex h-11 items-center gap-3 rounded-2xl border border-border bg-card px-3.5 shadow-card">
+                <span class="text-primary">
+                  <SearchIcon size={17} />
+                </span>
+                <input
+                  ref={(el: HTMLInputElement) => {
+                    /* A window with a real keyboard should not ask for a click
+                     before it will take a letter. Focusing raises no keyboard on
+                     a phone because no phone is this wide. Once the database
+                     is read, not on the next frame: on a cold start the ref
+                     runs while the database is still loading and the screen is
+                     held off the page, and focusing a node that is not in the
+                     document does nothing. An effect that reads the database is
+                     held with the screen and runs once it is on the page. */
+                    createEffect(
+                      () => db(),
+                      () => {
+                        if (!window.matchMedia("(min-width: 64rem)").matches) return;
+                        el.focus();
+                        /* The screen opening is not a rider reaching for the
+                           field, so this focus does not bring the history up
+                           over the dial. A click on the field does. */
+                        setTyping(false);
+                      },
+                    );
+                  }}
+                  value={query()}
+                  onInput={(e) => setQuery(e.currentTarget.value)}
+                  /* The field takes real typing at every width - stop names and
+                   places, not just numbers - so on a phone it raises the
+                   keyboard like any field. The dial sheet steps aside for it:
+                   two keyboards at once is one too many, and the dock's button
+                   brings the dial back when the number is the way in. */
+                  onFocus={() => {
+                    setTyping(true);
+                    if (!wide()) setDialOpen(false);
+                  }}
+                  /* Clicking a field that already has the caret raises no
+                     focus event, and on a wide window the field has held it
+                     since the screen opened - so the click is the gesture
+                     that asks for the history there. */
+                  onClick={() => setTyping(true)}
+                  /* A beat's grace before the history goes: a tap on one of its
+                     rows blurs the field before the link is followed, and a
+                     panel that vanished on the blur took the tap with it. */
+                  onBlur={() => window.setTimeout(() => setTyping(false), 150)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setTyping(false);
+                    if (e.key === "Enter") {
+                      searches.remember(query());
+                      setTyping(false);
+                    }
+                  }}
+                  placeholder={t("searchAnything", lang())}
+                  aria-label={t("searchAnything", lang())}
+                  enterkeyhint="search"
+                  autocomplete="off"
+                  autocorrect="off"
+                  spellcheck={false}
+                  class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
+                />
+                <Show when={query()}>
+                  <button
+                    type="button"
+                    aria-label="clear"
+                    onClick={clear}
+                    class="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                  >
+                    <CloseIcon size={13} />
+                  </button>
+                </Show>
+              </div>
+
+              {/* What was looked up last, hanging off the field the way any
+                  search box's history does - which is what it is. It used to
+                  be a tab over the results, which put a rider's own list in
+                  the same rack as 巴士 and 鐵路 and made "what did I look at
+                  yesterday" a filter on a search nobody had typed yet.
+
+                  Floating rather than in the column: in flow it pushed the
+                  dial half a screen down on a wide window and left the
+                  category tiles stretched around a hole. Over the page it
+                  costs the layout nothing and behaves like the autocomplete
+                  it is - open while the field is in use and empty, gone at
+                  the first keystroke or the first tap elsewhere. */}
+              <Show when={historyOpen()}>
+                <div
+                  data-recent
+                  class="app-rise absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 flex flex-col gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-lg"
                 >
-                  <CloseIcon size={13} />
-                </button>
+                  <span class="px-2 pt-1 text-[0.69rem] font-bold uppercase tracking-[0.08em] text-faint-foreground">
+                    {t("recent", lang())}
+                  </span>
+                  <div class="app-scroll flex max-h-[13.5rem] flex-col overflow-y-auto overscroll-contain">
+                    <For each={searches.recent()}>
+                      {(term) => (
+                        <div class="flex items-center">
+                          {/* The words go back into the field rather than
+                              anywhere else: a history entry is a question
+                              asked again, and the answer is whatever the
+                              question finds today - which is not necessarily
+                              what it found last week. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuery(term);
+                              setTyping(false);
+                            }}
+                            class="app-tap flex min-w-0 grow items-center gap-2.5 rounded-lg px-2 py-2 text-left"
+                          >
+                            <span class="shrink-0 text-faint-foreground">
+                              <SearchIcon size={14} />
+                            </span>
+                            <span class="tnum truncate text-[0.88rem] font-semibold text-foreground">
+                              {term}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={t("removeRecent", lang())}
+                            onClick={() => searches.forget(term)}
+                            class="app-press flex size-8 shrink-0 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+                          >
+                            <CloseIcon size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </div>
               </Show>
             </div>
+
             {/* The same dial as the phone's, in the same frame: a desktop is a
               window a rider looks up a route number in too, and a strip of
               small shortcuts made them aim at a different pad on every
@@ -462,25 +609,31 @@ export default function Search() {
           </div>
         </div>
 
-        {/* What the search found, across the full width. On a wide window this
-          is the half that scrolls; on a phone it is simply the rest of the
-          page. */}
-        <div class="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:grow">
+        {/* What the search found, across the full width - and one card for
+            all of it, the filter included.
+
+            It used to be a chip row on the page, then a card of routes, then
+            a labelled block of stops on the page again, then another card:
+            four surfaces for one answer, and the eye had to work out each
+            time whether it had crossed into something new. One frame with
+            seams inside it says the same thing in one shape - the filter is
+            part of the result, because it is what the result is a result of. */}
+        <Card class="flex min-w-0 flex-col lg:min-h-0 lg:grow">
           {/* The list's mode, and at the far end of the row how many the mode
-            found. The count used to head the list on a line of its own with
-            the tab's own name repeated beside it - a heading that said what
-            the pressed chip already says. On the row, it reads as the answer
-            to the chip: 巴士 · 1383. */}
-          <div class="flex shrink-0 items-center gap-3">
+              found. The count used to head the list on a line of its own with
+              the tab's own name repeated beside it - a heading that said what
+              the pressed chip already says. On the row, it reads as the answer
+              to the chip: 巴士 · 1383. */}
+          <div class="flex shrink-0 items-center gap-2 border-b border-border px-2.5 py-1.5">
             <div
               role="tablist"
               aria-label={t("routes", lang())}
               data-search-tabs
-              class="app-scroll flex min-w-0 grow gap-1.5 overflow-x-auto lg:flex-wrap"
+              class="app-scroll flex min-w-0 grow gap-1 overflow-x-auto lg:flex-wrap"
             >
               <For each={tabs()}>
                 {(entry) => {
-                  const on = () => shownTab() === entry.id;
+                  const on = () => tab() === entry.id;
                   return (
                     <button
                       type="button"
@@ -488,7 +641,7 @@ export default function Search() {
                       aria-selected={on() ? "true" : "false"}
                       onClick={() => setTab(entry.id)}
                       class={[
-                        "app-press flex h-8 shrink-0 items-center rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
+                        "app-press flex h-7 shrink-0 items-center rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
                         {
                           "bg-primary text-primary-foreground": on(),
                           "bg-secondary text-muted-foreground hover:text-foreground": !on(),
@@ -501,95 +654,93 @@ export default function Search() {
                 }}
               </For>
             </div>
-            <Show when={listed().length > 0}>
-              <span class="tnum shrink-0 text-[0.75rem] font-semibold text-faint-foreground">
-                {listed().length}
+            <Show when={found() > 0}>
+              <span class="tnum shrink-0 pr-1.5 text-[0.75rem] font-semibold text-faint-foreground">
+                {found()}
               </span>
             </Show>
           </div>
 
-          {/* The blocks the search found. On a wide window the route list
-              fills this space and scrolls inside its own card; the stop and
-              destination blocks that a typed place adds sit under it and are
-              given the height they need, and if the three together outgrow
-              the pane, the pane scrolls as well. On a phone the page scrolls
-              and none of that applies. */}
-          <div class="app-scroll flex flex-col gap-4 lg:min-h-0 lg:grow lg:overflow-y-auto">
-            <Show when={!nothing()} fallback={<EmptyState title={t("noResults", lang())} />}>
-              {/* The recent tab's rows are the same rows, with a way off the list
-              on each: 最近搜尋 is a list a rider owns, not a result. */}
-              <Show
-                when={listed().length > 0}
-                fallback={
-                  <Show when={shownTab() === "recent"}>
-                    <EmptyState title={t("noRecent", lang())} hint={t("noRecentHint", lang())} />
-                  </Show>
-                }
-              >
-                {/* No heading of its own: the pressed chip above names the
-                    list and the count beside it sizes it.
-
-                    On a wide window it takes the pane's height and scrolls
-                    inside its own card - with a floor, so that a query which
-                    also matched stops and places leaves this list a few rows
-                    rather than a sliver. */}
-                <section
-                  class="flex flex-col lg:min-h-56 lg:flex-1"
-                  data-recent={shownTab() === "recent" || undefined}
-                >
-                  <RouteList
-                    fills
-                    routes={listed()}
-                    lang={lang()}
-                    onRemove={shownTab() === "recent" ? (key) => frequent.forget(key) : undefined}
-                  />
-                </section>
+          {/* Everything the query answered, in the order a rider means it:
+              the routes, then the stops whose name it is, then the places it
+              is the destination of. Inside the frame they are seamed rather
+              than boxed - the card is the box. */}
+          {/* `[&>*]:shrink-0` is load-bearing: the virtualiser's own container
+              is a box of a stated height with nothing in flow inside it - its
+              rows are placed absolutely - so a flex column is free to squash
+              it to nothing, and the rows it holds then spill over the stops
+              below. */}
+          <div
+            class="app-scroll flex flex-col lg:min-h-0 lg:grow lg:overflow-y-auto [&>*]:shrink-0"
+            /* A search a rider acted on is a search worth keeping: opening
+               anything from these results is what turns the words in the field
+               into history. Typing alone is not - "1", "11", "11X" on the way
+               to 11X is three questions nobody asked. */
+            onClick={(event) => {
+              if (!empty() && (event.target as HTMLElement).closest("a")) {
+                searches.remember(query());
+              }
+            }}
+          >
+            <Show
+              when={!nothing()}
+              fallback={
+                <div class="py-6">
+                  <EmptyState title={t("noResults", lang())} />
+                </div>
+              }
+            >
+              <Show when={showRoutes() && listed().length > 0}>
+                <RouteList routes={listed()} lang={lang()} />
               </Show>
 
-              <Show when={stops().length > 0}>
-                <section class="flex flex-col gap-2.5 lg:shrink-0">
-                  <SectionLabel>{t("stopsMatched", lang())}</SectionLabel>
-                  <Card>
-                    <For each={stops()}>
-                      {(match, index) => (
-                        <>
-                          <Show when={index() > 0}>
-                            <Hairline />
-                          </Show>
-                          <a
-                            {...useLinkProps(stopLink(match.stopId))}
-                            class="app-tap flex items-center gap-3 px-3.5 py-2.5"
-                          >
-                            {/* The name once, in the language being read, and the
+              <Show when={showStops() && stops().length > 0}>
+                <SeamLabel first={!showRoutes() || listed().length === 0}>
+                  {t("stopsMatched", lang())}
+                </SeamLabel>
+                <For each={stops()}>
+                  {(match, index) => (
+                    <>
+                      <Show when={index() > 0}>
+                        <Hairline />
+                      </Show>
+                      <a
+                        {...useLinkProps(stopLink(match.stopId))}
+                        class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+                      >
+                        {/* The name once, in the language being read, and the
                             pole code beside it - which is both what tells two
                             stops of one name apart and what a rider can search
                             for directly. */}
-                            <div class="flex min-w-0 grow items-center gap-1.5">
-                              <span class="truncate text-[0.88rem] font-bold text-foreground">
-                                {stripStopCode(pick(match.stop.name, lang()))}
-                              </span>
-                              <StopCode name={match.stop.name} lang={lang()} />
-                            </div>
-                            <span class="tnum shrink-0 text-[0.75rem] font-bold text-subtle-foreground">
-                              {match.routeCount} {t("routesCount", lang())}
-                            </span>
-                          </a>
-                        </>
-                      )}
-                    </For>
-                  </Card>
-                </section>
+                        <div class="flex min-w-0 grow items-center gap-1.5">
+                          <span class="truncate text-[0.88rem] font-bold text-foreground">
+                            {stripStopCode(pick(match.stop.name, lang()))}
+                          </span>
+                          <StopCode name={match.stop.name} lang={lang()} />
+                        </div>
+                        <span class="tnum shrink-0 text-[0.75rem] font-bold text-subtle-foreground">
+                          {match.routeCount} {t("routesCount", lang())}
+                        </span>
+                      </a>
+                    </>
+                  )}
+                </For>
               </Show>
 
-              <Show when={destinations().length > 0}>
-                <section class="flex flex-col gap-2.5 lg:shrink-0">
-                  <SectionLabel>{t("towards", lang())}</SectionLabel>
-                  <RouteList routes={destinations()} lang={lang()} />
-                </section>
+              <Show when={showDest() && destinations().length > 0}>
+                <SeamLabel
+                  first={
+                    (!showRoutes() || listed().length === 0) &&
+                    (!showStops() || stops().length === 0)
+                  }
+                >
+                  {t("toLabel", lang())}
+                </SeamLabel>
+                <RouteRows routes={destinations()} lang={lang()} />
               </Show>
             </Show>
           </div>
-        </div>
+        </Card>
       </div>
       {/* The dial itself, in the house sheet: handle, drag, and the drawer
           ground its keys step up from. Non-modal, so the list above it stays

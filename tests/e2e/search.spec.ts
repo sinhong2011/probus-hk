@@ -87,24 +87,31 @@ test("opening a result navigates to that route", async ({ page }) => {
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 });
 
-test("remembers what you opened, under 最近搜尋", async ({ page }) => {
+test("remembers what you searched for, in the field's own history", async ({ page }) => {
   await page.getByRole("button", { name: "1", exact: true }).click();
   await page.locator('a[href^="/route/"]').first().click();
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 
   await page.goto("/search");
-  // The recent tab is the one the page opens on, and it holds the visit.
-  await expect(page.locator("[data-recent]")).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('[data-recent] a[href^="/route/"]')).toHaveCount(1);
-});
+  // Not a tab over the results any more: it hangs off the field, like any
+  // search box's history, and comes up when a rider is in the field.
+  await expect(page.locator("[data-recent]")).toHaveCount(0);
 
-/*
- * The router claims every link it renders and writes its own `data-active` on
- * the current one - an empty string, not "true". The travelling pill used to
- * read that attribute, so it agreed with the router on the first paint and lost
- * the argument on the first navigation: switching to 規劃 and back left the
- * switch with no pill at all, and nothing said which half you were looking at.
- */
+  await page.getByLabel(/路線、車站|Route, stop/).click();
+  const history = page.locator("[data-recent]");
+  await expect(history).toBeVisible({ timeout: 10_000 });
+
+  // The words that were typed, not the route they led to: "彌敦道" is a search
+  // a rider repeats and never a row in a list of routes.
+  await expect(history.getByRole("button", { name: "1", exact: true })).toBeVisible();
+  await expect(history.locator('a[href^="/route/"]')).toHaveCount(0);
+
+  // And the first keystroke replaces it with what that keystroke found. Typed
+  // into the field rather than dialled: reaching for the field is what put the
+  // dial down in the first place.
+  await page.getByLabel(/路線、車站|Route, stop/).fill("2");
+  await expect(history).toHaveCount(0);
+});
 test("the pill still marks the half you are on after switching", async ({ page }) => {
   const pill = page.locator('[role="tablist"] [data-ready]');
   const plan = page.locator('[role="tab"][href="/plan"]');
@@ -200,18 +207,6 @@ test("lists every route under 全部, and one kind under its tab", async ({ page
   await expect(results.count()).resolves.toBeLessThan(all);
 });
 
-test("a number typed on the recent tab falls through to every route", async ({ page }) => {
-  // Nothing has been looked up yet, so the recent list cannot answer "1";
-  // the page answers from the whole list rather than showing an empty card.
-  await page.getByRole("button", { name: "1", exact: true }).click();
-  await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('[data-search-tabs] [aria-selected="true"]')).toHaveText("全部");
-
-  // And clearing the field brings the recent tab back.
-  await page.getByRole("button", { name: "清除" }).click();
-  await expect(page.locator('[data-search-tabs] [aria-selected="true"]')).toHaveText("最近搜尋");
-});
-
 test("reads each route as its number, its operator and where it is going", async ({ page }) => {
   await page.getByRole("button", { name: "1", exact: true }).click();
   const first = page.locator('a[href^="/route/"]').first();
@@ -222,13 +217,20 @@ test("reads each route as its number, its operator and where it is going", async
   await expect(first).toContainText("竹園邨");
 });
 
-test("the dial stays put when the text field is in use", async ({ page }) => {
+test("the dial steps aside for the keyboard, and is one tap back", async ({ page }) => {
   const field = page.getByLabel(/路線、車站|Route, stop/);
+  const five = page.getByRole("button", { name: "5", exact: true });
+  await expect(five).toBeVisible({ timeout: 10_000 });
+
+  // Two keyboards at once is one too many: reaching for the field puts the
+  // dial down, and a place is something only the keyboard can type.
   await field.fill("彌敦道");
   await expect(page.locator('a[href^="/stop/"]').first()).toBeVisible({ timeout: 10_000 });
-  // Typing a place did not take the dial away; it is the screen's fixture.
-  await expect(page.getByRole("button", { name: "5", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "backspace" })).toBeVisible();
+  await expect(five).toBeHidden();
+
+  // The dock's button is the way back to it.
+  await page.getByRole("button", { name: "按號碼" }).click();
+  await expect(five).toBeVisible();
 });
 
 test("keeps the dial pinned to the bottom of a short page", async ({ page }) => {
@@ -246,9 +248,10 @@ test("remembers what you opened last, and forgets it on request", async ({ page 
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 
   await page.goto("/search");
+  await page.getByLabel(/路線、車站|Route, stop/).click();
   const recent = page.locator("[data-recent]");
   await expect(recent).toBeVisible({ timeout: 10_000 });
-  await expect(recent.locator('a[href^="/route/"]')).toHaveCount(1);
+  await expect(recent.getByRole("button", { name: "1", exact: true })).toBeVisible();
 
   await recent.getByRole("button", { name: "從最近搜尋移除" }).click();
   await expect(recent).toHaveCount(0);
