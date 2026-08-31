@@ -111,6 +111,9 @@ const railMapRoute = createRoute({
 const railLineRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/rail/$code",
+  // The two stations of the trip being read, like the planner's - a fare
+  // looked up between two stations survives a reload and can be sent on.
+  validateSearch: endpointSearch,
   component: lazyScreen(() => import("~/routes/RailLine")),
 });
 

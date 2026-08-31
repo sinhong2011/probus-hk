@@ -5,12 +5,13 @@ import { ChevronRightIcon, CloseIcon, PinIcon, SearchIcon, SwapIcon, WalkIcon } 
 import { Modal } from "./Modal";
 import { RoutePlate } from "./RoutePlate";
 import { useDb } from "~/data/context";
-import { lineName } from "~/data/rail";
+import { lineName, lineRank } from "~/data/rail";
 import { planRail, type RailJourney, type RailLeg } from "~/data/railPlanner";
-import { lineOf, railStations, servicesAt } from "~/data/railTimes";
+import { lineOf, railLineCodes, railStations, servicesAt, stationsOnLine } from "~/data/railTimes";
 import type { KeyedRoute, RouteDb } from "~/data/types";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { plateStyle } from "~/lib/operators";
+import { createWide } from "~/lib/wide";
 
 /**
  * Station to station across the railway: pick both ends, read the ways
@@ -106,7 +107,7 @@ function JourneyCard(props: { journey: RailJourney; lang: Lang; suggested: boole
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open() ? "true" : "false"}
-        class="mb-tap flex w-full flex-col gap-2.5 px-3.5 py-3 text-left"
+        class="app-tap flex w-full flex-col gap-2.5 px-3.5 py-3 text-left"
         data-rail-journey
       >
         <div class="flex w-full items-center justify-between gap-3">
@@ -178,7 +179,7 @@ function JourneyCard(props: { journey: RailJourney; lang: Lang; suggested: boole
                       return !route();
                     },
                   })}
-                  class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+                  class="app-tap flex items-center gap-3 px-3.5 py-2.5"
                 >
                   <RoutePlate route={leg.line} co={["mtr"]} size="sm" />
                   <div class="flex min-w-0 grow flex-col gap-0.5">
@@ -221,7 +222,7 @@ function EndRow(props: {
     <button
       type="button"
       onClick={props.onPick}
-      class="mb-press flex h-12 w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-border bg-card px-3.5 text-left transition-colors duration-state"
+      class="app-press flex h-12 w-full items-center gap-2.5 rounded-2xl bg-card px-3.5 text-left shadow-card transition-colors duration-state"
       data-rail-end={props.tone}
     >
       <span class={props.tone === "from" ? "text-primary" : "text-destructive"}>
@@ -269,15 +270,9 @@ export function RailPlanner(props: { lang: Lang }) {
     },
   );
   const [query, setQuery] = createSignal("");
-
-  /** Only stations the database knows, so every one on the list has a name. */
-  const stations = createMemo(() =>
-    railStations()
-      .filter((code) => db().stopList[code])
-      .sort((a, b) =>
-        stationName(db(), a, props.lang).localeCompare(stationName(db(), b, props.lang), "zh-HK"),
-      ),
-  );
+  /* On a wide window the picker is a panel from the right - a hundred
+     stations read as a column beside the page, not a sheet over it. */
+  const wide = createWide();
 
   const known = (code: string | undefined | null) =>
     code && railStations().includes(code) ? code : null;
@@ -297,18 +292,36 @@ export function RailPlanner(props: { lang: Lang }) {
       replace: true,
     });
 
-  const matches = createMemo(() => {
+  /**
+   * The list, as the network is held in the head: line by line, in the order
+   * the MTR's own map gives them, each line's stations in running order. An
+   * interchange is on every line it serves - looked for under the wrong one,
+   * it is still found. Only stations the database knows, so every row has a
+   * name; a search keeps the lines that still have a station to show.
+   */
+  const groups = createMemo(() => {
     const q = query().trim().toLowerCase();
-    return stations().filter((code) => {
-      if (!q) return true;
+    const wanted = (code: string) => {
       const stop = db().stopList[code];
+      if (!stop) return false;
+      if (!q) return true;
       return (
         code.toLowerCase().startsWith(q) ||
-        stop?.name.zh.toLowerCase().includes(q) ||
-        stop?.name.en.toLowerCase().includes(q)
+        stop.name.zh.toLowerCase().includes(q) ||
+        stop.name.en.toLowerCase().includes(q)
       );
-    });
+    };
+    return railLineCodes()
+      .sort((a, b) => lineRank(a) - lineRank(b))
+      .map((line) => ({ line, stations: stationsOnLine(line).filter(wanted) }))
+      .filter((group) => group.stations.length > 0);
   });
+
+  /** The other lines a station is on, in the network map's order. */
+  const interchanges = (code: string, line: string) =>
+    [...new Set(servicesAt(code).map(lineOf))]
+      .filter((other) => other !== line)
+      .sort((a, b) => lineRank(a) - lineRank(b));
 
   const journeys = createMemo(() => {
     const a = from();
@@ -356,10 +369,9 @@ export function RailPlanner(props: { lang: Lang }) {
             type="button"
             onClick={swap}
             aria-label={t("swapEnds", props.lang)}
-            title={t("swapEnds", props.lang)}
             disabled={!from() && !to()}
             data-rail-swap
-            class="mb-press flex w-11 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-border bg-card text-muted-foreground disabled:text-faint-foreground/50"
+            class="app-press flex w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-muted-foreground shadow-card disabled:text-faint-foreground/50"
           >
             <SwapIcon size={17} />
           </button>
@@ -402,9 +414,11 @@ export function RailPlanner(props: { lang: Lang }) {
         onClose={() => setPicking(null)}
         title={shownEnd() === "from" ? t("fromStation", props.lang) : t("toStation", props.lang)}
         lang={props.lang}
+        side={wide() ? "right" : "bottom"}
+        description={t("chooseStation", props.lang)}
       >
         <div class="flex flex-col gap-3">
-          <div class="flex h-11 items-center gap-2.5 rounded-2xl border-[1.5px] border-border bg-card px-3.5">
+          <div class="flex h-11 items-center gap-2.5 rounded-2xl bg-card px-3.5 shadow-card">
             <span class="text-primary">
               <SearchIcon size={17} />
             </span>
@@ -428,43 +442,68 @@ export function RailPlanner(props: { lang: Lang }) {
               </button>
             </Show>
           </div>
-          <Card>
-            <For each={matches()}>
-              {(code, index) => (
-                <>
-                  <Show when={index() > 0}>
-                    <Hairline />
-                  </Show>
-                  <button
-                    type="button"
-                    onClick={() => choose(code)}
-                    class="mb-tap flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left"
-                    data-rail-station={code}
-                  >
-                    {/* The lines the station is on, as the colours a rider
-                        knows them by - which is also how an interchange
-                        shows itself: more than one dot. */}
-                    <span class="flex shrink-0 items-center gap-0.5">
-                      <For each={[...new Set(servicesAt(code).map(lineOf))]}>
-                        {(line) => (
-                          <span
-                            class="size-2.5 rounded-full"
-                            style={{ background: colourOf(line) }}
-                          />
-                        )}
-                      </For>
-                    </span>
+          <Show
+            when={groups().length > 0}
+            fallback={
+              <span class="px-1 py-6 text-center text-[0.88rem] font-semibold text-subtle-foreground">
+                {t("noResults", props.lang)}
+              </span>
+            }
+          >
+            <For each={groups()}>
+              {(group) => (
+                <div class="flex flex-col gap-1.5">
+                  {/* The line, as it is known: its plate and its name. */}
+                  <div class="flex items-center gap-2.5 px-1 pt-1.5">
+                    <RoutePlate route={group.line} co={["mtr"]} size="sm" />
                     <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
-                      {stationName(db(), code, props.lang)}
+                      {pick(lineName(group.line), props.lang)}
                     </span>
-                    <Chip class="shrink-0">
-                      <span class="tnum">{code}</span>
-                    </Chip>
-                  </button>
-                </>
+                    <span class="tnum shrink-0 text-[0.75rem] font-semibold text-faint-foreground">
+                      {group.stations.length}
+                    </span>
+                  </div>
+                  <Card>
+                    <For each={group.stations}>
+                      {(code, index) => (
+                        <>
+                          <Show when={index() > 0}>
+                            <Hairline />
+                          </Show>
+                          <button
+                            type="button"
+                            onClick={() => choose(code)}
+                            class="app-tap flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left"
+                            data-rail-station={code}
+                          >
+                            <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
+                              {stationName(db(), code, props.lang)}
+                            </span>
+                            {/* The other lines you can change to here, as the
+                                colours a rider knows them by - which is how an
+                                interchange shows itself: a dot or two. */}
+                            <span class="flex shrink-0 items-center gap-0.5">
+                              <For each={interchanges(code, group.line)}>
+                                {(line) => (
+                                  <span
+                                    class="size-2.5 rounded-full"
+                                    style={{ background: colourOf(line) }}
+                                  />
+                                )}
+                              </For>
+                            </span>
+                            <Chip class="shrink-0">
+                              <span class="tnum">{code}</span>
+                            </Chip>
+                          </button>
+                        </>
+                      )}
+                    </For>
+                  </Card>
+                </div>
               )}
             </For>
-          </Card>
+          </Show>
         </div>
       </Modal>
     </div>

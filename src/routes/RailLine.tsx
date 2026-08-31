@@ -1,7 +1,6 @@
-import { useLinkProps, useParams } from "@tanstack/solid-router";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { useLinkProps, useNavigate, useParams, useSearch } from "@tanstack/solid-router";
+import { For, Show, createMemo } from "solid-js";
 import { Card, Chip, EmptyState, Hairline, Reveal, SectionLabel } from "~/components/Chrome";
-import { Trail } from "~/components/Breadcrumb";
 import { ChevronRightIcon, CloseIcon, PinIcon } from "~/components/Icons";
 import { DirectionTrains } from "~/components/DirectionTrains";
 import { Page, Section, SplitPage } from "~/components/Layout";
@@ -53,28 +52,40 @@ export default function RailLine() {
    * a railway station's own question, both directions and their platforms - so
    * a rider who only ever taps once never meets the second half of this at all.
    */
-  const [fromId, setFromId] = createSignal<string | null>(null);
-  const [toId, setToId] = createSignal<string | null>(null);
+  /*
+   * The trip lives in the URL rather than in a signal: two taps that name a
+   * journey have named a place worth reloading and worth sending, and the
+   * URL was already the state everywhere else the screen keeps one. Replace,
+   * not push - re-picking stations is thinking, not travelling.
+   */
+  const search = useSearch({ from: "/rail/$code" });
+  const navigate = useNavigate();
+  const fromId = () => search().from ?? null;
+  const toId = () => search().to ?? null;
+  const setTrip = (from: string | null, to: string | null) =>
+    void navigate({
+      to: "/rail/$code",
+      params: { code: params().code },
+      search: { ...(from !== null && { from }), ...(to !== null && { to }) },
+      replace: true,
+    });
 
   const select = (id: string) => {
     // Tapping the open station closes it, and closing is what clears the trip:
     // there is no destination without somewhere to leave from.
     if (fromId() === id) {
-      setFromId(null);
-      setToId(null);
+      setTrip(null, null);
       return;
     }
     if (!fromId()) {
-      setFromId(id);
-      setToId(null);
+      setTrip(id, null);
       return;
     }
-    setToId((current) => (current === id ? null : id));
+    setTrip(fromId(), toId() === id ? null : id);
   };
 
   const clearTrip = () => {
-    setFromId(null);
-    setToId(null);
+    setTrip(null, null);
   };
 
   /**
@@ -139,7 +150,6 @@ export default function RailLine() {
         <SplitPage
           aside={
             <>
-              <Trail extra={[{ href: "/rail", label: t("rail", lang()) }]} />
               <LineHeader line={l()} lang={lang()} count={stations().length} />
             </>
           }
@@ -186,7 +196,6 @@ export default function RailLine() {
 function EmptyStatePage(props: { lang: Lang }) {
   return (
     <Page>
-      <Trail extra={[{ href: "/rail", label: t("rail", props.lang) }]} />
       <NotFound kind="line" />
     </Page>
   );
@@ -234,7 +243,7 @@ function LineHeader(props: { line: RailLine; lang: Lang; count: number }) {
               <Hairline />
               <a
                 {...useLinkProps(routeLink(route.key))}
-                class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+                class="app-tap flex items-center gap-3 px-3.5 py-2.5"
               >
                 <span
                   class="size-2.5 shrink-0 rounded-full"
@@ -323,7 +332,7 @@ function StationRow(props: {
         type="button"
         onClick={props.onToggle}
         aria-expanded={props.open ? "true" : "false"}
-        class="mb-tap flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
+        class="app-tap flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
       >
         {/* The line, drawn. The negative margin cancels the row's padding so
             one row's spine meets the next one's rather than stopping short. */}
@@ -457,7 +466,7 @@ function FareCard(props: { trip: Trip; lang: Lang; onClear: () => void }) {
           aria-label={t("clearTrip", props.lang)}
           title={t("clearTrip", props.lang)}
           onClick={props.onClear}
-          class="mb-press flex size-7 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground"
+          class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground"
         >
           <CloseIcon size={12} />
         </button>

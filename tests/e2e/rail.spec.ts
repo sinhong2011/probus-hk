@@ -44,6 +44,16 @@ test("a rail arrival says which platform", async ({ page }) => {
   // Minutes alone are half an answer on a railway: the train may be leaving
   // from the other side of the island.
   await expect(page.getByText(/月台\s*\d/).first()).toBeVisible({ timeout: 15_000 });
+
+  // A train is not a line: opened, a station also says where the next one is
+  // actually going, which on a branch or at the end of the day is not the
+  // terminus on the plate.
+  const row = page.locator('[data-stop-seq="6"]');
+  await row.locator("button[aria-expanded]").click();
+  const dest = row.locator("[data-rail-next-dest]");
+  await expect(dest).toBeVisible();
+  await expect(dest).toContainText("往 荃灣");
+  await expect(dest).toHaveAttribute("data-rail-next-dest", "terminus");
 });
 
 /**
@@ -60,7 +70,7 @@ test("the railway has a screen of its own, organised as lines", async ({ page })
   await expect(page.getByText("16 個站")).toBeVisible();
 
   const tabs = page.getByRole("navigation", { name: "導覽" });
-  await expect(tabs.getByRole("link", { name: "鐵路" })).toHaveAttribute("aria-current", "page");
+  await expect(tabs.getByRole("button", { name: "更多" })).toHaveAttribute("aria-current", "page");
 });
 
 test("a line's direction opens that direction's route", async ({ page }) => {
@@ -138,10 +148,10 @@ test("picks both stations from a sheet, and swaps them", async ({ page }) => {
   await page.goto("/rail");
   await page.locator('[data-rail-end="from"]').click();
   await page.getByLabel("選擇車站").fill("中環");
-  await page.locator('[data-rail-station="CEN"]').click();
+  await page.locator('[data-rail-station="CEN"]').first().click();
 
   await page.locator('[data-rail-end="to"]').click();
-  await page.locator('[data-rail-station="TSW"]').click();
+  await page.locator('[data-rail-station="TSW"]').first().click();
   await expect(page).toHaveURL(/from=CEN/);
   await expect(page).toHaveURL(/to=TSW/);
   await expect(page.locator("[data-rail-journey]").first()).toContainText("直達");
@@ -277,11 +287,13 @@ test("the light rail unfolds when you go into it", async ({ page }) => {
 
 /**
  * What the map's sheet shows is the URL's: a link to the map at a station is
- * a link, a reload comes back to it, and back closes it.
+ * a link, a reload comes back to it, and back leaves the map. Nothing is up
+ * until something is picked.
  */
 test("the network map's sheet lives in the URL", async ({ page }) => {
   await page.goto("/rail/map");
   await settled(page);
+  await expect(page.locator('div[aria-label="路綫圖"]')).toHaveCount(0);
 
   const station = page.locator('g[data-station="YMT"] circle').first();
   const box = await station.boundingBox();
@@ -299,4 +311,37 @@ test("the network map's sheet lives in the URL", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /荃灣綫/ }).first()).toBeVisible({
     timeout: 15_000,
   });
+});
+
+/**
+ * A bus stop carries its fare on the row; a station carried nothing, because
+ * a rail fare exists only between two stations. Once the rider has said where
+ * they board, every station they could alight at can be priced from there.
+ */
+test("a station down the line from the boarding one says what the ride costs", async ({ page }) => {
+  await page.goto("/route/TWL%2B1%2BCentral%2BTsuen%20Wan");
+  const mongKok = page.locator('[data-stop-seq="6"]');
+  await expect(mongKok).toBeVisible({ timeout: 15_000 });
+  await expect(mongKok).toContainText("旺角");
+
+  await mongKok.locator("button[aria-expanded]").click();
+  await mongKok.getByRole("button", { name: "喺呢度上車" }).click();
+
+  // While the rider is choosing where to get off, each candidate carries the
+  // price of getting off there - the number the choice turns on.
+  const cheungShaWan = page.locator('[data-stop-seq="9"]');
+  await expect(cheungShaWan).toContainText("長沙灣");
+  const fare = cheungShaWan.locator("[data-rail-stop-fare]");
+  await expect(fare).toBeVisible({ timeout: 10_000 });
+  await expect(fare).toContainText("八達通");
+  await expect(fare).toContainText("單程票");
+  await expect(fare).toContainText(/\$\d+(\.\d)?/);
+
+  // A station the ride does not reach is not priced.
+  await expect(page.locator('[data-stop-seq="3"] [data-rail-stop-fare]')).toHaveCount(0);
+
+  // Choosing it turns the pair into a ride, and the ride carries the same fare.
+  await cheungShaWan.locator("button").first().click();
+  await expect(page.getByText("車程")).toBeVisible();
+  await expect(page.getByText("$5.9").first()).toBeVisible();
 });

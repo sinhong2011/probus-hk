@@ -36,7 +36,7 @@ function LineCard(props: { line: RailLine; lang: Lang }) {
 
       <a
         {...useLinkProps(railLink(props.line.code))}
-        class="mb-tap flex items-center gap-3 px-3.5 py-3"
+        class="app-tap flex items-center gap-3 px-3.5 py-3"
       >
         <RoutePlate route={props.line.code} co={["mtr"]} size="md" />
         <div class="flex min-w-0 grow flex-col gap-0.5">
@@ -62,7 +62,7 @@ function LineCard(props: { line: RailLine; lang: Lang }) {
             <Hairline />
             <a
               {...useLinkProps(routeLink(route.key))}
-              class="mb-tap flex items-center gap-2.5 px-3.5 py-2.5"
+              class="app-tap flex items-center gap-2.5 px-3.5 py-2.5"
             >
               <span
                 class="size-2 shrink-0 rounded-full"
@@ -88,7 +88,7 @@ function LightRailRow(props: { route: KeyedRoute; lang: Lang }) {
   return (
     <a
       {...useLinkProps(routeLink(props.route.key))}
-      class="mb-tap flex items-center gap-3 px-3.5 py-2.5"
+      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
     >
       <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
       <span class="min-w-0 grow truncate text-[0.88rem] font-bold text-foreground">
@@ -125,7 +125,7 @@ export default function Rail() {
              it is offered before the list rather than buried under it. */
           <a
             {...useLinkProps({ to: "/rail/map" })}
-            class="mb-press flex h-8 items-center gap-1.5 rounded-full bg-secondary pl-2.5 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground"
+            class="app-press flex h-8 items-center gap-1.5 rounded-full bg-secondary pl-2.5 pr-3 text-[0.81rem] font-bold text-muted-foreground transition-colors duration-state active:text-foreground"
           >
             <MapIcon size={13} />
             {t("networkMap", lang())}
@@ -162,7 +162,7 @@ export default function Rail() {
               <For each={lines()}>
                 {(line, index) => (
                   <CardColumnItem
-                    class="motion-safe:mb-rise"
+                    class="motion-safe:app-rise"
                     style={{ "animation-delay": `${Math.min(index(), 8) * 24}ms` }}
                   >
                     <LineCard line={line} lang={lang()} />
