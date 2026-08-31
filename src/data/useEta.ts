@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/solid-query";
-import { latest, type Accessor } from "solid-js";
+import type { Accessor } from "solid-js";
 import { useDb } from "./context";
 import { fetchEtaAllOperators } from "./eta";
 import { live } from "./live";
+import { observe } from "./observe";
 import type { Company, Eta, KeyedRoute } from "./types";
 
 /** Counts the queries that stand for no target, so each has a key of its own. */
@@ -23,7 +23,11 @@ export interface EtaTarget {
  *
  * `undefined` means the answer is still in flight, which is a different thing
  * from `[]`, "there are no buses". Collapsing the two made every stop claim
- * 暫無班次 for as long as the request took.
+ * 暫無班次 for as long as the request took. On every poll after the first the
+ * last answer stays until the new one lands.
+ *
+ * A plain signal, not a query read - see `./observe` for why that matters
+ * here more than it should.
  *
  * Two rows asking about the same stop on the same route are one query: a
  * route listed at a kerb and the same route open in a sheet share a fetch and
@@ -64,19 +68,6 @@ export function useEta(
   };
 
   /*
-   * Options are read under `latest`, and this is not optional.
-   *
-   * A query's options are evaluated once, synchronously, as the component is
-   * set up. A target that reads another query's answer - the buses placed from
-   * the open stop's arrivals, say - reads a value that may still be in flight,
-   * and a pending read during setup does not wait: it throws, the component is
-   * torn down and set up again when the value lands, and every query in it is
-   * created afresh each time. With a page of forty rows that is a storm of
-   * observers that never settles. `latest` hands back the last settled value
-   * instead, so the options are built from what is known and the query simply
-   * re-keys when the rest arrives.
-   */
-  /*
    * A row with nothing to ask about still holds a query, disabled. It used
    * to hold the same one as every other such row - one key for "nothing" -
    * so forty off-screen rows were forty observers on one query, and every
@@ -84,14 +75,12 @@ export function useEta(
    */
   const idle = `idle:${nextIdle++}`;
 
-  const query = useQuery(() => {
-    const t = latest(subject);
+  const query = observe<Eta[]>(() => {
+    const t = subject();
     return {
       ...live(),
-      queryKey: t
-        ? (["eta", t.route.key, t.seq, t.stopIdByCo, limit] as const)
-        : (["eta", idle] as const),
-      enabled: t !== null && latest(target) !== null,
+      queryKey: t ? ["eta", t.route.key, t.seq, t.stopIdByCo, limit] : ["eta", idle],
+      enabled: t !== null && target() !== null,
       queryFn: async (): Promise<Eta[]> => {
         if (!t) return [];
         try {
@@ -109,13 +98,10 @@ export function useEta(
   });
 
   return () => {
-    // Reading the data while it is in flight suspends, which keeps whatever
-    // was on screen there until the answer lands - the skeleton on a first
-    // load, the old numbers on every poll after.
-    if (target()) return query.data;
+    if (target()) return query.data();
     // No target - the row is off screen, or the route has not resolved. That
     // is "no answer", not "no buses", unless an answer is being kept.
-    return options.keepLast && query.isSuccess ? query.data : undefined;
+    return options.keepLast ? query.data() : undefined;
   };
 }
 

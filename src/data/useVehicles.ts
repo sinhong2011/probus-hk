@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/solid-query";
-import { createEffect, createMemo, latest, type Accessor } from "solid-js";
+import { createEffect, createMemo, type Accessor } from "solid-js";
 import { hasLiveFeed } from "./eta";
 import { fetchGmbRouteEtaTable } from "./eta/gmb";
 import { fetchKmbRouteEtaTable } from "./eta/kmb";
 import { live } from "./live";
+import { observe } from "./observe";
 import { pacedByDistance, pacedByFeed, type RideTime } from "./pace";
 import type { Eta, KeyedRoute } from "./types";
 import type { LatLng } from "~/lib/geo";
@@ -92,6 +92,10 @@ const empty = (status: VehicleStatus, ride: RideTime): VehicleFeed => ({
  * `undefined` means the answer is still in flight, which is a different thing
  * from an empty feed - the same distinction `useEta` draws, and for the same
  * reason: a rider waiting is not a rider being told there is nothing.
+ *
+ * A plain signal, not a query read - see `./observe`. The ride time is read
+ * by a memo, and a memo that read the query during a poll was held there
+ * with everything downstream of it.
  */
 export function useVehicles(target: () => VehicleTarget | null): Accessor<VehicleFeed | undefined> {
   let previous: Vehicle[] = [];
@@ -145,10 +149,8 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
     return { status: "ready" as const, vehicles: tracked, ride };
   };
 
-  // Under `latest` for the reason given in `useEta`: the target reads the
-  // open stop's arrivals, which are another query's answer.
-  const query = useQuery(() => {
-    const t = latest(target);
+  const query = observe<VehicleFeed>(() => {
+    const t = target();
     return {
       ...live(),
       /*
@@ -162,7 +164,7 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
        * synchronously, never from what a query answered; the answer drives a
        * refetch instead, below.
        */
-      queryKey: ["vehicles", t?.route.key ?? ""] as const,
+      queryKey: ["vehicles", t?.route.key ?? ""],
       enabled: t !== null,
       queryFn: () => feed(t as VehicleTarget),
     };
@@ -180,7 +182,7 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
    * one reads the new arrivals.
    */
   const arrivals = createMemo(() => {
-    const t = latest(target);
+    const t = target();
     return t?.atStop
       ? `${t.atStop.seq}:${t.atStop.etas.map((eta) => eta.at.getTime()).join(",")}`
       : "";
@@ -188,9 +190,9 @@ export function useVehicles(target: () => VehicleTarget | null): Accessor<Vehicl
   createEffect(
     () => arrivals(),
     (now, before) => {
-      if (before !== undefined && now !== before) void query.refetch({ cancelRefetch: false });
+      if (before !== undefined && now !== before) query.refetch();
     },
   );
 
-  return () => (target() ? query.data : undefined);
+  return () => (target() ? query.data() : undefined);
 }
