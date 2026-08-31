@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
   CloseIcon,
   DialpadIcon,
+  GridIcon,
   HistoryIcon,
   SearchIcon,
   TrashIcon,
@@ -173,6 +174,27 @@ function RouteItem(props: {
         )}
       </Show>
     </div>
+  );
+}
+
+/**
+ * The sheet's own way out, at the top right where a dialog's has always been.
+ *
+ * The drawer already closes by dragging it down, by tapping outside it and by
+ * Escape - but the first of those has to be discovered, and the other two are
+ * a keyboard and a scrim that a thumb over the middle of a phone cannot see.
+ * A cross costs one corner and asks nothing of anybody.
+ */
+function SheetClose(props: { lang: Lang; onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={t("close", props.lang)}
+      onClick={props.onClose}
+      class="app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors duration-state hover:text-foreground"
+    >
+      <CloseIcon size={14} />
+    </button>
   );
 }
 
@@ -862,16 +884,19 @@ export default function Search() {
         <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
           <div class="flex items-center justify-between gap-3">
             <SectionLabel>{t("recent", lang())}</SectionLabel>
-            <button
-              type="button"
-              onClick={() => {
-                frequent.clear();
-                setSheet(undefined);
-              }}
-              class="app-press rounded-lg px-2 py-1 text-[0.75rem] font-bold text-primary"
-            >
-              {t("clearQuery", lang())}
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  frequent.clear();
+                  setSheet(undefined);
+                }}
+                class="app-press rounded-lg px-2 py-1 text-[0.75rem] font-bold text-primary"
+              >
+                {t("clearQuery", lang())}
+              </button>
+              <SheetClose lang={lang()} onClose={() => setSheet(undefined)} />
+            </div>
           </div>
           <Card>
             <RouteRows
@@ -948,10 +973,19 @@ function Categories(props: {
     <button
       type="button"
       onClick={() => setAllOpen(true)}
-      class="app-press flex shrink-0 items-center gap-0.5 self-center rounded-full bg-secondary py-1 pl-2.5 pr-1.5 text-[0.69rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground"
+      /* No `self-center` on a phone: the row's other children are the category
+         chips, and stretching to them is what makes this the same height as
+         them without either one naming a number. A wide window puts it in the
+         heading instead, where centring is right. */
+      class="app-press flex shrink-0 items-center gap-1 rounded-full bg-secondary py-0.5 pl-0.5 pr-2 text-[0.69rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground lg:self-center lg:py-1 lg:pl-1"
     >
+      {/* The same badge the categories wear, in the neutral tint rather than
+          in a colour of its own: it is the row's own furniture, and it has to
+          sit at their height without either of them naming a number. */}
+      <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-card text-subtle-foreground">
+        <GridIcon size={13} />
+      </span>
       {t("viewAll", props.lang)}
-      <ChevronRightIcon size={12} />
     </button>
   );
 
@@ -1048,7 +1082,10 @@ function Categories(props: {
         class="z-50 max-w-[32rem] !pb-[calc(var(--tabbar-height)+0.25rem)] lg:!pb-4"
       >
         <div class="flex flex-col gap-2.5 px-3.5 pb-4 pt-1">
-          <SectionLabel>{t("categories", props.lang)}</SectionLabel>
+          <div class="flex items-center justify-between gap-3">
+            <SectionLabel>{t("categories", props.lang)}</SectionLabel>
+            <SheetClose lang={props.lang} onClose={() => setAllOpen(false)} />
+          </div>
           <Card>
             <For each={CATEGORIES}>
               {(item, index) => (
