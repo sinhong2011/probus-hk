@@ -14,19 +14,20 @@ import {
 import { CardColumns, CardColumnItem, Page, RowCard, Section } from "~/components/Layout";
 import {
   ChevronRightIcon,
+  MapIcon,
   MegaphoneIcon,
   PinIcon,
   RadiusIcon,
   RefreshIcon,
 } from "~/components/Icons";
 import { RouteLine } from "~/components/RouteRow";
-import { routeLink } from "~/lib/links";
+import { browseLink, routeLink } from "~/lib/links";
 import { RoutePlate } from "~/components/RoutePlate";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { StopCard } from "~/components/StopCard";
 import { StopListSkeleton } from "~/components/Skeleton";
 import { useDb } from "~/data/context";
-import { presetRoutes } from "~/data/presets";
+import { presetRoutes, scenicHighlights } from "~/data/presets";
 import { operatorLabel } from "~/lib/operators";
 import {
   nearbyStopClusters,
@@ -98,39 +99,112 @@ function PopularRoutes(props: { lang: Lang }) {
         >
           {t("popularRoutes", props.lang)}
         </SectionLabel>
+        {/* Plain rows only: the card seams and columns itself. */}
         <RowCard>
           <For each={routes()}>
-            {(route, index) => (
-              <>
-                <Show when={index() > 0}>
-                  <Hairline />
-                </Show>
-                <a
-                  {...useLinkProps(routeLink(route.key))}
-                  class="app-tap flex items-center gap-3 px-3.5 py-2.5"
-                >
-                  <RoutePlate route={route.route} co={route.co} size="sm" />
-                  <div class="flex min-w-0 grow flex-col gap-0.5">
-                    <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                      <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
-                        {t("towards", props.lang)}
-                      </span>
-                      {pick(route.dest, props.lang)}
+            {(route) => (
+              <a
+                {...useLinkProps(routeLink(route.key))}
+                class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+              >
+                <RoutePlate route={route.route} co={route.co} size="sm" />
+                <div class="flex min-w-0 grow flex-col gap-0.5">
+                  <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                    <span class="mr-1 text-[0.75rem] font-semibold text-subtle-foreground">
+                      {t("towards", props.lang)}
                     </span>
-                    <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-                      {operatorLabel(route.co, props.lang)} · {pick(route.orig, props.lang)}
-                    </span>
-                  </div>
-                  <span class="text-faint-foreground">
-                    <ChevronRightIcon size={15} />
+                    {pick(route.dest, props.lang)}
                   </span>
-                </a>
-              </>
+                  <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                    {operatorLabel(route.co, props.lang)} · {pick(route.orig, props.lang)}
+                  </span>
+                </div>
+                <span class="text-faint-foreground">
+                  <ChevronRightIcon size={15} />
+                </span>
+              </a>
             )}
           </For>
         </RowCard>
       </Section>
     </Show>
+  );
+}
+
+/**
+ * The buses tourists and day-trippers ride for the view - one route fronting
+ * each scenic series, so the list spans the Peak, the beaches, the corridor
+ * and Lantau rather than six numbers from the same coast. Leads the screen
+ * only when there is no position; a located rider gets `ScenicLink` instead.
+ */
+function ScenicRoutes(props: { lang: Lang }) {
+  const db = useDb();
+  const highlights = createMemo(() => scenicHighlights(db()));
+
+  return (
+    <Show when={highlights().length > 0}>
+      <Section>
+        <SectionLabel
+          trailing={
+            <a
+              {...useLinkProps(browseLink("tourism"))}
+              class="app-tap text-[0.75rem] font-semibold text-primary"
+            >
+              {t("more", props.lang)}
+            </a>
+          }
+        >
+          {t("scenicRoutes", props.lang)}
+        </SectionLabel>
+        {/* Plain rows only: the card draws its own seams, and on a wide
+            window flows the rows into columns - a Hairline child would sit
+            in a grid cell of its own and tear the card apart. */}
+        <RowCard>
+          <For each={highlights()}>
+            {(entry) => (
+              <a
+                {...useLinkProps(routeLink(entry.route.key))}
+                class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+              >
+                <RoutePlate route={entry.route.route} co={entry.route.co} size="sm" />
+                <div class="flex min-w-0 grow flex-col gap-0.5">
+                  <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                    {pick(entry.series.name, props.lang)}
+                  </span>
+                  <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                    {t("towards", props.lang)} {pick(entry.route.dest, props.lang)} ·{" "}
+                    {operatorLabel(entry.route.co, props.lang)}
+                  </span>
+                </div>
+                <span class="text-faint-foreground">
+                  <ChevronRightIcon size={15} />
+                </span>
+              </a>
+            )}
+          </For>
+        </RowCard>
+      </Section>
+    </Show>
+  );
+}
+
+/**
+ * The located rider's way into the same catalogue. Nearby stops are the
+ * screen's answer; this is one quiet line at the bottom, not a section
+ * competing with them.
+ */
+function ScenicLink(props: { lang: Lang }) {
+  return (
+    <a
+      {...useLinkProps(browseLink("tourism"))}
+      class="app-press flex items-center gap-2.5 rounded-xl bg-card px-3.5 py-2.5 text-subtle-foreground shadow-card"
+    >
+      <MapIcon size={14} />
+      <span class="min-w-0 grow truncate text-[0.81rem] font-bold">
+        {t("scenicRoutes", props.lang)}
+      </span>
+      <ChevronRightIcon size={13} />
+    </a>
   );
 }
 
@@ -553,6 +627,9 @@ export default function Nearby() {
          * blank until a permission dialog is answered is not a home screen.
          */}
         <Show when={position() === null}>
+          {/* The scenic list leads: a rider with no position granted is more
+              often a visitor planning a day than a commuter chasing a stop. */}
+          <ScenicRoutes lang={lang()} />
           <PopularRoutes lang={lang()} />
         </Show>
 
@@ -630,6 +707,10 @@ export default function Nearby() {
           </Show>
         </Show>
       </Section>
+
+      <Show when={position() !== null}>
+        <ScenicLink lang={lang()} />
+      </Show>
     </Page>
   );
 }

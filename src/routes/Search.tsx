@@ -306,6 +306,12 @@ export default function Search() {
 
   return (
     <SplitPage
+      /* On the recent tab the pane's height is handed to the content: the
+         recent list scrolls inside its own frame and the categories keep
+         their place on the screen instead of being pushed off the bottom
+         by however long the history has grown. The other tabs are one long
+         list each - for them the pane scrolling is the right thing. */
+      mainFills={shownTab() === "recent"}
       dock={
         /* Always there, and nothing on the screen can put a keyboard over it:
            the dial is how a route number is typed here, and the field above
@@ -395,7 +401,7 @@ export default function Search() {
         </>
       }
     >
-      <div class="flex flex-col gap-4">
+      <div class={["flex flex-col gap-4", { "min-h-0 grow": shownTab() === "recent" }]}>
         {/* The list's mode. One row that scrolls sideways on a phone rather
             than wrapping, so the list under it starts at the same height
             whichever tab is on. */}
@@ -403,7 +409,7 @@ export default function Search() {
           role="tablist"
           aria-label={t("routes", lang())}
           data-search-tabs
-          class="app-scroll -mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:flex-wrap lg:px-0"
+          class="app-scroll -mx-3.5 flex shrink-0 gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:flex-wrap lg:px-0"
         >
           <For each={tabs()}>
             {(entry) => {
@@ -511,20 +517,29 @@ export default function Search() {
  */
 function RecentView(props: { lang: Lang; routes: KeyedRoute[]; onForget: (key: string) => void }) {
   return (
-    <div class="flex flex-col gap-6">
+    /* The outer scroll is the fallback for a window too short to hold even
+       the floor below plus the category tiles - without it the pane's
+       overflow-hidden would simply crop the tiles out of reach. */
+    <div class="app-scroll flex min-h-0 grow flex-col gap-6 overflow-y-auto">
       <Show
         when={props.routes.length > 0}
         fallback={
           <EmptyState title={t("noRecent", props.lang)} hint={t("noRecentHint", props.lang)} />
         }
       >
-        <section class="flex flex-col gap-2.5" data-recent>
+        {/* The recent list takes whatever height the categories leave and
+            scrolls its rows inside its own frame - the history can be thirty
+            routes long without costing the categories their place. The floor
+            keeps a couple of rows in view; past that the categories win. */}
+        <section class="flex min-h-36 flex-1 flex-col gap-2.5" data-recent>
           <SectionLabel>{t("recent", props.lang)}</SectionLabel>
-          <RouteList routes={props.routes} lang={props.lang} onRemove={props.onForget} />
+          <div class="app-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl">
+            <RouteList routes={props.routes} lang={props.lang} onRemove={props.onForget} />
+          </div>
         </section>
       </Show>
 
-      <section class="flex flex-col gap-2.5">
+      <section class="flex shrink-0 flex-col gap-2.5">
         <SectionLabel
           trailing={
             <a {...useLinkProps({ to: "/browse" })} class="text-[0.75rem] font-bold text-primary">

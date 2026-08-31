@@ -22,6 +22,7 @@ export type CategoryId =
   | "feeder"
   | "circular"
   | "islands"
+  | "tourism"
   | "kmb"
   | "citybus"
   | "nlb"
@@ -106,6 +107,117 @@ function runsOvernight(route: KeyedRoute): boolean {
 const BUS_COMPANIES = new Set(["kmb", "ctb", "nlb", "lwb"]);
 const isBus = (route: KeyedRoute) => BUS_COMPANIES.has(route.co[0] ?? "");
 
+/* ---- sightseeing ------------------------------------------------------- */
+
+/** A themed group of scenic routes, e.g. the Peak or the Stanley coast. */
+export interface ScenicSeries {
+  id: string;
+  name: Bilingual;
+  /** `"co route"` tokens; the operator disambiguates shared numbers. */
+  routes: string[];
+}
+
+/**
+ * No upstream data marks a route as scenic, so this list is curated. The
+ * series follow Citybus's own 觀景路線 recommendations (the Peak, Stanley,
+ * Shek O, the Eastern Corridor, the Pok Fu Lam sunset run) plus the
+ * cross-operator classics riders actually take for the view: KMB over
+ * Route Twisk and into Sai Kung, NLB across Lantau.
+ */
+export const SCENIC_SERIES: ScenicSeries[] = [
+  {
+    id: "openTop",
+    name: { zh: "開篷觀光巴士", en: "Open-top tours" },
+    routes: ["ctb H1", "ctb H1S", "ctb H2", "ctb H2K", "ctb H3", "ctb H4"],
+  },
+  {
+    id: "peakHill",
+    name: { zh: "山頂", en: "The Peak" },
+    routes: ["ctb 15"],
+  },
+  {
+    id: "stanley",
+    name: { zh: "赤柱 · 淺水灣", en: "Stanley & Repulse Bay" },
+    routes: ["ctb 6", "ctb 6X", "ctb 260", "ctb 973"],
+  },
+  {
+    id: "shekO",
+    name: { zh: "石澳 · 大浪灣", en: "Shek O & Big Wave Bay" },
+    routes: ["ctb 9", "ctb 14"],
+  },
+  {
+    id: "eastCorridor",
+    name: { zh: "東廊海景", en: "Eastern Corridor" },
+    routes: ["ctb 720", "ctb 788", "ctb 789"],
+  },
+  {
+    id: "sunsetCoast",
+    name: { zh: "薄扶林日落", en: "Pok Fu Lam sunsets" },
+    routes: ["ctb 970X"],
+  },
+  {
+    id: "taiMoShan",
+    name: { zh: "大帽山", en: "Tai Mo Shan" },
+    routes: ["kmb 51"],
+  },
+  {
+    id: "saiKung",
+    name: { zh: "西貢", en: "Sai Kung" },
+    routes: ["kmb 94", "kmb 96R"],
+  },
+  {
+    id: "lantau",
+    name: { zh: "昂坪 · 大澳", en: "Ngong Ping & Tai O" },
+    routes: ["nlb 11", "nlb 23"],
+  },
+];
+
+/**
+ * The series a route belongs to, if any - the one fact behind both the
+ * category predicate and the grouped browse view. Any Citybus H route falls
+ * into the open-top series even when unlisted: that family grows (H1S and
+ * H2K arrived after H1/H2, then H20) and new members should appear without
+ * an edit here.
+ */
+export function scenicSeriesOf(route: KeyedRoute): ScenicSeries | undefined {
+  for (const series of SCENIC_SERIES) {
+    if (route.co.some((co) => series.routes.includes(`${co} ${route.route}`))) return series;
+  }
+  if (route.co.includes("ctb") && /^H\d/i.test(route.route)) {
+    return SCENIC_SERIES.find((series) => series.id === "openTop");
+  }
+  return undefined;
+}
+
+/**
+ * Every scenic route the database can resolve, grouped by series in the
+ * curated order - so a rider can see which routes are the sea views and
+ * which climb the Peak, rather than one flat list of 46 numbers.
+ */
+export function scenicGroups(db: RouteDb): { series: ScenicSeries; routes: KeyedRoute[] }[] {
+  const byId = new Map<string, KeyedRoute[]>(SCENIC_SERIES.map((series) => [series.id, []]));
+  const seen = new Set<string>();
+
+  for (const key in db.routeList) {
+    const entry = db.routeList[key];
+    if (!entry) continue;
+    const route: KeyedRoute = { ...entry, key };
+    const series = scenicSeriesOf(route);
+    if (!series) continue;
+    const identity = `${route.route}/${route.dest.en}/${route.co[0]}`;
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    byId.get(series.id)?.push(route);
+  }
+
+  return SCENIC_SERIES.flatMap((series) => {
+    const routes = byId.get(series.id) ?? [];
+    if (routes.length === 0) return [];
+    routes.sort((a, b) => a.route.localeCompare(b.route, "en", { numeric: true }));
+    return [{ series, routes }];
+  });
+}
+
 /* ---- the catalogue ----------------------------------------------------- */
 
 export const CATEGORIES: Category[] = [
@@ -141,6 +253,15 @@ export const CATEGORIES: Category[] = [
       const stops = stopsOf(route, db);
       return stops.some(onIsland) && stops.some(onMainland);
     },
+  },
+  {
+    // Within the first six so the search screen offers it - the array order
+    // is the shop window (Search.tsx shows CATEGORIES.slice(0, 6)).
+    id: "tourism",
+    name: { zh: "旅遊觀光", en: "Sightseeing" },
+    hint: { zh: "山頂 · 海岸 · 開篷觀光巴士", en: "The Peak, coastlines, open-top tours" },
+    accent: "#B0487D",
+    matches: (route) => scenicSeriesOf(route) !== undefined,
   },
   {
     id: "hsr",
@@ -244,6 +365,36 @@ export const CATEGORIES: Category[] = [
 
 export function categoryById(id: string): Category | undefined {
   return CATEGORIES.find((c) => c.id === id);
+}
+
+/** A route's two directions, kept together so a wide row can seat both. */
+export interface RoutePair {
+  out: KeyedRoute;
+  back?: KeyedRoute;
+}
+
+/**
+ * Folds a sorted route list into direction pairs: two consecutive entries of
+ * the same number and operator - almost always the outward and return legs -
+ * share a pair. Termini are not compared, because they rarely mirror exactly
+ * (Citybus 6 runs 中環→赤柱市場 out but 赤柱村→中環 back); a route with a
+ * third variant simply starts another pair.
+ */
+export function pairDirections(routes: KeyedRoute[]): RoutePair[] {
+  const pairs: RoutePair[] = [];
+  for (const route of routes) {
+    const last = pairs[pairs.length - 1];
+    if (
+      last?.back === undefined &&
+      last?.out.route === route.route &&
+      last.out.co[0] === route.co[0]
+    ) {
+      last.back = route;
+    } else {
+      pairs.push({ out: route });
+    }
+  }
+  return pairs;
 }
 
 /**

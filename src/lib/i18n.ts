@@ -21,6 +21,7 @@ const MESSAGES = {
   home: m.home,
   popularRoutes: m.popular_routes,
   popularRoutesHint: m.popular_routes_hint,
+  scenicRoutes: m.scenic_routes,
   search: m.search,
   searchRoutes: m.search_routes,
   saved: m.saved,

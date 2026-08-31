@@ -1,4 +1,5 @@
 import type { Company, KeyedRoute, RouteDb } from "./types";
+import { SCENIC_SERIES, type ScenicSeries } from "./categories";
 import { routeAt } from "./db";
 
 /**
@@ -33,14 +34,51 @@ export function presetRoutes(db: RouteDb): KeyedRoute[] {
   const seen = new Set<string>();
   for (const [number, co] of PRESETS) {
     if (out.length >= LIMIT) break;
-    const key = Object.keys(db.routeList).find((k) => {
-      const entry = db.routeList[k];
-      return entry?.route === number && entry.co[0] === co && !seen.has(entry.route + co);
-    });
-    const route = key ? routeAt(db, key) : undefined;
+    const route = lookup(db, number, co, seen);
     if (!route) continue;
     seen.add(route.route + co);
     out.push(route);
+  }
+  return out;
+}
+
+function lookup(
+  db: RouteDb,
+  number: string,
+  co: string,
+  seen: Set<string>,
+): KeyedRoute | undefined {
+  const key = Object.keys(db.routeList).find((k) => {
+    const entry = db.routeList[k];
+    return entry?.route === number && entry.co[0] === co && !seen.has(entry.route + co);
+  });
+  return key ? routeAt(db, key) : undefined;
+}
+
+/** A scenic route with the themed series it fronts for. */
+export interface ScenicHighlight {
+  route: KeyedRoute;
+  series: ScenicSeries;
+}
+
+/**
+ * One route per scenic series - the first of each list the database can
+ * resolve - so the home screen shows the breadth of the city's viewpoints
+ * rather than six numbers from the same coast.
+ */
+export function scenicHighlights(db: RouteDb): ScenicHighlight[] {
+  const out: ScenicHighlight[] = [];
+  const seen = new Set<string>();
+  for (const series of SCENIC_SERIES) {
+    for (const token of series.routes) {
+      const [co, number] = token.split(" ");
+      if (!co || !number) continue;
+      const route = lookup(db, number, co, seen);
+      if (!route) continue;
+      seen.add(route.route + co);
+      out.push({ route, series });
+      break;
+    }
   }
   return out;
 }

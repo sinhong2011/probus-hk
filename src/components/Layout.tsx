@@ -191,8 +191,11 @@ export function RowCard(props: {
               "min-[110rem]:grid-cols-3",
               /* An odd number of rows leaves the last cell of the grid empty,
                  and an empty cell is a hole of the separator colour in the
-                 corner of the card. The last row widens to close it. */
-              "lg:[&>*:last-child:nth-child(odd)]:col-span-2",
+                 corner of the card. The last row widens to close it. Bounded
+                 below the three-column width: both span rules land in the
+                 same layer, so an unbounded two-column span would win the
+                 ordering there and punch two holes instead. */
+              "lg:max-[110rem]:[&>*:last-child:nth-child(odd)]:col-span-2",
               "min-[110rem]:[&>*:last-child:nth-child(3n+1)]:col-span-3",
               "min-[110rem]:[&>*:last-child:nth-child(3n+2)]:col-span-2",
               "min-[110rem]:[&>*:last-child:nth-child(3n)]:col-span-1",
