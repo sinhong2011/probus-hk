@@ -368,26 +368,20 @@ export default function Search() {
               }}
               value={query()}
               onInput={(e) => setQuery(e.currentTarget.value)}
-              /* On a phone the dial is this field's keyboard: touching the
-                 field while the sheet is away is asking to type, so it asks
-                 the sheet back up. */
+              /* The field takes real typing at every width - stop names and
+                 places, not just numbers - so on a phone it raises the
+                 keyboard like any field. The dial sheet steps aside for it:
+                 two keyboards at once is one too many, and the dock's button
+                 brings the dial back when the number is the way in. */
               onFocus={() => {
-                if (!wide()) setDialOpen(true);
+                if (!wide()) setDialOpen(false);
               }}
-              /* On a phone this field shows the number the dial is typing; on
-                 a desktop it also takes what the keyboard types. It says so:
-                 a placeholder promising stops and places on a screen whose
-                 only keys are digits was a promise the dial could not keep. */
-              placeholder={wide() ? t("searchAnything", lang()) : t("routes", lang())}
+              placeholder={t("searchAnything", lang())}
               aria-label={t("searchAnything", lang())}
               enterkeyhint="search"
               autocomplete="off"
               autocorrect="off"
               spellcheck={false}
-              /* Never a virtual keyboard: it would come up over the dial, and
-                 on a phone the dial is the keyboard. A physical one is
-                 unaffected, so the desktop field still takes letters. */
-              inputmode="none"
               class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
             />
             <Show when={query()}>
