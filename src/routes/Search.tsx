@@ -317,7 +317,12 @@ export default function Search() {
            tablet. It rises into place with the page - the one thing on the
            screen that is not content, arriving as the fixture it is. */
         <div class="app-rise px-3 pb-2">
-          <div class="mx-auto w-full max-w-[27rem] rounded-2xl bg-card p-3 shadow-card">
+          {/* The drawer's surface, not the card's: the dock floats over list
+              cards cut from the card tone, and on the dark theme a card on a
+              card has no edge. On the drawer ground the keys step up in the
+              drawer's raised tone - the same two steps every sheet takes -
+              and the light theme's drawer is white, so nothing moves there. */}
+          <div class="mx-auto w-full max-w-[27rem] rounded-2xl bg-drawer p-3 shadow-card">
             {keypad(false)}
           </div>
         </div>
@@ -610,7 +615,7 @@ function Keypad(props: {
           size,
           { "app-pop": order !== undefined },
           {
-            "bg-secondary text-foreground active:bg-primary active:text-primary-foreground":
+            "bg-raised text-foreground active:bg-primary active:text-primary-foreground":
               enabled(),
             "bg-background text-faint-foreground/50": !enabled(),
           },
