@@ -30,6 +30,7 @@
  *
  *   bun run railmap
  */
+import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -1042,6 +1043,20 @@ const ts =
   `export const RACECOURSE: [number, number] = ${point(RACECOURSE)};\n`;
 
 writeFileSync(OUT, ts);
+
+/*
+ * And formatted, because the file is checked in and `bun run check` reads it
+ * like any other source. Nothing here knows the print width, and it cannot be
+ * guessed: a light rail stop's line grows with the routes calling at it, so a
+ * file that fitted when it was written goes over the moment the railway adds
+ * a service. Handing it to the formatter is the only version of this that
+ * stays true.
+ */
+spawnSync(fileURLToPath(new URL("../node_modules/.bin/vp", import.meta.url)), [
+  "check",
+  "--fix",
+  OUT,
+]);
 
 const anchored = Object.keys(ANCHORS).length;
 console.log(
