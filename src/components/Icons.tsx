@@ -1,5 +1,16 @@
 import type { JSX } from "@solidjs/web";
 import IconAlarmClock from "~icons/lineicons/alarm-clock";
+import IconBolt from "~icons/lineicons/bolt";
+import IconBridge from "~icons/lineicons/bridge";
+import IconBusSmall from "~icons/lineicons/bus-1";
+import IconCamera from "~icons/lineicons/camera";
+import IconIsland from "~icons/lineicons/island";
+import IconLink from "~icons/lineicons/link";
+import IconMountains from "~icons/lineicons/mountains-2";
+import IconPlane from "~icons/lineicons/plane";
+import IconStamp from "~icons/lineicons/stamp";
+import IconTrainAlt from "~icons/lineicons/train-alt";
+import IconUsers from "~icons/lineicons/users";
 import IconArrowBothDirectionVertical from "~icons/lineicons/arrow-both-direction-vertical-1";
 import IconBookmark from "~icons/lineicons/bookmark";
 import IconBus from "~icons/lineicons/bus";
@@ -164,6 +175,27 @@ export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);
 export const TrainIcon = wrap(IconTrain as IconComponent);
 export const FerryIcon = wrap(IconShip as IconComponent);
 export const TrashIcon = wrap(IconTrash as IconComponent);
+
+/*
+ * The route categories' glyphs. One each, and each one about the *journey*
+ * rather than the vehicle where it can be - a bridge for a cross-harbour
+ * route, a customs stamp for a boundary crossing, a camera for the
+ * sightseeing runs. See `CategoryIcon`.
+ */
+export const PlaneIcon = wrap(IconPlane as IconComponent);
+export const StampIcon = wrap(IconStamp as IconComponent);
+export const BridgeIcon = wrap(IconBridge as IconComponent);
+export const CameraIcon = wrap(IconCamera as IconComponent);
+/** The high-speed train, told from the local one by a different carriage. */
+export const TrainAltIcon = wrap(IconTrainAlt as IconComponent);
+export const BoltIcon = wrap(IconBolt as IconComponent);
+/** A crowd - which is what the peak hour is. */
+export const UsersIcon = wrap(IconUsers as IconComponent);
+export const LinkIcon = wrap(IconLink as IconComponent);
+export const IslandIcon = wrap(IconIsland as IconComponent);
+export const MountainIcon = wrap(IconMountains as IconComponent);
+/** The smaller bus, for the green minibus. */
+export const MinibusIcon = wrap(IconBusSmall as IconComponent);
 /** An alert the rider armed: a clock, because every alert is about a moment. */
 export const AlarmIcon = wrap(IconAlarmClock as IconComponent);
 export const CheckIcon = wrap(IconCheck as IconComponent);

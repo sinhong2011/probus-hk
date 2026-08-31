@@ -1,5 +1,6 @@
 import { useLinkProps, useParams } from "@tanstack/solid-router";
 import { For, Show, createMemo, createSignal } from "solid-js";
+import { CategoryIcon } from "~/components/CategoryIcon";
 import { EmptyState, ScreenTitle, SectionLabel } from "~/components/Chrome";
 import { Page, RowCard, Section } from "~/components/Layout";
 import { ChevronRightIcon, SortIcon } from "~/components/Icons";
@@ -146,11 +147,18 @@ export default function Browse() {
                   {...useLinkProps(browseLink(item.id))}
                   class="app-press flex flex-col justify-between gap-3 rounded-xl bg-card p-3.5 shadow-card motion-safe:app-rise"
                 >
+                  {/* The category's glyph, in its own colour on a wash of
+                      it. Seventeen cards of identical shape were told apart
+                      only by reading each title; a picture is read first. */}
                   <span
-                    class="h-1 w-8 rounded-full"
-                    style={{ background: item.accent }}
-                    aria-hidden="true"
-                  />
+                    class="flex size-9 items-center justify-center rounded-lg"
+                    style={{
+                      background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
+                      color: item.accent,
+                    }}
+                  >
+                    <CategoryIcon id={item.id} size={18} />
+                  </span>
                   <div class="flex flex-col gap-1">
                     <span class="text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
                       {pick(item.name, lang())}

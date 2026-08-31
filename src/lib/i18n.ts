@@ -91,7 +91,6 @@ const MESSAGES = {
   errorDetails: m.error_details,
   copyDetails: m.copy_details,
   detailsCopied: m.details_copied,
-  dimmedKeys: m.dimmed_keys,
   joint: m.joint,
   edit: m.edit,
   done: m.done,

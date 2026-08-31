@@ -1,7 +1,8 @@
 import { useLinkProps, useNavigate, useSearch } from "@tanstack/solid-router";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Card, EmptyState, FareTag, Hairline, SectionLabel, StopCode } from "~/components/Chrome";
-import { SplitPage } from "~/components/Layout";
+import { CategoryIcon } from "~/components/CategoryIcon";
+import { Page } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import { VirtualRows } from "~/components/VirtualRows";
 import { Drawer } from "~/components/Drawer";
@@ -17,7 +18,7 @@ import { RoutePlate } from "~/components/RoutePlate";
 import { browseLink, routeLink, stopLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { useDb } from "~/data/context";
-import { CATEGORIES } from "~/data/categories";
+import { CATEGORIES, categorySamples } from "~/data/categories";
 import {
   allRoutes,
   nextRouteChars,
@@ -34,9 +35,15 @@ import { frequent } from "~/stores/frequent";
 import { settings } from "~/stores/settings";
 
 /**
- * The search screen is a list of routes with a field above it and a dial
- * below - in that order, because that is how it is used: glance at what you
- * looked up last, or thumb a number in and watch the list narrow.
+ * The search screen reads top to bottom: what a search is made *with* first -
+ * the field, its dial, and the categories for when the trip is known by kind
+ * rather than by number - and then, across the full width beneath them, what
+ * the search *found*.
+ *
+ * The two halves used to be side by side, with the categories buried under
+ * however long the recent list had grown. Now the ways in keep the head of
+ * the screen at every width and the results get the whole width to spread
+ * into, which is what a list of routes wants: more rows, not wider rows.
  *
  * The tabs over the list are the list's mode, not a filter on a result:
  * 最近搜尋 is what you opened recently, 全部 is every route there is, and the
@@ -74,6 +81,13 @@ function keypadLetters(db: RouteDb): string[] {
 }
 
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/**
+ * The categories this screen puts in its window - the first six of the
+ * catalogue, whose order is the shop window. The rest are a tap away under
+ * 睇晒.
+ */
+const SHOWN_CATEGORIES = CATEGORIES.slice(0, 6);
 
 /**
  * One route on the list, in the shape a rider reads it: the number and who
@@ -152,18 +166,41 @@ function RouteItem(props: {
 }
 
 /** A list of routes, one card, with a hairline between rows. */
-function RouteList(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: string) => void }) {
+function RouteList(props: {
+  routes: KeyedRoute[];
+  lang: Lang;
+  onRemove?: (key: string) => void;
+  /**
+   * On a wide window, take the height the pane gives and scroll the rows
+   * inside the card rather than letting the card run past the window.
+   *
+   * A card whose own top and bottom edges scroll out of view stops reading as
+   * a card - the list simply bleeds off both ends of the screen. Held to the
+   * pane, the frame stays put and only its contents move, which is also what
+   * keeps the tabs above it in reach of a rider halfway down four thousand
+   * routes. A phone has no pane to hold it to: there the page scrolls.
+   */
+  fills?: boolean;
+}) {
   return (
-    <Card>
-      <VirtualRows items={props.routes} estimate={64} divided>
-        {(route) => (
-          <RouteItem
-            route={route}
-            lang={props.lang}
-            onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
-          />
-        )}
-      </VirtualRows>
+    <Card class={props.fills ? "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" : ""}>
+      <div
+        class={
+          props.fills
+            ? "app-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+            : ""
+        }
+      >
+        <VirtualRows items={props.routes} estimate={64} divided>
+          {(route) => (
+            <RouteItem
+              route={route}
+              lang={props.lang}
+              onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
+            />
+          )}
+        </VirtualRows>
+      </div>
     </Card>
   );
 }
@@ -293,9 +330,8 @@ export default function Search() {
   const press = (key: string) => setQuery((q) => q + key);
   const clear = () => setQuery("");
 
-  const keypad = (hint: boolean) => (
+  const keypad = () => (
     <Keypad
-      hint={hint}
       lang={lang()}
       letters={letters()}
       keyEnabled={(key) => allowed().has(key)}
@@ -313,13 +349,12 @@ export default function Search() {
   const [dialOpen, setDialOpen] = createSignal(true);
 
   return (
-    <SplitPage
-      /* On the recent tab the pane's height is handed to the content: the
-         recent list scrolls inside its own frame and the categories keep
-         their place on the screen instead of being pushed off the bottom
-         by however long the history has grown. The other tabs are one long
-         list each - for them the pane scrolling is the right thing. */
-      mainFills={shownTab() === "recent"}
+    <Page
+      /* A wide window holds the head of the screen still - field, dial and
+         categories - and scrolls the results underneath them. A phone has no
+         room for that: there the page scrolls as one, and the head simply
+         scrolls away above the list. */
+      fill
       dock={
         /* With the dial's sheet away, the way back to it: one glass button
            above the tab bar, where the thumb just left. It only exists while
@@ -338,20 +373,41 @@ export default function Search() {
           </div>
         </Show>
       }
-      aside={
-        <>
-          {/* The switch IS the title, at every width - 搜尋/規劃 says what the
-              screen is better than a heading above it could. Full width, so
-              it lines up with the field under it. */}
-          <ModeSwitch lang={lang()} />
+    >
+      {/* One child, so that the page's own generous gap between blocks - set
+          for screens whose blocks are separate subjects - does not open up
+          between the ways in and what they found. Those two belong close: a
+          keystroke on the dial changes the list, and a band of empty page
+          between the two made them read as unrelated. */}
+      <div class="flex min-h-0 grow flex-col gap-3 lg:gap-4">
+        {/* The head of the screen: the ways in. On a wide window the field and
+          its dial hold a column of their own - a dial wider than a thumb's
+          reach is not a dial - and the categories stand beside them, filling
+          that column's height.
 
-          <div class="flex h-11 items-center gap-3 rounded-2xl bg-card px-3.5 shadow-card">
-            <span class="text-primary">
-              <SearchIcon size={17} />
-            </span>
-            <input
-              ref={(el: HTMLInputElement) => {
-                /* A window with a real keyboard should not ask for a click
+          A phone has one column, and there the categories come second, right
+          under the 搜尋/規劃 switch and above the field: a row of chips read
+          in the first glance, before a rider decides to type at all. `order`
+          rather than a second copy of the markup - the same three blocks,
+          rearranged. */}
+        <div class="grid shrink-0 gap-3 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-x-10 lg:gap-y-6">
+          {/* The switch IS the title, at every width - 搜尋/規劃 says what the
+            screen is better than a heading above it could. Full width, so
+            it lines up with the field under it. */}
+          <div class="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
+            <ModeSwitch lang={lang()} />
+          </div>
+
+          <Categories lang={lang()} class="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1" />
+
+          <div class="order-3 flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-2 lg:gap-6">
+            <div class="flex h-11 items-center gap-3 rounded-2xl border border-border bg-card px-3.5 shadow-card">
+              <span class="text-primary">
+                <SearchIcon size={17} />
+              </span>
+              <input
+                ref={(el: HTMLInputElement) => {
+                  /* A window with a real keyboard should not ask for a click
                    before it will take a letter. Focusing raises no keyboard on
                    a phone because no phone is this wide. Once the database
                    is read, not on the next frame: on a cold start the ref
@@ -359,156 +415,181 @@ export default function Search() {
                    held off the page, and focusing a node that is not in the
                    document does nothing. An effect that reads the database is
                    held with the screen and runs once it is on the page. */
-                createEffect(
-                  () => db(),
-                  () => {
-                    if (window.matchMedia("(min-width: 64rem)").matches) el.focus();
-                  },
-                );
-              }}
-              value={query()}
-              onInput={(e) => setQuery(e.currentTarget.value)}
-              /* The field takes real typing at every width - stop names and
+                  createEffect(
+                    () => db(),
+                    () => {
+                      if (window.matchMedia("(min-width: 64rem)").matches) el.focus();
+                    },
+                  );
+                }}
+                value={query()}
+                onInput={(e) => setQuery(e.currentTarget.value)}
+                /* The field takes real typing at every width - stop names and
                  places, not just numbers - so on a phone it raises the
                  keyboard like any field. The dial sheet steps aside for it:
                  two keyboards at once is one too many, and the dock's button
                  brings the dial back when the number is the way in. */
-              onFocus={() => {
-                if (!wide()) setDialOpen(false);
-              }}
-              placeholder={t("searchAnything", lang())}
-              aria-label={t("searchAnything", lang())}
-              enterkeyhint="search"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck={false}
-              class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
-            />
-            <Show when={query()}>
-              <button
-                type="button"
-                aria-label="clear"
-                onClick={clear}
-                class="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
-              >
-                <CloseIcon size={13} />
-              </button>
-            </Show>
-          </div>
-          {/* The same dial as the phone's, in the same frame: a desktop is a
+                onFocus={() => {
+                  if (!wide()) setDialOpen(false);
+                }}
+                placeholder={t("searchAnything", lang())}
+                aria-label={t("searchAnything", lang())}
+                enterkeyhint="search"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck={false}
+                class="tnum grow bg-transparent text-[1.1rem] font-bold tracking-[-0.02em] text-foreground outline-none placeholder:text-[0.94rem] placeholder:font-medium placeholder:tracking-normal placeholder:text-subtle-foreground"
+              />
+              <Show when={query()}>
+                <button
+                  type="button"
+                  aria-label="clear"
+                  onClick={clear}
+                  class="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+                >
+                  <CloseIcon size={13} />
+                </button>
+              </Show>
+            </div>
+            {/* The same dial as the phone's, in the same frame: a desktop is a
               window a rider looks up a route number in too, and a strip of
               small shortcuts made them aim at a different pad on every
               screen. */}
-          <div class="-mt-1 hidden flex-col gap-2 lg:flex">
-            <SectionLabel>{t("routeNumber", lang())}</SectionLabel>
-            <div class="rounded-2xl bg-card p-3 shadow-card">{keypad(true)}</div>
+            <div class="-mt-1 hidden flex-col gap-2 lg:flex">
+              <SectionLabel>{t("routeNumber", lang())}</SectionLabel>
+              <div class="rounded-2xl border border-border bg-card p-3 shadow-card">{keypad()}</div>
+            </div>
           </div>
-        </>
-      }
-    >
-      <div class={["flex flex-col gap-4", { "min-h-0 grow": shownTab() === "recent" }]}>
-        {/* The list's mode. One row that scrolls sideways on a phone rather
-            than wrapping, so the list under it starts at the same height
-            whichever tab is on. */}
-        <div
-          role="tablist"
-          aria-label={t("routes", lang())}
-          data-search-tabs
-          class="app-scroll -mx-3.5 flex shrink-0 gap-1.5 overflow-x-auto px-3.5 lg:mx-0 lg:flex-wrap lg:px-0"
-        >
-          <For each={tabs()}>
-            {(entry) => {
-              const on = () => shownTab() === entry.id;
-              return (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={on() ? "true" : "false"}
-                  onClick={() => setTab(entry.id)}
-                  class={[
-                    "app-press flex h-8 shrink-0 items-center rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
-                    {
-                      "bg-primary text-primary-foreground": on(),
-                      "bg-secondary text-muted-foreground hover:text-foreground": !on(),
-                    },
-                  ]}
-                >
-                  {t(entry.label, lang())}
-                </button>
-              );
-            }}
-          </For>
         </div>
 
-        <Show when={!nothing()} fallback={<EmptyState title={t("noResults", lang())} />}>
-          <Show
-            when={shownTab() !== "recent"}
-            fallback={
-              <RecentView
-                lang={lang()}
-                routes={recentMatched()}
-                onForget={(key) => frequent.forget(key)}
-              />
-            }
-          >
+        {/* What the search found, across the full width. On a wide window this
+          is the half that scrolls; on a phone it is simply the rest of the
+          page. */}
+        <div class="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:grow">
+          {/* The list's mode, and at the far end of the row how many the mode
+            found. The count used to head the list on a line of its own with
+            the tab's own name repeated beside it - a heading that said what
+            the pressed chip already says. On the row, it reads as the answer
+            to the chip: 巴士 · 1383. */}
+          <div class="flex shrink-0 items-center gap-3">
+            <div
+              role="tablist"
+              aria-label={t("routes", lang())}
+              data-search-tabs
+              class="app-scroll flex min-w-0 grow gap-1.5 overflow-x-auto lg:flex-wrap"
+            >
+              <For each={tabs()}>
+                {(entry) => {
+                  const on = () => shownTab() === entry.id;
+                  return (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={on() ? "true" : "false"}
+                      onClick={() => setTab(entry.id)}
+                      class={[
+                        "app-press flex h-8 shrink-0 items-center rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
+                        {
+                          "bg-primary text-primary-foreground": on(),
+                          "bg-secondary text-muted-foreground hover:text-foreground": !on(),
+                        },
+                      ]}
+                    >
+                      {t(entry.label, lang())}
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
             <Show when={listed().length > 0}>
-              <section class="flex flex-col gap-2.5">
-                <SectionLabel
-                  trailing={
-                    <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                      {listed().length}
-                    </span>
-                  }
-                >
-                  {t("routes", lang())}
-                </SectionLabel>
-                <RouteList routes={listed()} lang={lang()} />
-              </section>
+              <span class="tnum shrink-0 text-[0.75rem] font-semibold text-faint-foreground">
+                {listed().length}
+              </span>
             </Show>
-          </Show>
+          </div>
 
-          <Show when={stops().length > 0}>
-            <section class="flex flex-col gap-2.5">
-              <SectionLabel>{t("stopsMatched", lang())}</SectionLabel>
-              <Card>
-                <For each={stops()}>
-                  {(match, index) => (
-                    <>
-                      <Show when={index() > 0}>
-                        <Hairline />
-                      </Show>
-                      <a
-                        {...useLinkProps(stopLink(match.stopId))}
-                        class="app-tap flex items-center gap-3 px-3.5 py-2.5"
-                      >
-                        {/* The name once, in the language being read, and the
+          {/* The blocks the search found. On a wide window the route list
+              fills this space and scrolls inside its own card; the stop and
+              destination blocks that a typed place adds sit under it and are
+              given the height they need, and if the three together outgrow
+              the pane, the pane scrolls as well. On a phone the page scrolls
+              and none of that applies. */}
+          <div class="app-scroll flex flex-col gap-4 lg:min-h-0 lg:grow lg:overflow-y-auto">
+            <Show when={!nothing()} fallback={<EmptyState title={t("noResults", lang())} />}>
+              {/* The recent tab's rows are the same rows, with a way off the list
+              on each: 最近搜尋 is a list a rider owns, not a result. */}
+              <Show
+                when={listed().length > 0}
+                fallback={
+                  <Show when={shownTab() === "recent"}>
+                    <EmptyState title={t("noRecent", lang())} hint={t("noRecentHint", lang())} />
+                  </Show>
+                }
+              >
+                {/* No heading of its own: the pressed chip above names the
+                    list and the count beside it sizes it.
+
+                    On a wide window it takes the pane's height and scrolls
+                    inside its own card - with a floor, so that a query which
+                    also matched stops and places leaves this list a few rows
+                    rather than a sliver. */}
+                <section
+                  class="flex flex-col lg:min-h-56 lg:flex-1"
+                  data-recent={shownTab() === "recent" || undefined}
+                >
+                  <RouteList
+                    fills
+                    routes={listed()}
+                    lang={lang()}
+                    onRemove={shownTab() === "recent" ? (key) => frequent.forget(key) : undefined}
+                  />
+                </section>
+              </Show>
+
+              <Show when={stops().length > 0}>
+                <section class="flex flex-col gap-2.5 lg:shrink-0">
+                  <SectionLabel>{t("stopsMatched", lang())}</SectionLabel>
+                  <Card>
+                    <For each={stops()}>
+                      {(match, index) => (
+                        <>
+                          <Show when={index() > 0}>
+                            <Hairline />
+                          </Show>
+                          <a
+                            {...useLinkProps(stopLink(match.stopId))}
+                            class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+                          >
+                            {/* The name once, in the language being read, and the
                             pole code beside it - which is both what tells two
                             stops of one name apart and what a rider can search
                             for directly. */}
-                        <div class="flex min-w-0 grow items-center gap-1.5">
-                          <span class="truncate text-[0.88rem] font-bold text-foreground">
-                            {stripStopCode(pick(match.stop.name, lang()))}
-                          </span>
-                          <StopCode name={match.stop.name} lang={lang()} />
-                        </div>
-                        <span class="tnum shrink-0 text-[0.75rem] font-bold text-subtle-foreground">
-                          {match.routeCount} {t("routesCount", lang())}
-                        </span>
-                      </a>
-                    </>
-                  )}
-                </For>
-              </Card>
-            </section>
-          </Show>
+                            <div class="flex min-w-0 grow items-center gap-1.5">
+                              <span class="truncate text-[0.88rem] font-bold text-foreground">
+                                {stripStopCode(pick(match.stop.name, lang()))}
+                              </span>
+                              <StopCode name={match.stop.name} lang={lang()} />
+                            </div>
+                            <span class="tnum shrink-0 text-[0.75rem] font-bold text-subtle-foreground">
+                              {match.routeCount} {t("routesCount", lang())}
+                            </span>
+                          </a>
+                        </>
+                      )}
+                    </For>
+                  </Card>
+                </section>
+              </Show>
 
-          <Show when={destinations().length > 0}>
-            <section class="flex flex-col gap-2.5">
-              <SectionLabel>{t("towards", lang())}</SectionLabel>
-              <RouteList routes={destinations()} lang={lang()} />
-            </section>
-          </Show>
-        </Show>
+              <Show when={destinations().length > 0}>
+                <section class="flex flex-col gap-2.5 lg:shrink-0">
+                  <SectionLabel>{t("towards", lang())}</SectionLabel>
+                  <RouteList routes={destinations()} lang={lang()} />
+                </section>
+              </Show>
+            </Show>
+          </div>
+        </div>
       </div>
       {/* The dial itself, in the house sheet: handle, drag, and the drawer
           ground its keys step up from. Non-modal, so the list above it stays
@@ -517,7 +598,18 @@ export default function Search() {
           over it: the tabs are the way off this screen and stay pressable
           under the sheet, so the card keeps its corners and the bar keeps
           its safe-area inset. A phone matter only: a wide window keeps the
-          dial in its panel. */}
+          dial in its panel.
+
+          The clearance over the bar is the sheet's own bottom padding and
+          not a `bottom` offset, so that the sheet's "off screen" - a
+          translate of its full height - is off the window rather than a
+          card's width short of it. Held short, a push to the floor went
+          further than the sheet had to travel, and the drawer sprang back
+          up that far on release before it went; and what it went to was a
+          band of card still over the bar, so the last of the dismissal was
+          a disappearance rather than a slide. That padding lies over the
+          tab bar, so it takes no pointer: the card inside it does, and the
+          strip below the card is the bar's again. */}
       <Show when={!wide()}>
         <Drawer
           open={dialOpen()}
@@ -527,81 +619,121 @@ export default function Search() {
              digits come and go, and the sheet glides to each height instead
              of jumping - the library animates the resize itself. */
           transitionResize
-          class="!bottom-[var(--tabbar-height)] max-w-[27.5rem] !pb-1"
+          class="pointer-events-none max-w-[27.5rem] !pb-[calc(var(--tabbar-height)+0.25rem)] [&>*]:pointer-events-auto"
           label={t("routeNumber", lang())}
         >
-          <div class="mx-auto w-full px-4 pb-3 pt-1">{keypad(false)}</div>
+          {/* Clear of the grab handle above it: the pad is what the thumb is
+              aiming at, and the top row of keys sat close enough to the bar
+              to catch a drag meant for the sheet. */}
+          <div class="mx-auto mt-[10px] w-full px-4 pb-3 pt-1">{keypad()}</div>
         </Drawer>
       </Show>
-    </SplitPage>
+    </Page>
   );
 }
 
 /**
- * The recent tab: what was opened last, each with a way off the list, and
- * under it the categories - the other way in when you know the kind of trip
- * rather than the number, and what the tab offers before anything has been
- * looked up at all.
+ * The categories, at the head of the screen: the way in when the trip is known
+ * by its kind rather than by its number, and the only thing here worth reading
+ * before anything has been typed. They used to sit below the recent list,
+ * where thirty remembered routes pushed them off the bottom of the phone.
+ *
+ * They are two different things at the two widths, because they have two
+ * different jobs. On a phone they are a strip of chips the thumb swipes -
+ * glyph and name, nothing else - sat between the switch and the field, where
+ * they cost the list beneath them a single row. On a wide window there is a
+ * column standing empty beside the dial, so they become tiles: the same
+ * glyph, the name, and the line that says what is in the category.
  */
-function RecentView(props: { lang: Lang; routes: KeyedRoute[]; onForget: (key: string) => void }) {
+function Categories(props: { lang: Lang; class?: string }) {
+  const db = useDb();
+  /* Three numbers per tile, taken from the database rather than written down:
+     a category whose sample is stale is worse than one with none. Three is a
+     sample; a fourth was a list starting to compete with the name. */
+  const samples = createMemo(() => categorySamples(db(), SHOWN_CATEGORIES, 3));
+
   return (
-    /* The outer scroll is the fallback for a window too short to hold even
-       the floor below plus the category tiles - without it the pane's
-       overflow-hidden would simply crop the tiles out of reach. */
-    <div class="app-scroll flex min-h-0 grow flex-col gap-6 overflow-y-auto">
-      <Show
-        when={props.routes.length > 0}
-        fallback={
-          <EmptyState title={t("noRecent", props.lang)} hint={t("noRecentHint", props.lang)} />
+    /* `min-w-0`: the strip below is a flex line of chips that do not shrink,
+       and a grid column sized to `auto` would take their whole sum - which on
+       a phone is twice the window, and the page slides sideways with it. */
+    <section class={`flex min-w-0 flex-col gap-2.5 ${props.class ?? ""}`}>
+      <SectionLabel
+        trailing={
+          <a {...useLinkProps({ to: "/browse" })} class="text-[0.75rem] font-bold text-primary">
+            {t("viewAll", props.lang)}
+          </a>
         }
       >
-        {/* The recent list takes whatever height the categories leave and
-            scrolls its rows inside its own frame - the history can be thirty
-            routes long without costing the categories their place. The floor
-            keeps a couple of rows in view; past that the categories win. */}
-        <section class="flex min-h-36 flex-1 flex-col gap-2.5" data-recent>
-          <SectionLabel>{t("recent", props.lang)}</SectionLabel>
-          <div class="app-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl">
-            <RouteList routes={props.routes} lang={props.lang} onRemove={props.onForget} />
-          </div>
-        </section>
-      </Show>
+        {t("categories", props.lang)}
+      </SectionLabel>
 
-      <section class="flex shrink-0 flex-col gap-2.5">
-        <SectionLabel
-          trailing={
-            <a {...useLinkProps({ to: "/browse" })} class="text-[0.75rem] font-bold text-primary">
-              {t("viewAll", props.lang)}
-            </a>
-          }
-        >
-          {t("categories", props.lang)}
-        </SectionLabel>
+      {/* Six of them, three across and two down at every wide width. Sized
+          from a minimum tile instead, the block re-flowed to four columns and
+          one orphan on a big monitor and to two on a small laptop - a shop
+          window whose shape changed with the furniture. Three by two is the
+          shape the six of them have.
 
-        <div class="grid grid-cols-2 gap-2.5">
-          <For each={CATEGORIES.slice(0, 6)}>
-            {(item) => (
-              <a
-                {...useLinkProps(browseLink(item.id))}
-                class="app-press flex flex-col gap-1.5 rounded-xl bg-card p-3 shadow-card"
-              >
+          The two rows share whatever height the dial beside them takes, so
+          the block ends level with the keypad's panel rather than stopping
+          halfway down and leaving a hand's width of nothing under it. */}
+      <div class="app-scroll -mx-3.5 flex gap-2 overflow-x-auto px-3.5 lg:mx-0 lg:grid lg:grow lg:grid-cols-3 lg:grid-rows-2 lg:gap-4 lg:overflow-visible lg:px-0">
+        <For each={SHOWN_CATEGORIES}>
+          {(item) => (
+            /* A chip on a phone, a tile on a desktop. On the tile the glyph
+               sits at the top and the words at the foot: given a tile taller
+               than the words need, `justify-between` is what keeps them a
+               caption rather than leaving them stranded in the middle of an
+               empty card. */
+            <a
+              {...useLinkProps(browseLink(item.id))}
+              class="app-press flex shrink-0 items-center gap-2 rounded-full bg-card py-1.5 pl-1.5 pr-3.5 shadow-card lg:items-stretch lg:gap-3 lg:rounded-xl lg:p-3.5"
+            >
+              <span class="flex min-w-0 items-center gap-2 lg:grow lg:flex-col lg:items-stretch lg:justify-between lg:gap-1.5">
+                {/* The glyph in the category's own colour, on a wash of it -
+                    the coloured bar this replaces marked the tile without
+                    saying anything about what was in it. */}
                 <span
-                  class="h-1 w-7 rounded-full"
-                  style={{ background: item.accent }}
-                  aria-hidden="true"
-                />
-                <span class="text-[0.88rem] font-bold text-foreground">
-                  {pick(item.name, props.lang)}
+                  class="flex size-8 shrink-0 items-center justify-center rounded-full lg:size-9 lg:rounded-lg"
+                  style={{
+                    background: `color-mix(in srgb, ${item.accent} 14%, transparent)`,
+                    color: item.accent,
+                  }}
+                >
+                  <CategoryIcon id={item.id} size={17} />
                 </span>
-                <span class="text-[0.75rem] font-medium leading-snug text-subtle-foreground">
-                  {pick(item.hint, props.lang)}
+                <span class="flex flex-col gap-1">
+                  <span class="whitespace-nowrap text-[0.81rem] font-bold text-foreground lg:whitespace-normal lg:text-[0.88rem]">
+                    {pick(item.name, props.lang)}
+                  </span>
+                  {/* The line of examples is what a wide tile has room for; a
+                      chip is the name and the glyph, and nothing else. */}
+                  <span class="hidden text-[0.75rem] font-medium leading-snug text-subtle-foreground lg:block">
+                    {pick(item.hint, props.lang)}
+                  </span>
                 </span>
-              </a>
-            )}
-          </For>
-        </div>
-      </section>
-    </div>
+              </span>
+
+              {/* A few of the routes inside, down the tile's right-hand edge.
+                  "過海路線" is an abstraction; 101 is the thing a rider
+                  actually knows, and three of them say what the category
+                  holds faster than the line of prose beneath the name does.
+
+                  On their operators' own plates, not on a wash of the
+                  category's accent: a route number in this app is red for
+                  九巴 and yellow for 城巴 everywhere else it appears, and a
+                  sample that recoloured them by category would be teaching
+                  the wrong thing in the one place a rider is learning what
+                  the category holds. */}
+              <span class="hidden shrink-0 flex-col items-end gap-1 lg:flex">
+                <For each={samples()[item.id] ?? []}>
+                  {(sample) => <RoutePlate route={sample.route} co={sample.co} size="xs" />}
+                </For>
+              </span>
+            </a>
+          )}
+        </For>
+      </div>
+    </section>
   );
 }
 
@@ -620,8 +752,11 @@ function RecentView(props: { lang: Lang; routes: KeyedRoute[]; onForget: (key: s
  * is rendered where each layout needs it - but it is the one pad either way.
  * A desktop once got a flattened strip of shortcuts instead, and a rider who
  * had learned where "6" was on the phone had to learn it again on the laptop.
- * `hint` is the only difference: the desktop has room for the line that says
- * what a dimmed key means.
+ * It is the same pad at both widths, down to the last key.
+ *
+ * A line under it used to explain the dimmed keys. A key that is grey and
+ * will not press already says it, and the sentence was one more thing to read
+ * on a pad whose whole point is that it needs none.
  */
 function Keypad(props: {
   lang: Lang;
@@ -632,8 +767,6 @@ function Keypad(props: {
   onPress: (key: string) => void;
   onBackspace: () => void;
   onClear: () => void;
-  /** Show the line explaining the dimmed keys - only where there is room. */
-  hint?: boolean;
 }) {
   const live = () => props.letters.filter((letter) => props.keyEnabled(letter));
 
@@ -658,8 +791,7 @@ function Keypad(props: {
           size,
           { "app-pop": order !== undefined },
           {
-            "bg-raised text-foreground active:bg-primary active:text-primary-foreground":
-              enabled(),
+            "bg-raised text-foreground active:bg-primary active:text-primary-foreground": enabled(),
             "bg-background text-faint-foreground/50": !enabled(),
           },
         ]}
@@ -696,7 +828,9 @@ function Keypad(props: {
   );
 
   return (
-    <div class="flex w-full flex-col gap-2">
+    /* `app-seamless`: the pad draws its edge once, around itself - see the
+       rule in app.css. Twenty-five hairlines in a grid read as graph paper. */
+    <div class="app-seamless flex w-full flex-col gap-2">
       {/* The dial on the left - nine digits in a square, and under them
           clear, zero and backspace - and beside it the letters that could
           still follow: a column the thumb can scroll when there are more
@@ -735,15 +869,6 @@ function Keypad(props: {
           </For>
         </div>
       </div>
-
-      {/* The one line of explanation, and only where there is room for it.
-          On a phone a dimmed key explains itself the first time it is
-          pressed, and the line was a row of the list. */}
-      <Show when={props.hint}>
-        <span class="pt-0.5 text-[0.75rem] font-medium text-faint-foreground">
-          {t("dimmedKeys", props.lang)}
-        </span>
-      </Show>
     </div>
   );
 }
