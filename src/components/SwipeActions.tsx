@@ -10,9 +10,10 @@ export type SwipeSide = "leading" | "trailing";
  * Swipe left for the trailing deeds (pin, restop, group, delete). Swipe
  * right for the leading deed (the reorder grip). A vertical pan is left
  * to the page (`touch-action: pan-y`). The parent says which row is open,
- * so opening one closes the rest. A pointing device gets hover chevrons
- * instead of a peek: the trailing rightmost deed is Delete, and a sliver
- * of that red reads as a broken row, not as a handle.
+ * so opening one closes the rest. A pointing device never peeks the
+ * deeds: the trailing rightmost is Delete, and a sliver of that red
+ * reads as a broken row. Hover melts a liquid-glass chip onto each
+ * edge; a click opens that side.
  */
 export function SwipeActions(props: {
   open: SwipeSide | false;
@@ -20,9 +21,9 @@ export function SwipeActions(props: {
   onClose: () => void;
   /** Fires as the finger lands, so a sibling that is already open can close. */
   onEngage?: () => void;
-  /** Spoken name of the trailing hover chevron; omit it and that chevron stays off. */
+  /** Spoken and painted name of the trailing glass chip. */
   hintLabel?: string;
-  /** Spoken name of the leading hover chevron. */
+  /** Spoken and painted name of the leading glass chip. */
   leadingHintLabel?: string;
   /** Revealed by a swipe right: the reorder grip, when the list can be dragged. */
   leading?: JSX.Element;
@@ -253,37 +254,39 @@ export function SwipeActions(props: {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
       >
-        <div style={{ "pointer-events": open() ? "none" : undefined }}>{props.children}</div>
-        <Show when={props.leadingHintLabel && props.leading && !open()}>
+        <div class="app-swipe-body" style={{ "pointer-events": open() ? "none" : undefined }}>
+          {props.children}
+        </div>
+        <Show when={props.hintLabel}>
           <button
             type="button"
             data-swipe-hint
-            tabIndex={-1}
-            aria-label={props.leadingHintLabel}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              props.onOpen("leading");
-            }}
-            class="app-swipe-hint absolute inset-y-0 left-0 z-10 items-center justify-center bg-card px-2 text-faint-foreground"
-          >
-            <ChevronRightIcon size={14} />
-          </button>
-        </Show>
-        <Show when={props.hintLabel && !open()}>
-          <button
-            type="button"
-            data-swipe-hint
-            tabIndex={-1}
-            aria-label={props.hintLabel}
+            data-edge="trailing"
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
               props.onOpen("trailing");
             }}
-            class="app-swipe-hint absolute inset-y-0 right-0 z-10 items-center justify-center bg-card px-2 text-faint-foreground"
+            class="app-swipe-hint app-press app-glass absolute top-1/2 right-1.5 mt-[-1rem] flex size-8 items-center justify-center rounded-full text-foreground"
           >
-            <ChevronLeftIcon size={14} />
+            <ChevronLeftIcon size={15} />
+            <span class="sr-only">{props.hintLabel}</span>
+          </button>
+        </Show>
+        <Show when={props.leadingHintLabel && leadingW() > 0}>
+          <button
+            type="button"
+            data-swipe-hint
+            data-edge="leading"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              props.onOpen("leading");
+            }}
+            class="app-swipe-hint app-press app-glass absolute top-1/2 left-1.5 mt-[-1rem] flex size-8 items-center justify-center rounded-full text-foreground"
+          >
+            <ChevronRightIcon size={15} />
+            <span class="sr-only">{props.leadingHintLabel}</span>
           </button>
         </Show>
       </div>

@@ -270,9 +270,12 @@ test("a star can be dragged to a new place in the list", async ({ page }) => {
   // The grip is behind a swipe right, so the row itself stays a list of arrivals.
   await expect(page.getByRole("button", { name: "reorder" })).toHaveCount(0);
   await revealGrip(page, cards.first());
+  const grip = page.getByRole("button", { name: "reorder" }).first();
+  await expect(grip).toBeVisible();
+  // The face eases into place; dragging before it rests misses the handle.
+  await page.waitForTimeout(400);
 
   // Carry the first card below the second by its grip, in finger-sized steps.
-  const grip = page.getByRole("button", { name: "reorder" }).first();
   const from = await grip.boundingBox();
   const target = await cards.nth(1).boundingBox();
   if (!from || !target) throw new Error("no boxes to drag between");

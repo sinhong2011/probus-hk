@@ -790,9 +790,10 @@
   }
   /*
    * Swipe left for the trailing deeds, swipe right for the reorder grip.
-   * A pointing device gets hover chevrons instead of a peek: the trailing
-   * rightmost deed is Delete, and a sliver of that red reads as a broken
-   * row. Hidden on touch.
+   * A pointing device must not peek those deeds: the trailing rightmost
+   * is Delete, and a sliver of that red reads as a broken row. Hover
+   * slides a liquid-glass chip onto each edge; a click opens that side.
+   * Touch never hovers, so none of this paints on a phone.
    */
   .app-swipe-hint {
     display: none;
@@ -800,12 +801,37 @@
   @media (hover: hover) and (pointer: fine) {
     .app-swipe-hint {
       display: flex;
+      pointer-events: none;
       opacity: 0;
-      transition: opacity 0.15s var(--ease-out);
+      scale: 0.94;
+      z-index: 10;
     }
-    .app-swipe:hover .app-swipe-hint,
+    .app-swipe-hint[data-edge="trailing"] {
+      translate: 8px 0;
+    }
+    .app-swipe-hint[data-edge="leading"] {
+      translate: -8px 0;
+    }
+    .app-swipe:not([data-swipe-open]):hover .app-swipe-face:not([data-dragging]) .app-swipe-hint,
     .app-swipe-hint:focus-visible {
+      pointer-events: auto;
       opacity: 1;
+      scale: 1;
+      translate: 0;
+    }
+    .app-swipe:not([data-swipe-open]):hover .app-swipe-face:not([data-dragging]) .app-swipe-body {
+      padding-inline: 2rem;
+    }
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .app-swipe-hint {
+      transition:
+        opacity var(--duration-reveal) var(--ease-out),
+        translate var(--duration-reveal) var(--ease-out),
+        scale var(--duration-reveal) var(--ease-out);
+    }
+    .app-swipe-body {
+      transition: padding-inline var(--duration-state) var(--ease-out);
     }
   }
   /*
