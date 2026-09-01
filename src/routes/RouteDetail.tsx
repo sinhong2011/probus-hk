@@ -1261,9 +1261,16 @@ function StopRow(props: {
            * which piece. It led the row wearing its question in words, and a
            * label that changes with what is set - board here, get off here -
            * kept resizing the one control a thumb was aiming at. It is a
-           * square like the rest now, at the same end, and its question lives
-           * where every other control's does: in the name a screen reader
-           * speaks and the tooltip a pointer gets.
+           * square like the rest now, and its question lives where every other
+           * control's does: in the name a screen reader speaks and the tooltip
+           * a pointer gets.
+           *
+           * They run from the least-wanted to the most: the stop's own page,
+           * which leaves this one, then the camera and the share, then the two
+           * that hold state, and the flag last. A phone is held at the right
+           * edge, so the far end of the row is where a thumb lands without
+           * moving, and that end belongs to the thing this panel was opened
+           * for - not to the link that closes it.
            *
            * Nothing here is filled. Five containers under the arrivals made
            * the open panel a wall of boxes, and the last of them - a pill
@@ -1294,22 +1301,61 @@ function StopRow(props: {
                 controls beside it for a string most riders never read. */}
             <StopCode name={props.stop.name} lang={props.lang} class="mr-auto" />
 
+            <a
+              {...useLinkProps(stopLink(props.stopId))}
+              aria-label={t("openStop", props.lang)}
+              title={t("openStop", props.lang)}
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+            >
+              {/* Not a chevron: the other three icons do something to this
+                  stop, and this one is what else there is to know about it. */}
+              <InfoIcon size={16} />
+            </a>
+
+            {/* Only where the department has a camera within sight of the
+                kerb: a button that opens somebody else's junction would teach
+                riders not to press it. */}
+            <Show when={camera()}>
+              {(near) => (
+                <button
+                  type="button"
+                  aria-label={t("trafficCamera", props.lang)}
+                  title={t("trafficCamera", props.lang)}
+                  onClick={() => props.onCamera(near())}
+                  class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+                >
+                  <CameraIcon size={16} />
+                </button>
+              )}
+            </Show>
+
             <button
               type="button"
-              onClick={props.canAlight ? props.onAlight : props.onBoard}
-              aria-label={boardLabel()}
-              title={boardLabel()}
-              aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
+              aria-label={t("share", props.lang)}
+              title={t("share", props.lang)}
+              onClick={props.onShare}
+              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
+            >
+              <ShareIcon size={16} />
+            </button>
+
+            {/* Waiting for it, or riding on it: both questions are asked from
+                the stop you care about, so both are answered from here. */}
+            <button
+              type="button"
+              aria-label={t("remindMe", props.lang)}
+              title={t("remindMe", props.lang)}
+              aria-pressed={alerted() ? "true" : "false"}
+              onClick={props.onAlert}
               class={[
                 "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
-                  "text-primary": props.role === "board" || props.role === "alight",
-                  "text-subtle-foreground hover:text-foreground":
-                    props.role !== "board" && props.role !== "alight",
+                  "text-primary": alerted(),
+                  "text-subtle-foreground hover:text-foreground": !alerted(),
                 },
               ]}
             >
-              <FlagIcon size={16} />
+              <AlarmIcon size={16} />
             </button>
 
             <button
@@ -1347,62 +1393,23 @@ function StopRow(props: {
               <BookmarkIcon size={16} />
             </button>
 
-            {/* Waiting for it, or riding on it: both questions are asked from
-                the stop you care about, so both are answered from here. */}
             <button
               type="button"
-              aria-label={t("remindMe", props.lang)}
-              title={t("remindMe", props.lang)}
-              aria-pressed={alerted() ? "true" : "false"}
-              onClick={props.onAlert}
+              onClick={props.canAlight ? props.onAlight : props.onBoard}
+              aria-label={boardLabel()}
+              title={boardLabel()}
+              aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
               class={[
                 "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
-                  "text-primary": alerted(),
-                  "text-subtle-foreground hover:text-foreground": !alerted(),
+                  "text-primary": props.role === "board" || props.role === "alight",
+                  "text-subtle-foreground hover:text-foreground":
+                    props.role !== "board" && props.role !== "alight",
                 },
               ]}
             >
-              <AlarmIcon size={16} />
+              <FlagIcon size={16} />
             </button>
-
-            <button
-              type="button"
-              aria-label={t("share", props.lang)}
-              title={t("share", props.lang)}
-              onClick={props.onShare}
-              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
-            >
-              <ShareIcon size={16} />
-            </button>
-
-            {/* Only where the department has a camera within sight of the
-                kerb: a button that opens somebody else's junction would teach
-                riders not to press it. */}
-            <Show when={camera()}>
-              {(near) => (
-                <button
-                  type="button"
-                  aria-label={t("trafficCamera", props.lang)}
-                  title={t("trafficCamera", props.lang)}
-                  onClick={() => props.onCamera(near())}
-                  class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
-                >
-                  <CameraIcon size={16} />
-                </button>
-              )}
-            </Show>
-
-            <a
-              {...useLinkProps(stopLink(props.stopId))}
-              aria-label={t("openStop", props.lang)}
-              title={t("openStop", props.lang)}
-              class="app-press flex size-8 items-center justify-center rounded-lg text-subtle-foreground transition-colors duration-state hover:bg-secondary hover:text-foreground"
-            >
-              {/* Not a chevron: the other three icons do something to this
-                  stop, and this one is what else there is to know about it. */}
-              <InfoIcon size={16} />
-            </a>
           </div>
         </div>
       </Reveal>
