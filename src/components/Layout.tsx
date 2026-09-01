@@ -177,34 +177,60 @@ export function RowCard(props: {
   children: JSX.Element;
   /** Hold the list to one column, e.g. while its rows are being dragged. */
   single?: boolean;
+  /**
+   * Hairlines from edge to edge. The default is inset so a page list reads
+   * as one block with a seam; a sheet's rows sit flush to the card and the
+   * inset looked like a gap in the rule.
+   */
+  flushRules?: boolean;
+  /**
+   * Keep the card pinned while its rows scroll inside it. The frame stays
+   * put; only the list moves - on a stop screen and in its preview sheet.
+   */
+  scroll?: boolean;
   class?: string;
 }) {
+  const frame = "rounded-xl border border-border bg-card shadow-card";
+  const grid = [
+    "grid auto-rows-min content-start",
+    "[&>*]:min-w-0 [&>*]:max-w-full",
+    "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
+    props.flushRules ? "[&>*+*]:before:inset-x-0" : "[&>*+*]:before:left-3.5 [&>*+*]:before:right-0",
+    props.single
+      ? ""
+      : [
+          "lg:grid-cols-2 lg:gap-px lg:bg-border lg:[&>*]:bg-card lg:[&>*+*]:before:hidden",
+          "min-[110rem]:grid-cols-3",
+          /* An odd number of rows leaves the last cell of the grid empty,
+             and an empty cell is a hole of the separator colour in the
+             corner of the card. The last row widens to close it. Bounded
+             below the three-column width: both span rules land in the
+             same layer, so an unbounded two-column span would win the
+             ordering there and punch two holes instead. */
+          "lg:max-[110rem]:[&>*:last-child:nth-child(odd)]:col-span-2",
+          "min-[110rem]:[&>*:last-child:nth-child(3n+1)]:col-span-3",
+          "min-[110rem]:[&>*:last-child:nth-child(3n+2)]:col-span-2",
+          "min-[110rem]:[&>*:last-child:nth-child(3n)]:col-span-1",
+        ].join(" "),
+  ].join(" ");
+
+  if (props.scroll) {
+    return (
+      <div class={["flex min-h-0 flex-col overflow-hidden", frame, props.class ?? ""]}>
+        <div
+          class={[
+            "app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain",
+            grid,
+          ]}
+        >
+          {props.children}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      class={[
-        "grid overflow-hidden rounded-xl border border-border bg-card shadow-card",
-        "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:left-3.5 [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
-        props.single
-          ? ""
-          : [
-              "lg:grid-cols-2 lg:gap-px lg:bg-border lg:[&>*]:bg-card lg:[&>*+*]:before:hidden",
-              "min-[110rem]:grid-cols-3",
-              /* An odd number of rows leaves the last cell of the grid empty,
-                 and an empty cell is a hole of the separator colour in the
-                 corner of the card. The last row widens to close it. Bounded
-                 below the three-column width: both span rules land in the
-                 same layer, so an unbounded two-column span would win the
-                 ordering there and punch two holes instead. */
-              "lg:max-[110rem]:[&>*:last-child:nth-child(odd)]:col-span-2",
-              "min-[110rem]:[&>*:last-child:nth-child(3n+1)]:col-span-3",
-              "min-[110rem]:[&>*:last-child:nth-child(3n+2)]:col-span-2",
-              "min-[110rem]:[&>*:last-child:nth-child(3n)]:col-span-1",
-            ].join(" "),
-        props.class ?? "",
-      ]}
-    >
-      {props.children}
-    </div>
+    <div class={["grid overflow-hidden", frame, grid, props.class ?? ""]}>{props.children}</div>
   );
 }
 

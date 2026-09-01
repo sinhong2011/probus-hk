@@ -300,9 +300,8 @@ test("opening a stop reveals the departures after the next one", async ({ page }
   await row.click();
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
-  // The row keeps the next bus; the ones after it stack under that countdown
-  // on the right, each with the clock time it lands at - a wait that long is
-  // only worth reading against a watch.
+  // The row keeps the next bus; the waits after it continue that column,
+  // and each clock time sits on the left under the fare.
   const later = page.locator("[data-later-arrivals]");
   await expect(later).toBeVisible({ timeout: 10_000 });
 });
@@ -355,17 +354,44 @@ test("pinning a stop puts it on the saved screen", async ({ page }) => {
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 });
 
-test("an open stop links through to its own page", async ({ page }) => {
+test("an open stop previews its other lines over this route", async ({ page }) => {
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
   await stopRows(page).nth(2).click();
-  // Every row carries its own panel so the collapse can animate both ways, so
-  // the link has to be taken from the row that is actually open.
-  await page.locator('[data-open="true"] a[href^="/stop/"]').first().click();
+  await page.locator('[data-open="true"]').getByRole("button", { name: "車站詳情" }).click();
 
+  const preview = page.getByRole("dialog");
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText("途經路線")).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(/[?&]preview=/);
+
+  await preview.getByRole("link", { name: "車站詳情" }).click();
   await expect(page).toHaveURL(/\/stop\//);
-  await expect(page.getByText("途經路線", { exact: false })).toBeVisible({ timeout: 10_000 });
+});
+
+test("starring a stop from its preview puts it on the saved screen", async ({ page }) => {
+  await page.goto(`/route/${KMB_1}`);
+  await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
+
+  await stopRows(page).nth(2).click();
+  await page.locator('[data-open="true"]').getByRole("button", { name: "車站詳情" }).click();
+
+  const preview = page.getByRole("dialog").filter({ hasText: "途經路線" });
+  await expect(preview).toBeVisible();
+
+  const star = preview.getByRole("button", { name: "加入收藏" });
+  await expect(star).toHaveAttribute("aria-pressed", "false");
+  await star.click();
+
+  await page
+    .getByRole("dialog", { name: "分組" })
+    .getByRole("button", { name: "加入收藏" })
+    .click();
+  await expect(star).toHaveAttribute("aria-pressed", "true");
+
+  await page.goto("/saved");
+  await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 });
 
 test("the tab you came from stays lit on a route page", async ({ page }) => {

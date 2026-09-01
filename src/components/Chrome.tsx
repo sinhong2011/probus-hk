@@ -40,11 +40,19 @@ export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class
 }
 
 /** Small-caps section heading used down the whole app. */
-export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Element }) {
+export function SectionLabel(props: {
+  children: JSX.Element;
+  /** Beside the title on the left - a count, a chip. */
+  aside?: JSX.Element;
+  trailing?: JSX.Element;
+}) {
   return (
-    <div class="flex items-baseline justify-between">
-      <span class="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
-        {props.children}
+    <div class="flex items-center justify-between gap-2">
+      <span class="flex min-w-0 items-center gap-2">
+        <span class="shrink-0 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
+          {props.children}
+        </span>
+        <Show when={props.aside}>{props.aside}</Show>
       </span>
       <Show when={props.trailing}>{props.trailing}</Show>
     </div>
@@ -140,9 +148,12 @@ export function Chip(props: {
   tone?: "plain" | "accent" | "warn" | "card";
   /** For the flex behaviour of the row it sits in, e.g. `shrink-0`. */
   class?: string;
+  /** When the chip is only a numeral or icon, say what it counts. */
+  label?: string;
 }) {
   return (
     <span
+      aria-label={props.label}
       /* `whitespace-nowrap`, because the chip is a fixed height: a value that
          wraps does not make the chip taller, it spills out of it. "52 m" broke
          across two lines the moment a long stop name claimed the row. */
@@ -342,13 +353,16 @@ export function Segmented<T extends string | number>(props: {
               class={[
                 // `whitespace-nowrap`: a two-character label broken across two
                 // lines is not a shorter label, it is a broken one.
-                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
+                // Weight stays put: bolding the chosen label grew its box,
+                // and a heading that wrapped around a wider control was the
+                // whole list jumping.
+                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 font-bold leading-none transition-colors duration-state",
                 props.fill ? "grow basis-0" : "shrink-0",
                 props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
                 props.pill ? "rounded-full" : "rounded-md",
                 {
-                  "font-bold text-foreground": on(),
-                  "font-semibold text-subtle-foreground": !on(),
+                  "text-foreground": on(),
+                  "text-subtle-foreground": !on(),
                 },
               ]}
             >

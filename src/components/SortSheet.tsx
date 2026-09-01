@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 import { Modal } from "./Modal";
-import { CheckIcon } from "./Icons";
+import { CheckIcon, SortIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
 
 export interface SortChoice<T extends string> {
@@ -19,12 +19,33 @@ export interface SortChoice<T extends string> {
  * same colours, at the same height, it read as a second row of filters rather
  * than as a different kind of thing entirely.
  *
- * So it lives in the header as one button wearing its own answer, and the four
- * options only appear when asked for. Which buys the room to say what each one
- * means: "最近" beside a list of arrival times is genuinely ambiguous - nearest
- * stop, or most recently used - and a segment two characters wide had nowhere
- * to say which.
+ * So it lives in the header as one button that names the question, and the
+ * options only appear when asked for. Which buys the room to say what each
+ * one means: "最近" beside a list of arrival times is genuinely ambiguous -
+ * nearest stop, or most recently used - and a segment two characters wide
+ * had nowhere to say which.
+ *
+ * The trigger does not wear the current choice. "最快到站" and "路線號" are
+ * different widths, and painting whichever is on onto a pill grew or shrank
+ * it - a heading that wrapped around that change redrew the list under it.
  */
+
+/** Opens the sort sheet. Always the same words, so it never resizes. */
+export function SortTrigger(props: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-label={props.label}
+      onClick={props.onClick}
+      class="app-press flex h-[1.6rem] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold leading-none text-subtle-foreground"
+    >
+      <SortIcon size={12} />
+      {props.label}
+    </button>
+  );
+}
+
 export function SortSheet<T extends string>(props: {
   open: boolean;
   onClose: () => void;
