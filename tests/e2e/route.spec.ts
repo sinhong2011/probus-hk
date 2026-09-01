@@ -301,8 +301,9 @@ test("opening a stop reveals the departures after the next one", async ({ page }
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
   // The row keeps the next bus; the waits after it continue that column,
-  // and each clock time sits on the left under the fare.
-  const later = page.locator("[data-later-arrivals]");
+  // and each clock time sits on the left under the fare. Closed panels keep
+  // the same markup for the collapse, so the open one has to be named.
+  const later = page.locator('[data-open="true"] [data-later-arrivals]');
   await expect(later).toBeVisible({ timeout: 10_000 });
 });
 
@@ -380,7 +381,7 @@ test("starring a stop from its preview puts it on the saved screen", async ({ pa
   const preview = page.getByRole("dialog").filter({ hasText: "途經路線" });
   await expect(preview).toBeVisible();
 
-  const star = preview.getByRole("button", { name: "加入收藏" });
+  const star = preview.getByRole("button", { name: /加入收藏|已收藏/ });
   await expect(star).toHaveAttribute("aria-pressed", "false");
   await star.click();
 
