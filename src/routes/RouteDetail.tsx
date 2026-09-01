@@ -768,11 +768,13 @@ function StopRow(props: {
          * The negative margin cancels the row's own padding, so one row's rail
          * meets the next one's instead of stopping short of it.
          *
-         * The segment above the dot is a fixed height rather than a spring, so
-         * the dot lands on the stop name whatever else the row is carrying.
-         * Centring it instead made the marker slide down the moment a row grew
-         * a fare line or opened, and a rail whose dots wander away from the
-         * names beside them is unreadable as a sequence.
+         * Both segments spring, so the dot sits at the middle of its row. It
+         * used to hang from a fixed segment, pinned to the stop's name: back
+         * then a row was a name and a countdown, and a row that grew a fare
+         * line grew below the dot, leaving the mark riding high in its own
+         * row. Every row carries that line now, so the middle is where the
+         * stop is, and the rail reads as evenly spaced beads rather than as
+         * marks nudged towards the top of each row.
          */}
         <div class="pointer-events-none relative -my-2 mr-2 flex w-3 shrink-0 flex-col items-center self-stretch">
           {/*
@@ -785,8 +787,7 @@ function StopRow(props: {
            */}
           <div
             class={[
-              "w-0.5 shrink-0 transition-colors duration-state",
-              props.isNearest ? "h-[15px]" : "h-4",
+              "w-0.5 grow transition-colors duration-state",
               {
                 "bg-transparent": props.seq === 1,
                 // The rail above a stop belongs to the ride only once it has
@@ -848,9 +849,12 @@ function StopRow(props: {
              * of the way there, and the position glides with the clock the
              * way the countdown ticks - one movement, one meaning.
              *
-             * The lower segment is this stop's share of the gap; the next
-             * row's fixed segment above its dot is the rest, and the offset
-             * counts it so a bus about to arrive sits on the next stop.
+             * The gap between two dots is two half-rows: this one below its
+             * dot, the next one above its own. Only the first is a box CSS
+             * can measure here, so the fraction is read against twice it -
+             * exact while rows are the height they now all share, and a hair
+             * out on the one that is open, which is the row the bus is least
+             * likely to be short of.
              *
              * An opened row stretches its line, and the bus keeps its share
              * of it: the line is the road between the two stops however tall
@@ -865,7 +869,7 @@ function StopRow(props: {
                   data-rail-bus={bus.id}
                   class="absolute left-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
                   style={{
-                    top: `calc(${bus.fraction * 100}% + ${bus.fraction * 16}px)`,
+                    top: `${bus.fraction * 200}%`,
                     "box-shadow": "0 0 0 2px var(--card)",
                   }}
                 >
