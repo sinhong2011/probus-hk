@@ -219,7 +219,7 @@ export function Drawer(props: DrawerProps) {
               The bar sits in the middle of the strip, not at its foot. */}
           <Show when={!right() && draggable()}>
             <div class="flex h-[1.75rem] w-full shrink-0 items-center justify-center">
-              <Sheet.Handle class="!h-1 !w-24 rounded-full !bg-border !opacity-100" />
+              <Sheet.Handle class="relative -top-1 !h-1 !w-24 rounded-full !bg-border !opacity-100" />
             </div>
           </Show>
           <Show when={scrolls()} fallback={props.children}>

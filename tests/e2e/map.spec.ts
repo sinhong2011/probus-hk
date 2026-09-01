@@ -282,6 +282,12 @@ test("an opened-out map's stop list sits flush in its sheet", async ({ page }) =
     await expect(sheet).toBeVisible();
     await expect(overlay.getByText("油麻地永星里").first()).toBeVisible({ timeout: 15_000 });
 
+    // iOS Safari turns overflow, border-radius and -webkit-overflow-scrolling
+    // into containing blocks for position:fixed. The overlay has to live on
+    // document.body, the way every other sheet already does, or it is trapped
+    // in the map's rounded card and the stop list reads as a floating inset.
+    expect(await overlay.evaluate((el) => el.parentElement === document.body)).toBe(true);
+
     const overlayBox = await overlay.boundingBox();
     const sheetBox = await sheet.boundingBox();
     const card = sheet.locator(":scope > div").first();
