@@ -1,4 +1,5 @@
 import { Show, createEffect, createSignal } from "solid-js";
+import { PinIcon, RefreshIcon } from "./Icons";
 import { Modal } from "./Modal";
 import { CAMERA_REFRESH_MS, cameraImage, type NearbyCamera } from "~/data/cameras";
 import { clockTime } from "~/lib/format";
@@ -77,8 +78,27 @@ export function CameraSheet(props: {
       open={props.open}
       onClose={props.onClose}
       title={pick(props.near.camera.name, props.lang)}
-      description={caption()}
       lang={props.lang}
+      aside={
+        <div class="flex flex-col items-end gap-1" aria-label={caption()}>
+          <span class="flex items-center gap-1">
+            <PinIcon size={11} class="text-faint-foreground" />
+            <span class="tnum text-[0.81rem] font-semibold text-subtle-foreground">
+              {formatDistance(props.near.metres)}
+            </span>
+          </span>
+          <Show when={takenAt()}>
+            {(at) => (
+              <span class="flex items-center gap-1">
+                <RefreshIcon size={10} class="text-faint-foreground" />
+                <span class="tnum text-[0.69rem] font-medium text-faint-foreground">
+                  {t("updatedAt", props.lang)} {clockTime(at())}
+                </span>
+              </span>
+            )}
+          </Show>
+        </div>
+      }
     >
       <div class="flex flex-col gap-3">
         {/* The department's pictures are 4:3; the frame holds that shape from
@@ -100,7 +120,7 @@ export function CameraSheet(props: {
           </Show>
         </div>
 
-        <p class="text-center text-[0.75rem] font-medium text-faint-foreground md:text-left">
+        <p class="text-[0.75rem] font-medium text-faint-foreground">
           {t("cameraSource", props.lang)}
         </p>
       </div>

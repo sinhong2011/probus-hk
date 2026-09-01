@@ -33,6 +33,12 @@ export function Modal(props: {
   side?: "bottom" | "right";
   /** A line under the title saying what the sheet is for. */
   description?: string;
+  /**
+   * Status on the right of the title - a distance, a time - rather than a
+   * second line of the title. A camera's "229 m · 更新於 11:42" is not what
+   * the sheet is called, and sitting under the name it read as a subtitle.
+   */
+  aside?: JSX.Element;
 }) {
   const right = () => props.side === "right";
   return (
@@ -46,16 +52,25 @@ export function Modal(props: {
       class={right() ? "" : "sm:max-w-[32rem]"}
     >
       {/* Centred on a sheet, as shadcn centres its own; a panel reads from
-          the left, as a column does. */}
+          the left, as a column does. An aside pins the header to a left
+          title and a right status, or a centred name with a number off to
+          one side would be two alignments on one line. */}
       <div
         class={[
-          "flex shrink-0 flex-col gap-0.5 p-4 pb-0",
-          { "text-center md:text-left": !right() },
+          "flex shrink-0 p-4 pb-0",
+          props.aside
+            ? "items-start justify-between gap-3"
+            : ["flex-col gap-0.5", { "text-center md:text-left": !right() }],
         ]}
       >
-        <h2 class="text-base font-medium text-foreground">{props.title}</h2>
-        <Show when={props.description}>
-          <p class="text-balance text-sm text-muted-foreground">{props.description}</p>
+        <div class={props.aside ? "min-w-0 flex-1 text-left" : undefined}>
+          <h2 class="text-balance text-base font-medium text-foreground">{props.title}</h2>
+          <Show when={props.description}>
+            <p class="text-balance text-sm text-muted-foreground">{props.description}</p>
+          </Show>
+        </div>
+        <Show when={props.aside}>
+          <div class="shrink-0 pt-px text-right">{props.aside}</div>
         </Show>
       </div>
       <div class="app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4">
