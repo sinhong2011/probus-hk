@@ -1,10 +1,17 @@
-import { Show, createEffect, createSignal } from "solid-js";
-import { PinIcon, RefreshIcon } from "./Icons";
+import { For, Show, createEffect, createSignal } from "solid-js";
+import { ExternalIcon, MapIcon, PinIcon, RefreshIcon } from "./Icons";
 import { Modal } from "./Modal";
 import { CAMERA_REFRESH_MS, cameraImage, type NearbyCamera } from "~/data/cameras";
 import { clockTime } from "~/lib/format";
 import { formatDistance } from "~/lib/geo";
+import { mapLink, type MapProvider } from "~/lib/externalLinks";
 import { pick, t, type Lang } from "~/lib/i18n";
+
+const MAP_CHOICES: { id: MapProvider; label: "mapGoogle" | "mapApple" | "mapSystem" }[] = [
+  { id: "google", label: "mapGoogle" },
+  { id: "apple", label: "mapApple" },
+  { id: "geo", label: "mapSystem" },
+];
 
 /**
  * The road the bus is on, seen rather than inferred.
@@ -100,7 +107,7 @@ export function CameraSheet(props: {
         </div>
       }
     >
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1.5">
         {/* The department's pictures are 4:3; the frame holds that shape from
             the first paint so nothing jumps when the picture lands. */}
         <div class="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-secondary">
@@ -120,9 +127,43 @@ export function CameraSheet(props: {
           </Show>
         </div>
 
-        <p class="text-[0.75rem] font-medium text-faint-foreground">
-          {t("cameraSource", props.lang)}
-        </p>
+        {/* One line: the source is a footnote, the maps are the action. A
+            heading plus three full pills was a second block under a picture
+            that already fills the sheet. */}
+        <div class="flex items-center gap-2">
+          <p class="min-w-0 grow truncate text-[0.69rem] font-medium text-faint-foreground">
+            {t("cameraSource", props.lang)}
+          </p>
+          {/* One compact control, not a row of loose words: the maps share a
+              pill, with a hairline between each, so they still look like
+              buttons at this size. */}
+          <nav
+            aria-label={t("cameraOpenMap", props.lang)}
+            class="flex h-6 shrink-0 items-stretch overflow-hidden rounded-full border border-border bg-secondary"
+          >
+            <span class="flex items-center pl-1.5 text-faint-foreground" aria-hidden="true">
+              <MapIcon size={11} />
+            </span>
+            <For each={MAP_CHOICES}>
+              {(choice, index) => (
+                <a
+                  href={mapLink(choice.id, props.near.camera.location, props.lang)}
+                  target="_blank"
+                  rel="noreferrer"
+                  class={[
+                    "app-press flex items-center px-2 text-[0.69rem] font-bold text-muted-foreground transition-colors duration-state hover:text-foreground",
+                    { "border-l border-border": index() > 0 },
+                  ]}
+                >
+                  {t(choice.label, props.lang)}
+                </a>
+              )}
+            </For>
+            <span class="flex items-center pr-1.5 text-faint-foreground" aria-hidden="true">
+              <ExternalIcon size={9} />
+            </span>
+          </nav>
+        </div>
       </div>
     </Modal>
   );

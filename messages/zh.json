@@ -327,5 +327,9 @@
   "traffic_camera": "交通快拍",
   "camera_failed": "載唔到張相",
   "camera_source": "相片嚟自運輸署，每兩分鐘更新一次",
+  "camera_open_map": "用地圖開",
+  "map_google": "Google",
+  "map_apple": "Apple",
+  "map_system": "地理",
   "special_departures": "特別班次"
 }

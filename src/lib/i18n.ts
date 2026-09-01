@@ -344,6 +344,10 @@ const MESSAGES = {
   trafficCamera: m.traffic_camera,
   cameraFailed: m.camera_failed,
   cameraSource: m.camera_source,
+  cameraOpenMap: m.camera_open_map,
+  mapGoogle: m.map_google,
+  mapApple: m.map_apple,
+  mapSystem: m.map_system,
   specialDepartures: m.special_departures,
 } as const satisfies Record<string, Message>;
 

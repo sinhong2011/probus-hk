@@ -327,5 +327,9 @@
   "traffic_camera": "Traffic snapshot",
   "camera_failed": "The picture didn't load",
   "camera_source": "Pictures from the Transport Department, refreshed every two minutes",
+  "camera_open_map": "Open in maps",
+  "map_google": "Google",
+  "map_apple": "Apple",
+  "map_system": "Geo",
   "special_departures": "Special departures"
 }
