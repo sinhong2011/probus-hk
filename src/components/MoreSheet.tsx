@@ -12,7 +12,7 @@ import { trail } from "~/stores/trail";
  *
  * A thumb reaches five things comfortably at the foot of a 390px screen, and
  * the bar was asking it to reach six. The screens a rider lives in - nearby,
- * bookmarks, search - keep their tabs; the ones visited now and then, the
+ * starred, search - keep their tabs; the ones visited now and then, the
  * railway and the notices, live here behind "more", together with settings.
  * The sheet is a menu, not a place: a tap navigates and the sheet is gone.
  */

@@ -85,22 +85,24 @@ test("a line's direction opens that direction's route", async ({ page }) => {
   await expect(page.getByText("往 荃灣").first()).toBeVisible();
 });
 
-test("a station can be bookmarked like any other stop", async ({ page }) => {
+test("a station can be starred like any other stop", async ({ page }) => {
   await page.goto("/route/TWL%2B1%2BCentral%2BTsuen%20Wan");
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
 
   await page.locator("[data-stop-seq]").nth(2).getByRole("button").first().click();
-  const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
-  await pin.click();
+  const toggle = page
+    .locator(".app-reveal[data-open='true']")
+    .getByRole("button", { name: /加入收藏|已收藏/ });
+  await toggle.click();
   await page
     .getByRole("dialog", { name: "分組" })
     .getByRole("button", { name: "加入收藏" })
     .click();
-  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
 
-  // Bookmarks are route-agnostic, but a railway station is the one place where
+  // Stars are route-agnostic, but a railway station is the one place where
   // that had never actually been exercised.
-  await page.goto("/saved");
+  await page.goto("/starred");
   await expect(page.getByText("往 荃灣").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("TWL").first()).toBeVisible();
 });

@@ -129,7 +129,7 @@ export function installTooltips() {
   });
 
   // Pressing answers the question the tooltip was holding open - and often
-  // flips the label ("bookmark" becomes "remove bookmark"), which would leave
+  // flips the label ("star" becomes "starred"), which would leave
   // a stale name floating. `click` as well as `pointerdown`, for the keyboard.
   document.addEventListener("pointerdown", hide, true);
   document.addEventListener("click", hide, true);

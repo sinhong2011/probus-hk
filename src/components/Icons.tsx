@@ -12,7 +12,6 @@ import IconStamp from "~icons/lineicons/stamp";
 import IconTrainAlt from "~icons/lineicons/train-alt";
 import IconUsers from "~icons/lineicons/users";
 import IconArrowBothDirectionVertical from "~icons/lineicons/arrow-both-direction-vertical-1";
-import IconBookmark from "~icons/lineicons/bookmark";
 import IconBus from "~icons/lineicons/bus";
 import IconChevronLeft from "~icons/lineicons/chevron-left";
 import IconChevronRight from "~icons/lineicons/chevron-right";
@@ -130,7 +129,6 @@ export const GridIcon = wrap(IconGridAlt as IconComponent);
 export const PinIcon = wrap(IconMapMarker as IconComponent);
 export const MapIcon = wrap(IconMap as IconComponent);
 export const SearchIcon = wrap(IconSearch as IconComponent);
-export const BookmarkIcon = wrap(IconBookmark as IconComponent);
 export const StarIcon = wrap(IconStarFat as IconComponent);
 export const StarFillIcon = wrap(IconStarFill as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
@@ -278,7 +276,7 @@ export const AlarmIcon = wrap(IconAlarmClock as IconComponent);
 export const CheckIcon = wrap(IconCheck as IconComponent);
 export const FilterIcon = wrap(IconFunnel as IconComponent);
 export const SortIcon = wrap(IconSortAmount as IconComponent);
-/** Grouping, on the bookmark screen. */
+/** Grouping, on the starred screen. */
 export const LayersIcon = wrap(IconLayers as IconComponent);
 /** One group's name, beside the field a rider types a new one into. */
 export const TagIcon = wrap(IconTag as IconComponent);

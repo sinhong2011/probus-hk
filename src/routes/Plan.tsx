@@ -14,7 +14,7 @@ import type { ExplorePin } from "~/components/ExploreMap";
 import { Section } from "~/components/Layout";
 import { ModeSwitch } from "~/components/ModeSwitch";
 import {
-  BookmarkIcon,
+  StarIcon,
   CheckIcon,
   ChevronRightIcon,
   CloseIcon,
@@ -861,7 +861,7 @@ export default function Plan() {
                     },
                   ]}
                 >
-                  <BookmarkIcon size={13} />
+                  <StarIcon size={13} />
                   {t("saveTrip", lang())}
                 </button>
 

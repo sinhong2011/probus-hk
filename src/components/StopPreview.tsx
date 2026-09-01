@@ -28,7 +28,7 @@ import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { stopLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { useGeolocation } from "~/stores/geolocation";
-import { saved } from "~/stores/saved";
+import { isStopStar, starred } from "~/stores/starred";
 
 const MAP_CHOICES: { id: MapProvider; label: "mapGoogle" | "mapApple" | "mapSystem" }[] = [
   { id: "google", label: "mapGoogle" },
@@ -119,36 +119,22 @@ export function StopPreview(props: {
   const [groupOpen, setGroupOpen] = createSignal(false);
 
   /**
-   * Star the stop. Not a new kind of keeping: it saves the soonest line that
-   * calls here - the first by number when none have answered - so the Saved
-   * screen still ranks a route at a stop. Un-starring removes every bookmark
-   * kept at this kerb, whichever line it was kept on.
+   * Star the stop itself. A star from a route page is a line at this kerb;
+   * this is the kerb, every line that calls here. Removing it drops only
+   * that stop star, not a route kept from a route page.
    */
   const keptHere = () => {
     const ids = new Set(memberIds());
-    return saved.items().filter((item) => ids.has(item.stopId));
+    return starred.items().filter((item) => isStopStar(item) && ids.has(item.stopId));
   };
-  const starred = () => keptHere().length > 0;
-
-  const pickSave = () => {
-    const map = etas();
-    const rows = routes().map((at) => {
-      const list = map?.get(etaKey(at.route.key)) ?? [];
-      return { at, next: list[0]?.at.getTime() ?? Number.POSITIVE_INFINITY };
-    });
-    rows.sort((a, b) => a.next - b.next || compareRoutes(a.at.route, b.at.route));
-    const at = rows[0]?.at;
-    if (!at) return null;
-    return { routeKey: at.route.key, co: at.co, stopId: at.stopId, seq: at.seq };
-  };
+  const isStarred = () => keptHere().length > 0;
 
   const toggleStar = () => {
     const kept = keptHere();
     if (kept.length > 0) {
-      for (const item of kept) saved.remove(item.id);
+      for (const item of kept) starred.remove(item.id);
       return;
     }
-    if (!pickSave()) return;
     requestAnimationFrame(() => setGroupOpen(true));
   };
 
@@ -170,22 +156,17 @@ export function StopPreview(props: {
               <button
                 type="button"
                 onClick={toggleStar}
-                disabled={routes().length === 0}
-                aria-label={t(starred() ? "bookmarked" : "addBookmark", props.lang)}
-                title={t(starred() ? "bookmarked" : "addBookmark", props.lang)}
-                aria-pressed={starred() ? "true" : "false"}
+                aria-pressed={isStarred() ? "true" : "false"}
                 class={[
-                  "app-press flex size-[1.6rem] shrink-0 items-center justify-center rounded-full bg-secondary",
-                  starred() ? "text-primary" : "text-muted-foreground",
+                  "app-press inline-flex h-[1.6rem] w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold transition-colors duration-state hover:text-foreground",
+                  isStarred() ? "text-primary" : "text-muted-foreground",
                 ]}
               >
-                <Show when={starred()} fallback={<StarIcon size={13} />}>
-                  <StarFillIcon size={13} />
+                <Show when={isStarred()} fallback={<StarIcon size={12} />}>
+                  <StarFillIcon size={12} />
                 </Show>
+                {t(isStarred() ? "starredOn" : "addStar", props.lang)}
               </button>
-              <Show when={props.embedded}>
-                <StopCode name={entry().name} lang={props.lang} class="text-[0.75rem]" />
-              </Show>
               <Show when={metres() !== null}>
                 <Chip tone="accent">
                   <WalkIcon size={12} />
@@ -248,13 +229,17 @@ export function StopPreview(props: {
           <GroupSheet
             open={groupOpen()}
             onClose={() => setGroupOpen(false)}
-            groups={saved.groups()}
+            groups={starred.groups()}
             current=""
-            confirmLabel={t("addBookmark", props.lang)}
+            confirmLabel={t("addStar", props.lang)}
             onChoose={(group) => {
-              const entry = pickSave();
-              if (!entry) return;
-              saved.toggle({ ...entry, group });
+              starred.toggle({
+                routeKey: "",
+                co: routes()[0]?.co ?? "kmb",
+                stopId: props.stopId,
+                seq: 0,
+                group,
+              });
             }}
             lang={props.lang}
           />
@@ -347,6 +332,11 @@ export function StopPreviewSheet(props: {
       onClose={props.onClose}
       title={title()}
       lang={props.lang}
+      aside={
+        <Show when={stop()}>
+          {(entry) => <StopCode name={entry().name} lang={props.lang} class="text-[0.75rem]" />}
+        </Show>
+      }
       side={wide() ? "right" : "bottom"}
       /* The default side panel is a settings column. A route number, a
          destination and an arrival need the same width the stop list uses. */

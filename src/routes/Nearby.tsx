@@ -52,7 +52,7 @@ import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { liveUpdatedAt } from "~/data/live";
 import { frequent } from "~/stores/frequent";
 import { geo, useGeolocation } from "~/stores/geolocation";
-import { saved } from "~/stores/saved";
+import { starred } from "~/stores/starred";
 import { settings, type NearbyMode } from "~/stores/settings";
 import { sheets } from "~/stores/sheets";
 
@@ -509,7 +509,7 @@ export default function Nearby() {
 
   const mine = createMemo(() => {
     const numbers = new Set<string>();
-    for (const item of saved.items()) {
+    for (const item of starred.items()) {
       const route = routeAt(db(), item.routeKey);
       if (route) numbers.add(route.route);
     }
