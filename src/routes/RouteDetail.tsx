@@ -642,18 +642,6 @@ function StopRow(props: {
         : props.canAlight
           ? t("alightHere", props.lang)
           : t("boardHere", props.lang);
-  /* The same question in the words that fit on the control itself. A phone has
-     no pointer to hover, so a lone flag square was an unnamed control on the
-     one screen where naming it matters most - the band above the list asks the
-     rider to pick where they get off, and this is where they answer. */
-  const flagText = () =>
-    props.role === "board"
-      ? t("boardLabel", props.lang)
-      : props.role === "alight"
-        ? t("alightLabel", props.lang)
-        : props.canAlight
-          ? t("alightHere", props.lang)
-          : t("boardHere", props.lang);
   /** Whether the ride being planned owns the rail above and below the dot. */
   const primaryAbove = () => props.isNearest || props.role === "riding" || props.role === "alight";
   const primaryBelow = () => props.role === "board" || props.role === "riding";
@@ -1224,11 +1212,12 @@ function StopRow(props: {
            * The flag is where you get on and where you get off: a rider does
            * not ride a route, they ride a piece of one, and every number that
            * matters - how long, how much, what time you are there - depends on
-           * which piece. Its question changes with what is set, so it is the
-           * one control here that says its name out loud rather than leaving it
-           * to a tooltip no touch screen will ever show. The other four are
-           * icons alone, because a bookmark, an alarm, a share and an arrow
-           * need no introduction; "where do you get off" does.
+           * which piece. It led the row wearing its question in words, and a
+           * label that changes with what is set - board here, get off here -
+           * kept resizing the one control a thumb was aiming at. It is a
+           * square like the rest now, at the same end, and its question lives
+           * where every other control's does: in the name a screen reader
+           * speaks and the tooltip a pointer gets.
            *
            * Nothing here is filled. Five containers under the arrivals made
            * the open panel a wall of boxes, and the last of them - a pill
@@ -1247,7 +1236,7 @@ function StopRow(props: {
               title={boardLabel()}
               aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
               class={[
-                "app-bare app-press mr-auto flex h-8 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[0.75rem] font-bold transition-colors duration-state hover:bg-secondary lg:px-2 lg:text-[0.81rem]",
+                "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
                   "text-primary": props.role === "board" || props.role === "alight",
                   "text-subtle-foreground hover:text-foreground":
@@ -1255,8 +1244,7 @@ function StopRow(props: {
                 },
               ]}
             >
-              <FlagIcon size={12} />
-              <span class="truncate">{flagText()}</span>
+              <FlagIcon size={16} />
             </button>
 
             <button
