@@ -1,15 +1,18 @@
-import {
-  AttributionControl,
-  LngLatBounds,
-  Map as MlMap,
-  type ExpressionSpecification,
-} from "maplibre-gl";
+import { LngLatBounds, Map as MlMap, type ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
-import type { JSX } from "@solidjs/web";
+import { Portal, type JSX } from "@solidjs/web";
 import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { Drawer } from "~/components/Drawer";
-import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
+import {
+  BusIcon,
+  CloseIcon,
+  ExpandIcon,
+  MinusIcon,
+  PinIcon,
+  PlusIcon,
+  RouteIcon,
+} from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
 import { whenIdleAfter } from "~/lib/idle";
 import { useInView } from "~/lib/inView";
@@ -30,6 +33,8 @@ import { kindOf } from "~/lib/operators";
 import {
   MAP_ACCENT as ACCENT,
   MAP_STYLES as STYLES,
+  addFoldedAttribution,
+  MAP_CONTROL,
   lineColour,
   prefersDark,
   upsertSource,
@@ -146,11 +151,18 @@ function stateTween(instance: MlMap) {
       const t = Math.min(1, (now - started) / STATE_MS);
       const value = from + (to - from) * easeOut(t);
       at.set(slot, value);
-      try {
-        instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
-      } catch {
-        // The source is not there yet, or has gone; there is nothing to move.
+      /*
+       * The source may not be there yet, or may have gone in a style swap.
+       * Checked rather than caught: a missing source does not make
+       * `setFeatureState` throw, it makes the map fire its error event, and
+       * that prints to the console from inside MapLibre where no catch here
+       * can reach. The next state change starts a fresh tween.
+       */
+      if (!instance.getSource(SRC_STOPS)) {
+        frames.delete(slot);
+        return;
       }
+      instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
       if (t < 1) frames.set(slot, requestAnimationFrame(step));
       else frames.delete(slot);
     };
@@ -1155,6 +1167,12 @@ export function RouteMap(props: {
   /** How the map has framed itself so far - see the geometry effect. */
   let opened: "none" | "route" | "nearest" = "none";
   const [map, setMap] = createSignal<MlMap | null>(null);
+  /**
+   * MapLibre's own bottom-left control column - the ⓘ lives there, and any
+   * control of ours that should stand in line with it mounts here rather
+   * than measuring where the pill happens to be.
+   */
+  const [corner, setCorner] = createSignal<HTMLElement | null>(null);
   /** The state driver, once there is a map to drive. */
   const [tween, setTween] = createSignal<((id: number, key: string, to: number) => void) | null>(
     null,
@@ -1259,7 +1277,7 @@ export function RouteMap(props: {
         },
       });
 
-      instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
+      addFoldedAttribution(instance);
 
       // Picking a stop on the map is the fast way into a forty-stop list. The
       // name and the flag are the stop as much as the dot under them is - a
@@ -1297,6 +1315,9 @@ export function RouteMap(props: {
         instance.resize();
         setUsable(true);
         setMap(instance);
+        setCorner(
+          instance.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-bottom-left"),
+        );
       });
 
       const giveUp = window.setTimeout(() => setUsable((v) => v ?? false), 6_000);
@@ -1304,6 +1325,7 @@ export function RouteMap(props: {
       return () => {
         clearTimeout(giveUp);
         setMap(null);
+        setCorner(null);
         instance.remove();
       };
     },
@@ -1720,56 +1742,71 @@ export function RouteMap(props: {
     if (instance && me) instance.easeTo({ center: [me.lng, me.lat], zoom: 15, duration: 500 });
   };
 
-  /**
-   * Take me to the bus.
-   *
-   * A bus on a forty-stop route is one badge in a metre of line, and on a phone
-   * most of that line is off screen - so the one question the map exists to
-   * answer needs an answer that does not involve hunting for it. If a stop is
-   * open, this goes to the bus that stop is waiting for, because that is the
-   * bus the rider means; otherwise it frames every bus on the route.
+  /*
+   * The opened-out map rests a sheet over its foot and runs under the
+   * notch: the bottom control column lifts clear of the one, the top
+   * column drops clear of the other. Styling the columns styles everything
+   * standing in them at once.
    */
+  createEffect(
+    () => ({ mount: corner(), up: expanded() }),
+    ({ mount, up }) => {
+      if (!mount) return;
+      mount.style.bottom = up ? `${sheetHeight()}px` : "";
+      const tops = mount.parentElement?.querySelector<HTMLElement>(".maplibregl-ctrl-top-left");
+      if (tops) tops.style.top = up ? "max(0px, calc(env(safe-area-inset-top) - 10px))" : "";
+    },
+  );
+
+  /**
+   * Take me to the bus - and, pressed again, to the one behind it.
+   *
+   * A bus on a forty-stop route is one badge in a metre of line, and on a
+   * phone most of that line is off screen - so the one question the map
+   * exists to answer needs an answer that does not involve hunting. The
+   * first press goes to the bus that matters most: the one the open stop is
+   * waiting for, or failing that the one furthest along. Each press after
+   * steps back through the rest and wraps, so a route with three buses is
+   * three presses rather than a search - and with one bus, every press is
+   * "find it again".
+   */
+  let visitedBus = "";
   const frameBuses = () => {
     const instance = map();
     const measured = track();
     if (!instance || !measured || trails.size === 0) return;
 
-    const here = [...trails.values()].map((trail) => ({
-      measure: trail.measure,
-      position: pointAt(measured.line, trail.measure).position,
-    }));
+    const here = [...trails.entries()]
+      .map(([id, trail]) => ({
+        id,
+        measure: trail.measure,
+        position: pointAt(measured.line, trail.measure).position,
+      }))
+      // Front of the route first, so "next" reads down the stop list.
+      .sort((a, b) => b.measure - a.measure);
 
     const selected = props.selectedIndex;
     const limit = selected === undefined ? undefined : measured.measures[selected];
-    // The last bus still short of that stop is the next one to reach it.
-    const coming =
-      limit === undefined
-        ? undefined
-        : here
-            .filter((bus) => bus.measure <= limit)
-            .reduce<(typeof here)[number] | undefined>(
-              (best, bus) => (best && best.measure > bus.measure ? best : bus),
-              undefined,
-            );
+    // The last bus still short of the open stop is the next to reach it.
+    const coming = limit === undefined ? undefined : here.find((bus) => bus.measure <= limit);
 
-    if (coming) {
-      instance.easeTo({
-        center: coming.position,
-        // Off-centre by half the sheet, so the bus does not land behind it.
-        offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
-        // Close enough to read the road it is on, without throwing away a
-        // wider view the rider has deliberately zoomed out to.
-        zoom: Math.max(instance.getZoom(), 15),
-        duration: 600,
-      });
-      return;
-    }
+    const at = here.findIndex((bus) => bus.id === visitedBus);
+    // A remembered bus has gone - or nothing is remembered: start over at
+    // the one that matters. Otherwise, the next one back.
+    const target = (
+      at === -1 ? (coming ?? here[0]) : here[(at + 1) % here.length]
+    ) as (typeof here)[number];
+    visitedBus = target.id;
 
-    const bounds = new LngLatBounds();
-    for (const bus of here) bounds.extend(bus.position);
-    if (!bounds.isEmpty()) {
-      instance.fitBounds(bounds, { padding: framePadding(72), maxZoom: 15.5, duration: 600 });
-    }
+    instance.easeTo({
+      center: target.position,
+      // Off-centre by half the sheet, so the bus does not land behind it.
+      offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
+      // Close enough to read the road it is on, without throwing away a
+      // wider view the rider has deliberately zoomed out to.
+      zoom: Math.max(instance.getZoom(), 15),
+      duration: 600,
+    });
   };
 
   /**
@@ -1799,6 +1836,13 @@ export function RouteMap(props: {
     if (!bounds.isEmpty()) {
       instance.fitBounds(bounds, { padding: framePadding(48), maxZoom: 15, duration: 500 });
     }
+  };
+
+  // A mouse has no pinch, and scroll-to-zoom is not discoverable from a
+  // still map; a whole zoom level per press, about what one pinch covers.
+  const zoomStep = (delta: number) => {
+    const instance = map();
+    if (instance) instance.zoomTo(instance.getZoom() + delta, { duration: 240 });
   };
 
   /**
@@ -2323,8 +2367,7 @@ export function RouteMap(props: {
     }
   };
 
-  const controlClass =
-    "app-press app-glass flex size-[1.6rem] items-center justify-center rounded-full text-foreground lg:size-9";
+  const controlClass = MAP_CONTROL;
 
   return (
     <>
@@ -2345,37 +2388,6 @@ export function RouteMap(props: {
           style={{ height: usable() === false ? "0" : undefined, overflow: "hidden" }}
           aria-label="route map"
         />
-
-        {/*
-         * The status line. It is the honesty label when there are buses - they
-         * are inferences, not position reports, and the map has to say so
-         * somewhere a rider can find it - and it is the explanation when there
-         * are none, which is the harder half: a blank map that says nothing is
-         * indistinguishable from a broken one.
-         */}
-        <Show when={usable()}>
-          <div
-            class="app-glass pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-1.5 py-0.5 lg:gap-1.5 lg:px-2.5 lg:py-1"
-            style={expanded() ? { top: "max(0.625rem, env(safe-area-inset-top))" } : undefined}
-          >
-            <span
-              class={[
-                "size-1 rounded-full lg:size-2",
-                {
-                  // Waiting has to look like waiting, or it looks like nothing.
-                  "animate-pulse bg-subtle-foreground": note() === "loading",
-                  "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
-                },
-              ]}
-              style={
-                note() === "estimated" ? { "background-color": lineColour(props.route) } : undefined
-              }
-            />
-            <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.75rem]">
-              {noteLabel()}
-            </span>
-          </div>
-        </Show>
 
         {/*
          * Opened out, the map takes the whole window - and takes the arrivals
@@ -2439,28 +2451,6 @@ export function RouteMap(props: {
                 <CloseIcon size={15} />
               </Show>
             </button>
-            <Show when={drawn() > 0}>
-              <button
-                type="button"
-                aria-label={t("mapFindBus", props.lang)}
-                title={t("mapFindBus", props.lang)}
-                onClick={frameBuses}
-                class={`${controlClass} text-primary`}
-              >
-                <BusIcon size={15} />
-              </button>
-            </Show>
-            <Show when={props.me}>
-              <button
-                type="button"
-                aria-label={t("mapMyLocation", props.lang)}
-                title={t("mapMyLocation", props.lang)}
-                onClick={recentre}
-                class={controlClass}
-              >
-                <PinIcon size={15} />
-              </button>
-            </Show>
             <button
               type="button"
               aria-label={t("mapWholeRoute", props.lang)}
@@ -2470,7 +2460,109 @@ export function RouteMap(props: {
             >
               <RouteIcon size={15} />
             </button>
+            {/* A pair, spaced as one: in and out are halves of one control. */}
+            <div class="flex flex-col gap-1">
+              <button
+                type="button"
+                aria-label={t("mapZoomIn", props.lang)}
+                onClick={() => zoomStep(1)}
+                class={controlClass}
+              >
+                <PlusIcon size={15} />
+              </button>
+              <button
+                type="button"
+                aria-label={t("mapZoomOut", props.lang)}
+                onClick={() => zoomStep(-1)}
+                class={controlClass}
+              >
+                <MinusIcon size={15} />
+              </button>
+            </div>
           </div>
+
+          {/* Where am I, opposite where is the bus: the two questions a rider
+              stands at a kerb with, one at each lower corner. Above the sheet
+              once the opened-out map has one. */}
+          <Show when={props.me}>
+            <div
+              class="absolute bottom-2.5 right-2.5"
+              style={expanded() ? { bottom: `${sheetHeight() + 10}px` } : undefined}
+            >
+              <button
+                type="button"
+                aria-label={t("mapMyLocation", props.lang)}
+                title={t("mapMyLocation", props.lang)}
+                onClick={recentre}
+                class={controlClass}
+              >
+                <PinIcon size={15} />
+              </button>
+            </div>
+          </Show>
+
+          {/* The question the map exists to answer, at the thumb's corner -
+              and beside it, in a whisper, the honesty label: the buses are
+              inferences, not position reports, and when there are none this
+              is the explanation, without which a blank map reads as a broken
+              one. Both mount into MapLibre's own bottom-left control column
+              rather than being placed by hand, so everything in that corner
+              shares one stacking system instead of trading magic offsets. */}
+          <Show when={usable() && corner()} keyed>
+            {(mount) => (
+              <Portal mount={mount}>
+                <div
+                  class="maplibregl-ctrl flex items-center gap-1.5"
+                  ref={(el) =>
+                    queueMicrotask(() => {
+                      // Whichever node the portal actually parented to the
+                      // column - itself, or a wrapper - goes first in it.
+                      const node = el.parentElement === mount ? el : el.parentElement;
+                      if (node?.parentElement === mount && node !== mount.firstChild) {
+                        mount.insertBefore(node, mount.firstChild);
+                      }
+                    })
+                  }
+                >
+                  <Show when={drawn() > 0}>
+                    <button
+                      type="button"
+                      aria-label={t("mapFindBus", props.lang)}
+                      title={t("mapFindBus", props.lang)}
+                      onClick={frameBuses}
+                      class={controlClass}
+                    >
+                      <BusIcon size={15} />
+                    </button>
+                  </Show>
+                  {/* The button's own height, so the corner reads as one row
+                      of controls rather than a button with a sticker beside
+                      it. */}
+                  <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
+                    <span
+                      class={[
+                        "size-1 rounded-full lg:size-1.5",
+                        {
+                          // Waiting has to look like waiting, or it looks
+                          // like nothing.
+                          "animate-pulse bg-subtle-foreground": note() === "loading",
+                          "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
+                        },
+                      ]}
+                      style={
+                        note() === "estimated"
+                          ? { "background-color": lineColour(props.route) }
+                          : undefined
+                      }
+                    />
+                    <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
+                      {noteLabel()}
+                    </span>
+                  </div>
+                </div>
+              </Portal>
+            )}
+          </Show>
         </Show>
       </div>
       <Show when={usable() === false}>
