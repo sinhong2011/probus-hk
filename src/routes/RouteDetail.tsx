@@ -29,6 +29,7 @@ import {
   InfoIcon,
   MegaphoneIcon,
   MinibusIcon,
+  PinIcon,
   ShareIcon,
   StarFillIcon,
   StarIcon,
@@ -58,7 +59,7 @@ import {
   serviceNotice,
 } from "~/lib/format";
 import { now } from "~/stores/clock";
-import { distanceM } from "~/lib/geo";
+import { distanceM, formatDistance } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import {
   lineColour,
@@ -542,6 +543,12 @@ function StopRow(props: {
   open: boolean;
   passed: boolean;
   isNearest: boolean;
+  /**
+   * How far the rider is from this stop, in metres - given only for the stop
+   * the page has decided they are at, which is the only row where the answer
+   * is about them rather than about the route.
+   */
+  metres: number | null;
   /** Total stops on the route, so the rail stops at the terminus. */
   total: number;
   onToggle: () => void;
@@ -1044,21 +1051,45 @@ function StopRow(props: {
               stops, but what a ride costs is half of what a rider is deciding
               between two stops with, and making them open a row to see it put
               the price behind a tap while the time sat in the open. */}
-          <Show when={fare() !== null}>
+          <Show when={fare() !== null || props.metres !== null}>
             {/* Set off from the name rather than tucked under it: the tags
                 give the line a shape of its own, and at the list's own
                 line-spacing it read as a second line of the stop's name. */}
             <span class="mt-2 flex min-w-0 items-center gap-1 text-[0.64rem] font-semibold text-subtle-foreground">
-              <span class="shrink-0">{t("fareFull", props.lang)}</span>
-              <FareTag>{fare()}</FareTag>
-              <Show when={concession()}>
-                {(amount) => (
-                  <>
-                    <span class="shrink-0">·</span>
-                    <span class="truncate">{t("fareOctopus", props.lang)}</span>
-                    <FareTag>{amount()}</FareTag>
-                  </>
-                )}
+              <Show when={fare() !== null}>
+                <span class="shrink-0">{t("fareFull", props.lang)}</span>
+                <FareTag>{fare()}</FareTag>
+                <Show when={concession()}>
+                  {(amount) => (
+                    <>
+                      <span class="shrink-0">·</span>
+                      <span class="truncate">{t("fareOctopus", props.lang)}</span>
+                      <FareTag>{amount()}</FareTag>
+                    </>
+                  )}
+                </Show>
+              </Show>
+
+              {/*
+               * How far the rider actually is from this kerb, on the one row
+               * where that is a question: the stop the page has decided they
+               * are at. The halo says which stop it thinks they are standing
+               * at; this says how far off it is - "you are here" reads very
+               * differently at 20 m and at 600 m, and a rider who can see the
+               * difference can tell a stop across the road from one they have
+               * to walk to. In the accent, like the halo it belongs to.
+               */}
+              <Show when={props.metres !== null}>
+                <Show when={fare() !== null}>
+                  <span class="shrink-0">·</span>
+                </Show>
+                <span class="shrink-0 text-primary">
+                  <PinIcon size={10} />
+                </span>
+                {/* Zero metres is a real reading - it is where the phone says
+                    you are standing - so the guard is on null, not on truth,
+                    and the value is read back rather than handed in. */}
+                <span class="tnum shrink-0">{formatDistance(props.metres as number)}</span>
               </Show>
             </span>
           </Show>
@@ -1650,10 +1681,17 @@ export default function RouteDetail() {
   };
 
   /** Index of the closest stop, so the page opens where you are standing. */
-  const nearestIndex = createMemo(() => {
+  /**
+   * The stop the rider is at, and how far off it is.
+   *
+   * The distance was worked out here and thrown away; the row it belongs to
+   * prints it now, because "you are here" is a different sentence at twenty
+   * metres and at six hundred.
+   */
+  const nearest = createMemo(() => {
     const here = position();
     const list = stops();
-    if (!here || list.length === 0) return -1;
+    if (!here || list.length === 0) return { index: -1, metres: null };
 
     let best = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -1665,8 +1703,11 @@ export default function RouteDetail() {
       }
     });
     // Beyond a kilometre you are not "at" this route at all.
-    return bestDistance <= 1000 ? best : -1;
+    return bestDistance <= 1000
+      ? { index: best, metres: bestDistance }
+      : { index: -1, metres: null };
   });
+  const nearestIndex = () => nearest().index;
 
   /** Any bookmark kept on this route, whichever stop it was kept at. */
   const routeSaved = createMemo(() => {
@@ -2033,6 +2074,7 @@ export default function RouteDetail() {
                   lang={lang()}
                   passed={nearestIndex() >= 0 && index() < nearestIndex()}
                   isNearest={index() === nearestIndex()}
+                  metres={index() === nearestIndex() ? nearest().metres : null}
                   busAway={settings.vehiclesAway() && openSeq() === seq() ? stopsAway(seq()) : null}
                   onNoticeChange={(key) => noteNotice(seq(), key)}
                   onEtasChange={(list) => noteEtas(seq(), list)}
