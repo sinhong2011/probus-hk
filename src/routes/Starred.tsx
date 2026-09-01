@@ -10,13 +10,7 @@ import {
   onCleanup,
   untrack,
 } from "solid-js";
-import {
-  EmptyState,
-  ScreenTitle,
-  SectionLabel,
-  SpecialTag,
-  StopCode,
-} from "~/components/Chrome";
+import { EmptyState, ScreenTitle, SectionLabel, SpecialTag, StopCode } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
