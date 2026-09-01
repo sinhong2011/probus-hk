@@ -217,6 +217,19 @@ test("draws the bus on the rail between the stops it is between", async ({ page 
   // A countdown that jumps from fourteen minutes at one stop to one at the
   // next reads as a mistake until the bus between them is drawn.
   await mockRunningBuses(page);
+  // Every drawn vehicle is inferred, so a rider asks for it - see
+  // `settings.vehiclesOnList`. Asked for here, or there is nothing to draw.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "e2e-vehicles",
+          data: { id: "settings", vehiclesOnList: true },
+        },
+      }),
+    );
+  });
   await page.goto(`/route/${KMB_1}`);
   await expect(page.locator("[data-rail-bus]").first()).toBeAttached({ timeout: 15_000 });
 });

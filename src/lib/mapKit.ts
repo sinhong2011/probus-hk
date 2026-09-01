@@ -5,8 +5,9 @@ import {
   type Map as MlMap,
 } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
-import type { KeyedRoute } from "~/data/types";
-import { plateStyle } from "~/lib/operators";
+// The route's own colour lives with the plates it is read from, so a screen
+// that only needs the colour need not pull a map library in behind it.
+export { lineColour } from "~/lib/operators";
 
 /**
  * The pieces every map in the app shares - the route map, the explore stage
@@ -46,15 +47,6 @@ export function prefersDark(choice: string): boolean {
   if (choice === "dark") return true;
   if (choice === "light") return false;
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-/** Reads the plate colour back out so a line matches the operator's brand. */
-export function lineColour(route: KeyedRoute): string {
-  const style = plateStyle(route.co, route.route);
-  if (/^#[0-9a-f]{6}$/i.test(style.background)) return style.background;
-  // A joint route has a gradient plate; use the first operator's colour.
-  const first = /#([0-9a-f]{6})/i.exec(style.background);
-  return first ? `#${first[1]}` : "#d71920";
 }
 
 /**

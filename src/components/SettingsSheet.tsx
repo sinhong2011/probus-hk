@@ -289,6 +289,17 @@ export default function SettingsSheet() {
                   onChange={(v) => settings.setShowScheduled(v)}
                 />
               </Row>
+              <Hairline />
+              {/* The o'clock time beside the countdown. Off by default: the
+                  minutes are the answer at a kerb, and this is the form for
+                  planning against a watch or a last train. */}
+              <Row title={t("showClockTimes", lang())}>
+                <Toggle
+                  label={t("showClockTimes", lang())}
+                  checked={settings.clockTimes()}
+                  onChange={(v) => settings.setClockTimes(v)}
+                />
+              </Row>
             </Card>
           </Section>
 

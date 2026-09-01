@@ -60,7 +60,14 @@ import {
 import { now } from "~/stores/clock";
 import { distanceM } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { operatorLabel, plateStyle, vehicleKind, type VehicleKind } from "~/lib/operators";
+import {
+  lineColour,
+  operatorLabel,
+  plateStyle,
+  vehicleKind,
+  type VehicleKind,
+} from "~/lib/operators";
+import { vehicleSprite } from "~/lib/vehicleArt";
 import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
@@ -464,9 +471,14 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
                   </span>
                 </span>
 
-                <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                  {clockTime(row().at)}
-                </span>
+                {/* The same switch the countdown above reads: a rider who
+                    has not asked for o'clock times is not shown them here
+                    either - see `settings.clockTimes`. */}
+                <Show when={settings.clockTimes()}>
+                  <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                    {clockTime(row().at)}
+                  </span>
+                </Show>
 
                 {/* An operator that marks one of these as the last of the day
                     is answering a question the number alone cannot. Anything
@@ -755,7 +767,11 @@ function StopRow(props: {
        * button is neither valid nor reachable - this way the row still opens
        * from anywhere on it, and the one thing that opens something else can.
        */}
-      <div class="relative flex w-full items-start px-3.5 py-2 text-left">
+      {/* The countdown sits on the row's centre line, where the dot on the
+          rail opposite it now sits: hung from the top it lined up with the
+          name and left the fare under it facing nothing, and on a row whose
+          name runs to two lines it read as belonging to the line above. */}
+      <div class="relative flex w-full items-center px-3.5 py-2 text-left">
         <button
           type="button"
           onClick={() => (props.picking ? props.onAlight() : props.onToggle())}
@@ -862,19 +878,30 @@ function StopRow(props: {
              * top of an open card read as a different fact from the same bus
              * hugging the dot once the card closed.
              */}
+            {/* The map's own drawing, not a pictogram of it: the same
+                double-decker, minibus or railway car, in the same livery,
+                painted by the same canvas - see `~/lib/vehicleArt`. A rider
+                looking from the map to the list was being shown one vehicle
+                as a picture and the other as a symbol in a disc, and the
+                halo the drawing already carries does the job the disc was
+                doing - cutting it out of the line it sits on. */}
             <For each={props.buses}>
               {(bus) => (
-                <span
+                <img
                   aria-hidden="true"
+                  alt=""
                   data-rail-bus={bus.id}
-                  class="absolute left-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
-                  style={{
-                    top: `${bus.fraction * 200}%`,
-                    "box-shadow": "0 0 0 2px var(--card)",
-                  }}
-                >
-                  <VehicleIcon size={10} />
-                </span>
+                  src={vehicleSprite(lineColour(props.route), vehicleKind(props.route.co))}
+                  /* Turned a quarter to face down the rail, which on this
+                     list is the way the route runs: every stop below it is
+                     one it has still to reach, and a bus drawn facing the
+                     terminus it came from is a bus going the wrong way.
+                     `max-w-none` because the rail it hangs on is two pixels
+                     wide, and the base stylesheet caps an image at its
+                     parent's width - which squashed the drawing to a line. */
+                  class="absolute left-1/2 size-5 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
+                  style={{ top: `${bus.fraction * 200}%` }}
+                />
               )}
             </For>
           </div>

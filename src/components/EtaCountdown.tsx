@@ -5,6 +5,7 @@ import { EtaSkeleton } from "./Skeleton";
 import { clockTime, countdown, isLastRun, type Countdown } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { now } from "~/stores/clock";
+import { settings } from "~/stores/settings";
 
 export type CountdownSize = "sm" | "md" | "lg";
 
@@ -91,6 +92,14 @@ export function EtaCountdown(props: {
   stagger?: number;
 }) {
   const size = () => props.size ?? "md";
+  /*
+   * The o'clock time is asked for twice: by the caller, which knows whether
+   * this row has room for it, and by the rider, who says once in settings
+   * whether they want that form at all - see `settings.clockTimes`. Both have
+   * to say yes, and reading them in one place is what keeps the spoken label
+   * and the printed row from disagreeing.
+   */
+  const clock = () => props.clock === true && settings.clockTimes();
 
   /** How many of the leading arrivals are out of reach. */
   const missed = () => Math.max(0, props.unreachable ?? 0);
@@ -174,7 +183,7 @@ export function EtaCountdown(props: {
             upcoming()
               .map((entry, index) => label(entry.state, props.lang, index < missed()))
               .join(", "),
-            props.clock && leadAt() ? clockTime(leadAt() as Date) : "",
+            clock() && leadAt() ? clockTime(leadAt() as Date) : "",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -311,16 +320,16 @@ export function EtaCountdown(props: {
            * ran three lines deep on the right against one line of name on the
            * left, and the difference read as a hole in the row.
            */}
-          <Show when={wordBelow() || (props.clock && leadAt()) || rail()}>
+          <Show when={wordBelow() || (clock() && leadAt()) || rail()}>
             <span class="-mt-px flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
-              <Show when={wordBelow() || (props.clock && leadAt())}>
+              <Show when={wordBelow() || (clock() && leadAt())}>
                 <span class="flex items-baseline gap-1">
                   <Show when={wordBelow()}>
                     <span class="text-[0.69rem] font-semibold text-faint-foreground">
                       {t("scheduled", props.lang)}
                     </span>
                   </Show>
-                  <Show when={props.clock && leadAt()}>
+                  <Show when={clock() && leadAt()}>
                     {(at) => (
                       <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
                         {clockTime(at())}

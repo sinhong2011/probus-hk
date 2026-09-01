@@ -27,6 +27,15 @@ interface Persisted {
    * loosest of the three. A rider who trusts one need not take all three, and
    * turning the feed off entirely stops the work rather than hiding it.
    */
+  /**
+   * Whether an arrival says the o'clock time it lands at beside the minutes.
+   *
+   * Off unless asked for. "7 分鐘" is the answer at a kerb, and a second
+   * number beside every one of them is a column of digits to read past on the
+   * way to it. A rider planning against a watch, a meeting or a last train
+   * wants the other form, and this is how they ask for it.
+   */
+  clockTimes: boolean;
   vehiclesOnMap: boolean;
   vehiclesOnList: boolean;
   vehiclesAway: boolean;
@@ -53,6 +62,7 @@ const DEFAULTS: Persisted = {
   radiusM: 400,
   refreshSeconds: 20,
   showScheduled: true,
+  clockTimes: false,
   vehiclesOnMap: false,
   vehiclesOnList: false,
   vehiclesAway: false,
@@ -102,6 +112,7 @@ const [theme, setTheme] = field("theme");
 const [radiusM, setRadiusM] = field("radiusM");
 const [refreshSeconds, setRefreshSeconds] = field("refreshSeconds");
 const [showScheduled, setShowScheduled] = field("showScheduled");
+const [clockTimes, setClockTimes] = field("clockTimes");
 const [vehiclesOnMap, setVehiclesOnMap] = field("vehiclesOnMap");
 const [vehiclesOnList, setVehiclesOnList] = field("vehiclesOnList");
 const [vehiclesAway, setVehiclesAway] = field("vehiclesAway");
@@ -128,6 +139,8 @@ export const settings = {
   setRefreshSeconds,
   showScheduled,
   setShowScheduled,
+  clockTimes,
+  setClockTimes,
   vehiclesOnMap,
   setVehiclesOnMap,
   vehiclesOnList,

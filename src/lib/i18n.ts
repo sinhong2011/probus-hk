@@ -57,6 +57,7 @@ const MESSAGES = {
   searchRange: m.search_range,
   searchRangeHint: m.search_range_hint,
   showScheduled: m.show_scheduled,
+  showClockTimes: m.show_clock_times,
   showVehicles: m.show_vehicles,
   showVehiclesMap: m.show_vehicles_map,
   showVehiclesList: m.show_vehicles_list,

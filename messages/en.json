@@ -40,6 +40,7 @@
   "search_range": "Custom search range",
   "search_range_hint": "Nearby lists the stops inside this circle, drawn around where you are standing",
   "show_scheduled": "Show scheduled",
+  "show_clock_times": "Show exact arrival times",
   "show_vehicles": "Show where the buses are",
   "show_vehicles_map": "On the map",
   "show_vehicles_list": "On the route list",
