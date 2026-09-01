@@ -50,7 +50,7 @@ import { useVehicles } from "~/data/useVehicles";
 import { progressOf } from "~/data/vehicles";
 import {
   clockTime,
-  concessionFare,
+  notableConcession,
   countdown,
   fareAt,
   formatFare,
@@ -685,7 +685,7 @@ function StopRow(props: {
    */
   const VehicleIcon = VEHICLE_ICON[vehicleKind(props.route.co)];
   const fare = () => fareAt(props.route.fares, props.seq);
-  const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
+  const concession = () => notableConcession(props.route.fares?.[props.seq - 1]);
 
   /* Asked only for the open row, which is what makes the camera index load
      lazily: a page of forty closed rows never fetches it at all. */
@@ -881,7 +881,12 @@ function StopRow(props: {
         </div>
 
         <div class="pointer-events-none relative flex min-w-0 grow flex-col gap-0.5">
-          <div class="flex min-w-0 items-center gap-1.5">
+          {/* Everything on this line hangs off the name's first baseline, not
+              off the middle of however many lines the name runs to. A long
+              name wraps - "九龍城轉車站- 富豪東方酒店" takes two - and centred,
+              the number and the code slid down into the gap beside the second
+              line, reading as marks on the wrong row. */}
+          <div class="flex min-w-0 items-baseline gap-1.5">
             {/*
              * The stop's place in the route, as a prefix on the name - where
              * the eye already is, and set as close to it as the two words of
@@ -929,10 +934,6 @@ function StopRow(props: {
                 {nameParts().tail}
               </Show>
             </span>
-
-            {/* The code on the pole, which is what tells two stops of the same
-                name apart - the job the second-language line was doing badly. */}
-            <StopCode name={props.stop.name} lang={props.lang} />
 
             {/*
              * What the operator says is wrong here, beside the name it is
@@ -1237,6 +1238,19 @@ function StopRow(props: {
            * name, and everything unset stays grey.
            */}
           <div class="flex items-center justify-end gap-0.5 pb-3 pl-[2.125rem] pr-1.5">
+            {/*
+             * The code on the pole, at the quiet end of the panel a rider has
+             * opened rather than beside the name.
+             *
+             * It tells two stops of the same name apart, which is a real job -
+             * but one almost nobody is doing: a rider reads the name, and the
+             * code was a grey tag on every one of forty rows, taking width
+             * from the name it followed and pushing a long one onto a second
+             * line. Down here it costs nothing and is still one tap away for
+             * the rider matching a pole to a screen.
+             */}
+            <StopCode name={props.stop.name} lang={props.lang} class="mr-auto" />
+
             <button
               type="button"
               onClick={props.canAlight ? props.onAlight : props.onBoard}
