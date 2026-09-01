@@ -901,8 +901,12 @@ function StopRow(props: {
                      parent's width - which squashed the drawing to a line. */
                   /* Nudged off the rail rather than straddling it: the line is
                      the road, and a vehicle sitting exactly on it hides the
-                     stretch it is meant to be travelling. */
-                  class="absolute left-1/2 ml-[3px] size-4 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
+                     stretch it is meant to be travelling. It parks on the
+                     outside, where there is nothing but card, and flips so
+                     that its wheels still face the road it is driving on -
+                     turned a quarter without the flip, a bus on this side of
+                     the line is one lying on its roof. */
+                  class="absolute left-1/2 -ml-[5px] size-4 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 scale-y-[-1] transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
                   style={{ top: `${bus.fraction * 200}%` }}
                 />
               )}
