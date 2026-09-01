@@ -20,7 +20,7 @@ const ROUTES = [
   "/rail/TWL",
   "/browse",
   "/browse/overnight",
-  "/saved",
+  "/starred",
   "/settings",
   `/route/${encodeURIComponent("1+1+CHUK YUEN ESTATE+STAR FERRY")}`,
   // An unknown path must fall through to the catch-all, not explode.
@@ -66,7 +66,7 @@ test("a page transition leaves nothing behind that could trap fixed children", a
   expect(await shell.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
 });
 
-test("the saved screen renders its cards with no development warnings", async ({ page }) => {
+test("the starred screen renders its cards with no development warnings", async ({ page }) => {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(String(e)));
   page.on("console", (m) => {
@@ -75,10 +75,10 @@ test("the saved screen renders its cards with no development warnings", async ({
   });
 
   await mockTransit(page);
-  // The route dev.spec walks /saved empty; the cards, the sortable grid and
-  // the drag wiring only exist once there are bookmarks to draw.
+  // The route dev.spec walks /starred empty; the cards, the sortable grid and
+  // the drag wiring only exist once there are stars to draw.
   await page.addInitScript(() => {
-    if (!localStorage.getItem("probus:db:bookmarks")) {
+    if (!localStorage.getItem("probus:db:starred")) {
       localStorage.setItem(
         "probus:saved",
         JSON.stringify([
@@ -102,7 +102,7 @@ test("the saved screen renders its cards with no development warnings", async ({
       );
     }
   });
-  await page.goto("/saved");
-  await expect(page.locator("[data-bookmark-id]")).toHaveCount(2, { timeout: 20_000 });
-  expect(problems, "development warnings on /saved with bookmarks").toEqual([]);
+  await page.goto("/starred");
+  await expect(page.locator("[data-star-id]")).toHaveCount(2, { timeout: 20_000 });
+  expect(problems, "development warnings on /starred with stars").toEqual([]);
 });

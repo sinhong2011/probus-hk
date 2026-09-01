@@ -5,7 +5,7 @@ import type { MessageKey } from "~/lib/i18n";
 /** Every path that is a tab, and the label the tab bar gives it. */
 const TABS: Record<string, MessageKey> = {
   "/": "home",
-  "/saved": "saved",
+  "/starred": "starred",
   "/search": "search",
   "/rail": "rail",
   "/notices": "notices",

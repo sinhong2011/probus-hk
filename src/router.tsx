@@ -172,9 +172,9 @@ const browseCategoryRoute = createRoute({
   component: lazyScreen(() => import("~/routes/Browse")),
 });
 
-const savedRoute = createRoute({
+const starredRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/saved",
+  path: "/starred",
   // Which group the list is cut to. The empty string is a real value - the
   // ungrouped bucket - so this cannot go through `asText`, which folds ""
   // into "unset"; absent genuinely means "every group".
@@ -182,12 +182,28 @@ const savedRoute = createRoute({
     const group = typeof search.group === "string" ? search.group : undefined;
     return { ...(group !== undefined && { group }) };
   },
-  component: lazyScreen(() => import("~/routes/Saved")),
+  component: lazyScreen(() => import("~/routes/Starred")),
+});
+
+/*
+ * The address this screen used to have: a star, a shared link or an old test
+ * still lands on the list.
+ */
+const savedRedirect = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/saved",
+  validateSearch: (search: Record<string, unknown>) => {
+    const group = typeof search.group === "string" ? search.group : undefined;
+    return { ...(group !== undefined && { group }) };
+  },
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: "/starred", search });
+  },
 });
 
 /*
  * Settings is a drawer over the screen rather than a screen, but the address
- * it used to have keeps working: a bookmark, a shared link or an old test
+ * it used to have keeps working: a starred stop, a shared link or an old test
  * lands on the home screen with the drawer already open.
  */
 const settingsRoute = createRoute({
@@ -237,7 +253,8 @@ const routeTree = rootRoute.addChildren([
   railLineRoute,
   browseRoute,
   browseCategoryRoute,
-  savedRoute,
+  starredRoute,
+  savedRedirect,
   settingsRoute,
   routeDetailRoute,
   stopDetailRoute,

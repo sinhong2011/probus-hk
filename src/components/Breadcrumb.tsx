@@ -15,7 +15,7 @@ import type { RouteDb } from "~/data/types";
  * The way back out of a detail screen, named rather than implied.
  *
  * A bare chevron says only "somewhere previous"; on a screen you may have
- * reached from the map, a search result or a bookmark, that is the one thing
+ * reached from the map, a search result or a starred stop, that is the one thing
  * worth saying. Each crumb is a real link to the place it names, so the trail
  * behaves the same whether you arrived by tapping, by a shared link, or by
  * reloading the page - unlike a history-based back, which does nothing at all

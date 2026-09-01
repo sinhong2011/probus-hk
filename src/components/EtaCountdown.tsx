@@ -68,9 +68,15 @@ export function EtaCountdown(props: {
    */
   waitOnly?: boolean;
   /**
+   * The "預定班次" column beside a timetable guess. Off where the smaller
+   * numeral already says this is an estimate, and the four characters
+   * crowd the destination they sit beside.
+   */
+  scheduledLabel?: boolean;
+  /**
    * How many of the leading arrivals the rider cannot reach in time.
    *
-   * A countdown is only an answer if the bus is still catchable. A bookmark
+   * A countdown is only an answer if the bus is still catchable. A starred stop
    * twenty minutes' walk away lists buses that will have gone before anyone
    * could reach the kerb, and the screen that knows the walk is the one that
    * has to say so - this component only knows what the operator reported.
@@ -168,7 +174,10 @@ export function EtaCountdown(props: {
    * Holding it empty on a live-only row left a word-width hole between the
    * destination and the minutes.
    */
-  const booked = () => !props.waitOnly && upcoming().some((entry) => entry.state.scheduled);
+  const booked = () =>
+    (props.scheduledLabel ?? true) &&
+    !props.waitOnly &&
+    upcoming().some((entry) => entry.state.scheduled);
 
   return (
     <Show

@@ -165,8 +165,8 @@ test("switching halves does not replay the page entrance", async ({ page }) => {
   expect(await replays()).toBe(0);
 
   // Leaving for a screen that really is elsewhere still announces itself.
-  await page.locator('a[href="/saved"]').first().click();
-  await expect(page).toHaveURL(/\/saved$/);
+  await page.locator('a[href="/starred"]').first().click();
+  await expect(page).toHaveURL(/\/starred$/);
   await expect.poll(replays).toBeGreaterThan(0);
 });
 

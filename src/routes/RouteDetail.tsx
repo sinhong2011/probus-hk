@@ -21,7 +21,8 @@ import { SplitPage } from "~/components/Layout";
 import { EtaCountdown, EtaRemark } from "~/components/EtaCountdown";
 import {
   AlarmIcon,
-  BookmarkIcon,
+  StarFillIcon,
+  StarIcon,
   BusIcon,
   CameraIcon,
   CloseIcon,
@@ -32,8 +33,6 @@ import {
   MinibusIcon,
   PinIcon,
   ShareIcon,
-  StarFillIcon,
-  StarIcon,
   TrainIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
@@ -74,7 +73,7 @@ import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
 import { alertId, alerts } from "~/stores/alerts";
-import { saved, savedId, type SavedItem } from "~/stores/saved";
+import { starred, starredId, type StarredItem } from "~/stores/starred";
 import { toast } from "~/stores/toast";
 import { settings } from "~/stores/settings";
 
@@ -85,8 +84,8 @@ import { settings } from "~/stores/settings";
  */
 const LAST_CALL_MINUTES = 60;
 
-/** Everything a bookmark needs except the answer the group sheet collects. */
-type PendingSave = Omit<SavedItem, "id" | "group" | "order">;
+/** Everything a star needs except the answer the group sheet collects. */
+type PendingStar = Omit<StarredItem, "id" | "group" | "order">;
 
 // MapLibre is ~800 kB; keeping it in its own chunk means the rest of the
 // route page paints without waiting for it, and it stays cached across deploys.
@@ -570,8 +569,8 @@ function StopRow(props: {
   total: number;
   onToggle: () => void;
   onAlert: () => void;
-  /** Hands the page a bookmark to make, once it has asked where it belongs. */
-  onGroup: (entry: PendingSave) => void;
+  /** Hands the page a star to make, once it has asked where it belongs. */
+  onGroup: (entry: PendingStar) => void;
   onShare: () => void;
   /** Hands the page a traffic camera near this stop, to open in a sheet. */
   onCamera: (near: NearbyCamera) => void;
@@ -673,7 +672,7 @@ function StopRow(props: {
     return list.filter((eta) => eta.source !== "scheduled");
   };
 
-  const pinned = () => saved.has(props.route.key, props.stopId);
+  const isStarred = () => starred.has(props.route.key, props.stopId);
   /* What the flag would say if it still said anything: the four states the one
      square carries, kept where a pointer and a screen reader can reach them. */
   const boardLabel = () =>
@@ -1415,7 +1414,7 @@ function StopRow(props: {
            * around the flag - was the loudest thing on a row whose point is
            * the numbers above it. What the fills were carrying was state, and
            * state is carried here the way the row above carries it: a set
-           * boarding point, an armed alarm and a made bookmark go the app's
+           * boarding point, an armed alarm and a made star go the app's
            * own accent colour, the same colour they take beside the stop's
            * name, and everything unset stays grey.
            */}
@@ -1501,19 +1500,19 @@ function StopRow(props: {
 
             <button
               type="button"
-              aria-label="pin"
-              title={t("pinned", props.lang)}
-              aria-pressed={pinned() ? "true" : "false"}
+              aria-label={t(isStarred() ? "starredOn" : "addStar", props.lang)}
+              title={t(isStarred() ? "starredOn" : "addStar", props.lang)}
+              aria-pressed={isStarred() ? "true" : "false"}
               onClick={() => {
                 /*
-                 * Dropping a bookmark is immediate; making one is a question -
+                 * Dropping a star is immediate; making one is a question -
                  * which list it joins is part of making it, not an errand to
                  * run later on another screen. Nothing is saved until that
                  * sheet is confirmed, so backing out of it leaves the
-                 * bookmark list exactly as it was.
+                 * star list exactly as it was.
                  */
-                if (pinned()) {
-                  saved.remove(savedId(props.route.key, props.stopId));
+                if (isStarred()) {
+                  starred.remove(starredId(props.route.key, props.stopId));
                   return;
                 }
                 props.onGroup({
@@ -1526,12 +1525,14 @@ function StopRow(props: {
               class={[
                 "app-bare app-press flex size-8 items-center justify-center rounded-lg transition-colors duration-state hover:bg-secondary",
                 {
-                  "text-primary": pinned(),
-                  "text-subtle-foreground hover:text-foreground": !pinned(),
+                  "text-primary": isStarred(),
+                  "text-subtle-foreground hover:text-foreground": !isStarred(),
                 },
               ]}
             >
-              <BookmarkIcon size={16} />
+              <Show when={isStarred()} fallback={<StarIcon size={16} />}>
+                <StarFillIcon size={16} />
+              </Show>
             </button>
 
             <button
@@ -1692,8 +1693,8 @@ export default function RouteDetail() {
     setNotice({ name, text });
     requestAnimationFrame(() => setNoticeOpen(true));
   };
-  /** A bookmark waiting on the one answer it still needs: which group. */
-  const [pending, setPending] = createSignal<PendingSave | null>(null);
+  /** A star waiting on the one answer it still needs: which group. */
+  const [pending, setPending] = createSignal<PendingStar | null>(null);
   const [groupOpen, setGroupOpen] = createSignal(false);
 
   const askAlert = (seq: number, id: string, name: string) => {
@@ -1806,7 +1807,7 @@ export default function RouteDetail() {
     },
   );
 
-  const askGroup = (entry: PendingSave) => {
+  const askGroup = (entry: PendingStar) => {
     setPending(entry);
     requestAnimationFrame(() => setGroupOpen(true));
   };
@@ -1840,24 +1841,24 @@ export default function RouteDetail() {
   });
   const nearestIndex = () => nearest().index;
 
-  /** Any bookmark kept on this route, whichever stop it was kept at. */
-  const routeSaved = createMemo(() => {
+  /** Any star kept on this route, whichever stop it was kept at. */
+  const routeStarred = createMemo(() => {
     const key = route()?.key;
-    return key !== undefined && saved.items().some((item) => item.routeKey === key);
+    return key !== undefined && starred.items().some((item) => item.routeKey === key);
   });
 
   /**
    * Star the route. Not a new kind of keeping: it saves the route at the
    * stop you are nearest - its first stop when there is no position - so the
-   * Saved screen's groups, live ranking and alerts all apply unchanged.
-   * Un-starring removes every bookmark kept on this route.
+   * Starred screen's groups, live ranking and alerts all apply unchanged.
+   * Removing it drops every star kept on this route.
    */
   const toggleStar = () => {
     const r = route();
     if (!r) return;
-    if (routeSaved()) {
-      for (const item of saved.items().filter((i) => i.routeKey === r.key)) {
-        saved.remove(item.id);
+    if (routeStarred()) {
+      for (const item of starred.items().filter((i) => i.routeKey === r.key)) {
+        starred.remove(item.id);
       }
       return;
     }
@@ -2333,14 +2334,15 @@ export default function RouteDetail() {
                 <button
                   type="button"
                   onClick={toggleStar}
-                  aria-label={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
-                  title={t(routeSaved() ? "bookmarked" : "addBookmark", lang())}
+                  aria-label={t(routeStarred() ? "starredOn" : "addStar", lang())}
+                  title={t(routeStarred() ? "starredOn" : "addStar", lang())}
+                  aria-pressed={routeStarred() ? "true" : "false"}
                   class={[
                     "app-press flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary",
-                    routeSaved() ? "text-primary" : "text-muted-foreground",
+                    routeStarred() ? "text-primary" : "text-muted-foreground",
                   ]}
                 >
-                  <Show when={routeSaved()} fallback={<StarIcon size={15} />}>
+                  <Show when={routeStarred()} fallback={<StarIcon size={15} />}>
                     <StarFillIcon size={15} />
                   </Show>
                 </button>
@@ -2470,10 +2472,10 @@ export default function RouteDetail() {
                   <GroupSheet
                     open={groupOpen()}
                     onClose={() => setGroupOpen(false)}
-                    groups={saved.groups()}
+                    groups={starred.groups()}
                     current=""
-                    confirmLabel={t("addBookmark", lang())}
-                    onChoose={(group) => saved.toggle({ ...entry(), group })}
+                    confirmLabel={t("addStar", lang())}
+                    onChoose={(group) => starred.toggle({ ...entry(), group })}
                     lang={lang()}
                   />
                 )}

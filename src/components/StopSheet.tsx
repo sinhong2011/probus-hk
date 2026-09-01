@@ -7,9 +7,9 @@ import type { Company, KeyedRoute } from "~/data/types";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 
 /**
- * Which stop on a route a bookmark should watch.
+ * Which stop on a route a star should watch.
  *
- * A bookmark is a route at a stop, and the stop is the half that goes stale: a
+ * A star is a route at a stop, and the stop is the half that goes stale: a
  * route offered from the "you keep opening these" list is saved at its first
  * stop, and a rider who moves house or changes job is still watching the old
  * kerb. Until now the only way to move it was to delete it and walk the route
@@ -18,7 +18,7 @@ import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
  *
  * Every stop, numbered as the route page numbers them, with the current one
  * marked and scrolled into view. One tap decides: unlike the group sheet this
- * is not also how a bookmark is made, so there is nothing to confirm - and a
+ * is not also how a star is made, so there is nothing to confirm - and a
  * wrong tap is a second tap away from being put right.
  */
 export function StopSheet(props: {
@@ -26,7 +26,7 @@ export function StopSheet(props: {
   onClose: () => void;
   route: KeyedRoute;
   co: Company;
-  /** The stop the bookmark watches now. */
+  /** The stop the star watches now. */
   stopId: string;
   onChoose: (choice: { co: Company; stopId: string; seq: number }) => void;
   lang: Lang;

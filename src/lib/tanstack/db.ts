@@ -58,7 +58,7 @@ type SourceFn<T extends object> = () =>
 /**
  * Rows that keep themselves current.
  *
- * Give it a query - `(q) => q.from({ b: bookmarks }).where(…)` - or a
+ * Give it a query - `(q) => q.from({ s: stars }).where(…)` - or a
  * function returning a collection, and read the result where you read any
  * signal. Reading suspends until the first rows are in, and after that every
  * change to the source is reflected without a refetch: the query is kept
