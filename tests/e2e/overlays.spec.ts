@@ -98,9 +98,13 @@ test("route map draws rain radar and the chosen ride's sun", async ({ page }) =>
 
   const degraded = page.getByText("呢部機顯示唔到地圖");
   await expect
-    .poll(async () => (await page.locator(".maplibregl-canvas").count()) > 0 || (await degraded.count()) > 0, {
-      timeout: 25_000,
-    })
+    .poll(
+      async () =>
+        (await page.locator(".maplibregl-canvas").count()) > 0 || (await degraded.count()) > 0,
+      {
+        timeout: 25_000,
+      },
+    )
     .toBe(true);
   expect(await degraded.count(), "the route map has to paint for overlays to show").toBe(0);
 
