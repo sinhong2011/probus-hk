@@ -27,6 +27,7 @@ import {
   SUN_OVERHEAD,
   SUN_SHADE,
   SUN_SUN,
+  paintSunRide,
   sunRideCollection,
 } from "~/lib/mapSun";
 import { useWalkRain } from "~/data/useWalkRain";
@@ -738,7 +739,7 @@ export function ExploreMap(props: {
         return;
       }
       const line = measureLine(first.line);
-      upsertSource(
+      paintSunRide(
         instance,
         SRC_SUN,
         sunRideCollection({

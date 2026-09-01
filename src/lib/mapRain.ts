@@ -22,11 +22,23 @@ export function rainRasterSpec(tiles: string[]): RasterSourceSpecification {
  * The source's maxzoom is RainViewer's, not the map's: street zoom still
  * shows the last real radar tile, stretched, instead of their placeholder.
  */
+function markRain(instance: MlMap, on: boolean) {
+  const el = instance.getContainer();
+  if (on) {
+    el.dataset.rain = "on";
+    el.dataset.rainMaxzoom = String(RAIN_TILE_MAX_ZOOM);
+  } else {
+    delete el.dataset.rain;
+    delete el.dataset.rainMaxzoom;
+  }
+}
+
 export function syncRainRadar(instance: MlMap, tiles: string[] | null, beforeId?: string) {
   const before = beforeId && instance.getLayer(beforeId) ? beforeId : undefined;
   if (!tiles || tiles.length === 0) {
     if (instance.getLayer(LYR)) instance.removeLayer(LYR);
     if (instance.getSource(SRC)) instance.removeSource(SRC);
+    markRain(instance, false);
     return;
   }
 
@@ -53,4 +65,5 @@ export function syncRainRadar(instance: MlMap, tiles: string[] | null, beforeId?
   } else if (before) {
     instance.moveLayer(LYR, before);
   }
+  markRain(instance, true);
 }
