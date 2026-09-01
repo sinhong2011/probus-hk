@@ -100,17 +100,16 @@ export function Reveal(props: { open: boolean; children: JSX.Element; class?: st
 
 /** Inset divider matching the card's left padding. */
 /**
- * One fare, as a tag on the line that names it - set a step below the words
- * around it. A fare is a thing to check, not the answer the row is giving,
- * and at the same size as the small type beside it the tags were the loudest
- * thing on the line.
+ * One fare, on the line that names it.
+ *
+ * A number, not a chip: an amount already looks like an amount - it wears a
+ * dollar sign and it is the only figure on the line - and boxing it made a
+ * pair of them the loudest thing on a row whose answer is the countdown at
+ * the other end. What is left is the difference that matters: lining figures,
+ * a heavier weight, and the ink a step up from the words that name them.
  */
 export function FareTag(props: { children: JSX.Element }) {
-  return (
-    <span class="tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.59rem] font-bold text-muted-foreground">
-      {props.children}
-    </span>
-  );
+  return <span class="tnum shrink-0 font-bold text-muted-foreground">{props.children}</span>;
 }
 
 /**
