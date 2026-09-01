@@ -40,7 +40,9 @@ export function MoreSheet(props: { lang: Lang }) {
       onClose={() => sheets.closeMore()}
       modal
       label={t("more", props.lang)}
-      class="sm:max-w-[32rem]"
+      /* Above the search dial sheet at z-40 while the tab bar stays pressable
+         under that dial. */
+      class="z-50 sm:max-w-[32rem]"
     >
       <nav aria-label={t("more", props.lang)} class="py-1.5">
         <DrawerRows>

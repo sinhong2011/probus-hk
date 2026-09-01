@@ -212,13 +212,9 @@ export default function SettingsSheet() {
       side={wide() ? "right" : "bottom"}
       scroll={false}
       label={t("settings", lang())}
-      class={wide() ? "" : "sm:max-w-[32rem]"}
+      class={[wide() ? "" : "z-50 sm:max-w-[32rem]"].filter(Boolean).join(" ")}
     >
-      <DrawerHeader
-        title={t("settings", lang())}
-        onClose={() => sheets.closeSettings()}
-        closeLabel={t("close", lang())}
-      />
+      <DrawerHeader title={t("settings", lang())} />
 
       {/* The one part that scrolls; the header stays put over it. The sheet
           wears the same card surface as every other sheet; the section cards
