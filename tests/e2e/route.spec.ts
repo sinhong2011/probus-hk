@@ -270,12 +270,14 @@ test("numbers the stops so a position on the route is legible", async ({ page })
   await expect(page.locator("[data-stop-seq]").first()).toContainText("1");
 });
 
-test("shows the full fare and the concession on every stop", async ({ page }) => {
+test("shows the full fare on every stop, without the flat two dollars", async ({ page }) => {
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
   await expect(page.getByText(/車費\s?\$\d/).first()).toBeVisible();
-  await expect(page.getByText(/樂悠車費\s?\$2\.0/).first()).toBeVisible();
+  // $6.7 is under ten dollars, so the concession is the same $2 on every
+  // stop and is not printed. A rider who pays it already knows it.
+  await expect(page.getByText(/樂悠車費\s?\$2\.0/)).toHaveCount(0);
 });
 
 test("shows the next arrival on every stop without tapping", async ({ page }) => {
@@ -434,6 +436,18 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
 
 test("says how far up the road the bus still is", async ({ page }) => {
   await mockRunningBuses(page);
+  // Off until asked for - see `settings.vehiclesAway`.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "e2e-vehicles-away",
+          data: { id: "settings", vehiclesAway: true },
+        },
+      }),
+    );
+  });
   await page.goto(`/route/${KMB_1}`);
 
   // The page opens the stop the rider is standing at, which is the stop the
