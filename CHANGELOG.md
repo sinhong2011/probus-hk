@@ -4,6 +4,15 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.4.2](https://github.com/sinhong2011/probus-hk/compare/v0.4.1...v0.4.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* lift the opened-out map off the card on iOS Safari ([#22](https://github.com/sinhong2011/probus-hk/issues/22)) ([9c6f988](https://github.com/sinhong2011/probus-hk/commit/9c6f988f94dee1834509eca0f1405a9c9a0c7da1))
+* lock viewport scale to 1 on mobile and PWA ([#24](https://github.com/sinhong2011/probus-hk/issues/24)) ([a8a1553](https://github.com/sinhong2011/probus-hk/commit/a8a155330631393fbbe32cdc7b4349ca1ad151a0))
+* stop iOS 27 PWA status bar fog under the blur band ([#25](https://github.com/sinhong2011/probus-hk/issues/25)) ([24c152f](https://github.com/sinhong2011/probus-hk/commit/24c152f23ff83b7e453fa2ea22fab60ef1be596e))
+
 ## [0.4.1](https://github.com/sinhong2011/probus-hk/compare/v0.4.0...v0.4.1) (2026-09-01)
 
 
