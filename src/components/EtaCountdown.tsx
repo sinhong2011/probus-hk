@@ -50,7 +50,7 @@ export function EtaCountdown(props: {
   /** Cap on how many arrivals to stack. */
   limit?: number;
   /**
-   * Print the wall-clock time the next one lands at, under the countdown.
+   * Print the wall-clock time the next one lands at, before the countdown.
    *
    * Off by default: down a list of forty stops the countdown is the whole
    * answer, and a clock under every row is forty numbers nobody read. It earns
@@ -60,6 +60,13 @@ export function EtaCountdown(props: {
    * screenshotted and read a minute later, where "7 分鐘" does not.
    */
   clock?: boolean;
+  /**
+   * Minutes only: the clock, the timetable word and the operator's remark
+   * have already been said somewhere else. Used when the open row has
+   * moved those onto the left and this node is only the wait, dropping
+   * onto that line.
+   */
+  waitOnly?: boolean;
   /**
    * How many of the leading arrivals the rider cannot reach in time.
    *
@@ -90,6 +97,13 @@ export function EtaCountdown(props: {
   over?: boolean;
   /** Milliseconds before the digits roll; see `RollingNumber`. */
   stagger?: number;
+  /**
+   * One size down the whole stack. The hero minute size made the first wait
+   * a different kind of row from the two under it; in a sheet of many
+   * routes the colour is enough to say which one matters.
+   */
+  uniform?: boolean;
+  class?: string;
 }) {
   const size = () => props.size ?? "md";
   /*
@@ -150,27 +164,23 @@ export function EtaCountdown(props: {
   const leadAt = () => upcoming()[heroIndex()]?.at ?? null;
 
   /**
-   * A lone number that is a timetable estimate. The word underneath is the
-   * whole of what marks it, so it wears no tilde: beside the number the word
-   * was taking a third of the row from the stop's own name.
-   *
-   * A missed arrival is excluded - it wears the strike, and is not an answer
-   * any more.
+   * Only keep the 預定班次 column when a guess is actually on the stack.
+   * Holding it empty on a live-only row left a word-width hole between the
+   * destination and the minutes.
    */
-  const loneScheduled = () =>
-    upcoming().length === 1 && heroIndex() >= missed() && upcoming()[0]?.state.scheduled === true;
-
-  /** Whether "these are timetable estimates" is said in a word underneath. */
-  const wordBelow = () =>
-    loneScheduled() || (upcoming().length > 1 && upcoming().some((entry) => entry.state.scheduled));
+  const booked = () =>
+    !props.waitOnly && upcoming().some((entry) => entry.state.scheduled);
 
   return (
-    <Show when={props.etas !== undefined} fallback={<EtaSkeleton size={size()} />}>
+    <Show when={props.etas !== undefined} fallback={<EtaSkeleton size={size()} class={props.class} />}>
       <Show
         when={upcoming().length > 0}
         fallback={
           <span
-            class="text-[0.81rem] font-semibold text-faint-foreground"
+            class={[
+              "block text-right text-[0.81rem] font-semibold whitespace-nowrap text-faint-foreground",
+              props.class ?? "",
+            ]}
             data-eta-state={props.over ? "over" : "none"}
           >
             {t(props.over ? "lastBusGone" : "noService", props.lang)}
@@ -178,12 +188,18 @@ export function EtaCountdown(props: {
         }
       >
         <div
-          class="flex shrink-0 flex-col items-end gap-[3px]"
+          class={[
+            "grid shrink-0 items-center justify-items-end gap-x-[3px] gap-y-1.5",
+            booked()
+              ? "grid-cols-[auto_minmax(2.5rem,auto)_auto] lg:grid-cols-[auto_auto_minmax(2.5rem,auto)_auto]"
+              : "grid-cols-[auto_minmax(2.5rem,auto)_auto]",
+            props.class ?? "",
+          ]}
           aria-label={[
+            clock() && leadAt() ? clockTime(leadAt() as Date) : "",
             upcoming()
               .map((entry, index) => label(entry.state, props.lang, index < missed()))
               .join(", "),
-            clock() && leadAt() ? clockTime(leadAt() as Date) : "",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -200,6 +216,17 @@ export function EtaCountdown(props: {
            * once a second - which silently disabled the digit roll inside it,
            * because a freshly mounted digit starts at its final position. Keyed
            * by position the row survives the tick and the number can animate.
+           *
+           * Four columns, not a right-aligned stack: "預定班次" used to sit
+           * in the same run as the minutes, so a live 3 and a scheduled 13
+           * did not share a digit column and the eye had to hunt. The word
+           * keeps a column even when it is not said, or lighting it would
+           * shove the number sideways.
+           *
+           * The minutes keep a floor so "13 分鐘" never clips. On a phone
+           * the word itself is dropped - the weaker, smaller numeral already
+           * says this is a timetable guess, and the four characters were
+           * taking the destination's room.
            */}
           <For each={upcoming()} keyed={false}>
             {(entry, index) => {
@@ -213,8 +240,10 @@ export function EtaCountdown(props: {
                 <Show
                   when={!(hero() && !gone() && state().kind === "arriving")}
                   fallback={
-                    <div class="flex items-center gap-[5px]">
-                      <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
+                    <div class="col-span-full flex max-w-full items-center justify-end gap-[5px] overflow-hidden">
+                      <Show when={!props.waitOnly}>
+                        <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
+                      </Show>
                       <span
                         class="size-[7px] rounded-full bg-warning motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]"
                         style={{
@@ -222,19 +251,53 @@ export function EtaCountdown(props: {
                             "0 0 0 3px color-mix(in srgb, var(--warning) 16%, transparent)",
                         }}
                       />
-                      <span class="text-[1rem] font-bold tracking-tight text-warning">
+                      {/* A word, not a numeral: kept under the minute size so
+                          即將抵達 does not shout over the stack. */}
+                      <span
+                        class="truncate font-bold leading-none tracking-tight text-warning motion-safe:transition-[font-size] motion-safe:duration-reveal"
+                        style={{
+                          "font-size": props.waitOnly ? "0.75rem" : "0.88rem",
+                        }}
+                      >
                         {t("arriving", props.lang)}
                       </span>
                     </div>
                   }
                 >
-                  <div class="flex items-baseline gap-[3px]">
-                    {/* What the operator said about this one - and the thing it
+                  <div class="contents">
+                  {/* What the operator said about this one - and the thing it
                       says most often that matters is that it is the last. */}
-                    <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
+                  <span class="flex items-center justify-end gap-[3px]">
+                    <Show when={!props.waitOnly}>
+                      <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
+                      {/* Clock first: "12:33" is the thing a watch already
+                          knows, and the minutes after it are how long until
+                          then. After the wait it read as a footnote. */}
+                      <Show when={hero() && !gone() && clock() && leadAt()}>
+                        <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                          {clockTime(leadAt() as Date)}
+                        </span>
+                      </Show>
+                    </Show>
+                  </span>
+                  <Show when={booked()}>
+                    {/* One cell, no nested span: an empty wrapper still
+                        threw a line-box at the parent's leading, so a stack
+                        with one timetable guess was taller than three live
+                        times. Empty when live; the column width comes from
+                        the row that actually says the word. */}
                     <span
                       class={[
-                        "tnum font-bold tracking-[-0.05em] leading-none",
+                        "hidden min-w-0 items-center justify-end overflow-hidden whitespace-nowrap text-[0.69rem] font-semibold leading-none text-faint-foreground lg:flex",
+                        { "pr-1.5": state().scheduled },
+                      ]}
+                    >
+                      {state().scheduled ? t("scheduled", props.lang) : ""}
+                    </span>
+                  </Show>
+                  <span
+                    class={[
+                      "flex items-center justify-end tnum font-bold tracking-[-0.05em] leading-none motion-safe:transition-[font-size,color] motion-safe:duration-reveal",
                         {
                           /*
                            * Struck rather than merely dimmed: shape survives a
@@ -254,27 +317,33 @@ export function EtaCountdown(props: {
                            * it at the top. A timetable estimate takes the
                            * same colour weaker - it is the same claim, made
                            * with less behind it.
+                           *
+                           * Once this number has dropped into the list it
+                           * wears the list's size and ink, or the first wait
+                           * is a different kind of row from the two under it.
                            */
-                          "text-primary": hero() && !gone() && !state().scheduled,
-                          "text-primary/60": hero() && !gone() && state().scheduled,
+                          "text-primary": hero() && !gone() && !state().scheduled && !props.waitOnly,
+                          "text-primary/70":
+                            hero() && !gone() && (state().scheduled || props.waitOnly),
                           "text-subtle-foreground": !hero() && !gone(),
                         },
                       ]}
                       style={{
-                        "font-size": hero()
-                          ? (state().scheduled ? LEAD_SCHEDULED : LEAD)[size()]
-                          : gone()
-                            ? "0.88rem"
-                            : "1rem",
+                        "font-size": props.waitOnly
+                          ? "1.13rem"
+                          : props.uniform
+                            ? gone()
+                              ? "0.88rem"
+                              : "1rem"
+                            : hero()
+                              ? (state().scheduled ? LEAD_SCHEDULED : LEAD)[size()]
+                              : gone()
+                                ? "0.88rem"
+                                : "1rem",
                       }}
                     >
-                      {/* A stack keeps the tilde on every line: the word under
-                          it covers all of them, and which of the three it
-                          meant would otherwise be a guess. A lone number is
-                          named by that word alone - see `loneScheduled`. */}
-                      <Show when={state().scheduled && !loneScheduled()}>
-                        <span class="opacity-60">~</span>
-                      </Show>
+                      {/* The word sits before the minutes now, so a tilde
+                          would say the same thing twice. */}
                       {/* A bus already out of reach is not counting down to
                           anything, so it is printed rather than rolled - and a
                           rolling column clips its own box, which would cut the
@@ -291,15 +360,19 @@ export function EtaCountdown(props: {
                     </span>
                     <span
                       class={[
-                        "font-semibold",
+                        "flex items-center justify-end font-semibold leading-none motion-safe:transition-[font-size,color] motion-safe:duration-reveal",
                         {
                           "text-faint-foreground line-through decoration-1 decoration-faint-foreground/60":
                             gone(),
-                          "text-muted-foreground": hero() && !gone(),
-                          "text-faint-foreground": !hero() && !gone(),
+                          "text-muted-foreground": hero() && !gone() && !props.waitOnly,
+                          "text-subtle-foreground": props.waitOnly && !gone(),
+                          "text-faint-foreground": !hero() && !gone() && !props.waitOnly,
                         },
                       ]}
-                      style={{ "font-size": hero() ? "0.81rem" : "0.75rem" }}
+                      style={{
+                        "font-size":
+                          props.waitOnly || !hero() || props.uniform ? "0.75rem" : "0.81rem",
+                      }}
                     >
                       {t("minute", props.lang)}
                     </span>
@@ -309,58 +382,25 @@ export function EtaCountdown(props: {
             }}
           </For>
 
-          {/* Under the number rather than beside it: the two are one answer
-              read at two scales, and a rider who wants the clock time is
-              looking at the countdown already. What kind of answer it is -
-              a timetable estimate rather than a reported bus - reads on the
-              same line, under the number it qualifies. */}
           {/*
-           * One line under the number for what qualifies it - the clock time,
-           * and on a railway the platform. Stacked, the open row of a station
-           * ran three lines deep on the right against one line of name on the
-           * left, and the difference read as a hole in the row.
+           * Where to stand. Clock and "預定班次" live on the minutes now;
+           * only the platform still needs a line of its own.
            */}
-          <Show when={wordBelow() || (clock() && leadAt()) || rail()}>
-            <span class="-mt-px flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
-              <Show when={wordBelow() || (clock() && leadAt())}>
-                <span class="flex items-baseline gap-1">
-                  <Show when={wordBelow()}>
-                    <span class="text-[0.69rem] font-semibold text-faint-foreground">
-                      {t("scheduled", props.lang)}
-                    </span>
-                  </Show>
-                  <Show when={clock() && leadAt()}>
-                    {(at) => (
-                      <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                        {clockTime(at())}
-                      </span>
-                    )}
-                  </Show>
+          <Show when={rail()}>
+            {(info) => (
+              <span class="col-span-full -mt-px flex items-center justify-end gap-1 rounded-full bg-secondary px-1.5 py-px text-[0.69rem] font-bold text-muted-foreground">
+                <span class="tnum">
+                  {t("platform", props.lang)} {info().platform}
                 </span>
-              </Show>
-
-              {/*
-               * Where to stand. A rail arrival is not answered by a number of minutes
-               * alone - the platform is the rest of the answer, and it was being
-               * thrown away by the adapter that already parsed it.
-               */}
-              <Show when={rail()}>
-                {(info) => (
-                  <span class="flex items-center gap-1 rounded-full bg-secondary px-1.5 py-px text-[0.69rem] font-bold text-muted-foreground">
-                    <span class="tnum">
-                      {t("platform", props.lang)} {info().platform}
+                <Show when={info().cars}>
+                  {(cars) => (
+                    <span class="tnum text-faint-foreground">
+                      · {cars()} {t("cars", props.lang)}
                     </span>
-                    <Show when={info().cars}>
-                      {(cars) => (
-                        <span class="tnum text-faint-foreground">
-                          · {cars()} {t("cars", props.lang)}
-                        </span>
-                      )}
-                    </Show>
-                  </span>
-                )}
-              </Show>
-            </span>
+                  )}
+                </Show>
+              </span>
+            )}
           </Show>
         </div>
       </Show>
