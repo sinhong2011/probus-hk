@@ -34,6 +34,8 @@ describe("settings", () => {
     expect(settings.radiusM()).toBe(800);
     // Never stored: the default.
     expect(settings.refreshSeconds()).toBe(20);
+    expect(settings.tripSun()).toBe(false);
+    expect(settings.walkRain()).toBe(false);
 
     settings.setLang("zh");
     await settled();

@@ -45,6 +45,23 @@ interface Persisted {
   alertLeadMinutes: number;
   /** How close to the stop an alight reminder should fire, in metres. */
   alertRadiusM: number;
+  /**
+   * Whether a ride says which window is shadier, from the sun and the heading.
+   *
+   * Off until asked for. It is extra work (a waypoint fetch, a pass along the
+   * line) and a claim not everyone wants under the countdown. The offer that
+   * points at it only appears on a daytime ride, once.
+   */
+  tripSun: boolean;
+  /**
+   * Whether a walk says it will be wet, and whether radar comes on the map
+   * when Hong Kong is raining.
+   *
+   * Off until asked for. It is extra fetches (HKO rain, then RainViewer only
+   * while wet) and a claim about district-hour rain, not this street. The
+   * offer that points at it only appears on a wet walk, once.
+   */
+  walkRain: boolean;
   /** Desktop only: whether the sidebar names its destinations or just shows them. */
   railOpen: boolean;
   /**
@@ -70,6 +87,8 @@ const DEFAULTS: Persisted = {
   starredOrder: "manual",
   alertLeadMinutes: 3,
   alertRadiusM: 300,
+  tripSun: false,
+  walkRain: false,
   railOpen: true,
   groupColors: {},
 };
@@ -148,6 +167,8 @@ const [nearbyMode, setNearbyMode] = field("nearbyMode");
 const [starredOrder, setStarredOrder] = field("starredOrder");
 const [alertLeadMinutes, setAlertLeadMinutes] = field("alertLeadMinutes");
 const [alertRadiusM, setAlertRadiusM] = field("alertRadiusM");
+const [tripSun, setTripSun] = field("tripSun");
+const [walkRain, setWalkRain] = field("walkRain");
 const [railOpen, setRailOpen] = field("railOpen");
 const [groupColors, writeGroupColors] = field("groupColors");
 
@@ -183,6 +204,10 @@ export const settings = {
   setAlertLeadMinutes,
   alertRadiusM,
   setAlertRadiusM,
+  tripSun,
+  setTripSun,
+  walkRain,
+  setWalkRain,
   railOpen,
   setRailOpen,
   groupColors,

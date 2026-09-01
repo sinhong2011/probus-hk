@@ -269,7 +269,7 @@ export function CardGrid(props: {
     <div
       ref={props.ref}
       class={[
-        "grid gap-2.5 lg:gap-4",
+        props.dense ? "grid gap-2 lg:gap-3" : "grid gap-2.5 lg:gap-4",
         props.single
           ? ""
           : props.dense
