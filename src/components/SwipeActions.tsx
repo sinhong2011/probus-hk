@@ -165,8 +165,16 @@ export function SwipeActions(props: {
   const onClick = (event: MouseEvent) => {
     if (!suppressClick && !props.open) return;
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     suppressClick = false;
+  };
+
+  const watchFace = (el: HTMLElement) => {
+    face = el;
+    // Capture, because the row's own link navigates in the target phase -
+    // a bubble listener would close the swipe and still follow the route.
+    el.addEventListener("click", onClick, true);
+    onCleanup(() => el.removeEventListener("click", onClick, true));
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -198,19 +206,19 @@ export function SwipeActions(props: {
         {props.actions}
       </div>
       <div
-        ref={(el) => {
-          face = el;
-        }}
+        ref={watchFace}
         class="app-swipe-face relative bg-card"
         data-dragging={dragging() ? "" : undefined}
-        style={{ translate: `-${shift()}px 0` }}
+        style={{
+          translate: `-${shift()}px 0`,
+          "pointer-events": props.open ? "auto" : undefined,
+        }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
-        onClick={onClick}
       >
-        {props.children}
+        <div style={{ "pointer-events": props.open ? "none" : undefined }}>{props.children}</div>
         <Show when={props.hintLabel && !props.open}>
           <button
             type="button"
