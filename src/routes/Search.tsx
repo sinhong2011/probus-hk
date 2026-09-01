@@ -40,7 +40,7 @@ import {
   searchStops,
 } from "~/data/db";
 import type { KeyedRoute, RouteDb } from "~/data/types";
-import { concessionFare, formatFare } from "~/lib/format";
+import { formatFare, notableConcession } from "~/lib/format";
 import { pick, stripStopCode, t, type Lang, type MessageKey } from "~/lib/i18n";
 import { kindOf, operatorShort, type Kind } from "~/lib/operators";
 import { frequent } from "~/stores/frequent";
@@ -157,7 +157,7 @@ function RouteItem(props: {
               {(fare) => (
                 <>
                   <FareTag>{fare()}</FareTag>
-                  <Show when={concessionFare(props.route.fares?.[0])}>
+                  <Show when={notableConcession(props.route.fares?.[0])}>
                     {(amount) => (
                       <>
                         <span class="shrink-0">·</span>

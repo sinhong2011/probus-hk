@@ -5,7 +5,7 @@ import { isSpecialService } from "~/data/db";
 import { lastRunGone } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
-import { concessionFare, fareAt } from "~/lib/format";
+import { fareAt, notableConcession } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
@@ -37,8 +37,9 @@ function subtitleFor(props: LineProps): string {
       // Only NLB really charges differently at weekends.
       parts.push(`${fare} · ${t("holidayFare", props.lang)} ${holiday}`);
     } else {
-      // The $2 concession matters to a lot of riders, so it is always shown.
-      const concession = concessionFare(props.route.fares?.[props.seq - 1]);
+      // The concession, where it is not the flat $2 every route charges - see
+      // `notableConcession`.
+      const concession = notableConcession(props.route.fares?.[props.seq - 1]);
       parts.push(concession ? `${fare} · ${concession}` : fare);
     }
   }
