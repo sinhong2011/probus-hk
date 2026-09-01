@@ -87,9 +87,11 @@ export interface DrawerProps {
    */
   nested?: boolean;
   /**
-   * A bottom sheet the full width of the window and flush with its foot:
+   * A bottom sheet the full width of its container and flush with its foot:
    * no inset at the sides, no gap below, square at the bottom. For a sheet
-   * that is a panel of the screen rather than a card floated over it.
+   * that is a panel of the screen rather than a card floated over it - a
+   * map opened out, the network map. Works with `within`: the sheet still
+   * lives in the panel, it just is a panel of that panel.
    */
   flush?: boolean;
   /** Extra classes on the sheet itself, e.g. a width cap on a wide screen. */
@@ -125,7 +127,7 @@ export function Drawer(props: DrawerProps) {
   const side = () => props.side ?? "bottom";
   const right = () => side() === "right";
   const scrolls = () => !right() && (props.scroll ?? true);
-  const flush = () => !right() && !props.within && Boolean(props.flush);
+  const flush = () => !right() && Boolean(props.flush);
   /* A sheet that cannot be put away and has no rest positions does not move,
      and a handle on a thing that does not move is a lie. */
   const draggable = () => (props.dismissible ?? true) || !!props.snapPoints;
@@ -181,11 +183,15 @@ export function Drawer(props: DrawerProps) {
             : [
                 "mx-auto w-full",
                 flush() ? "" : "px-2",
-                props.within
-                  ? "absolute inset-x-0 bottom-0 pb-2"
-                  : flush()
-                    ? "fixed inset-x-0 bottom-0"
-                    : "fixed inset-x-0 bottom-0 pb-[calc(var(--spacing-safe-bottom)+0.5rem)]",
+                [
+                  props.within ? "absolute" : "fixed",
+                  "inset-x-0 bottom-0",
+                  flush()
+                    ? ""
+                    : props.within
+                      ? "pb-2"
+                      : "pb-[calc(var(--spacing-safe-bottom)+0.5rem)]",
+                ].join(" "),
               ].join(" "),
           { [NATURAL_MAX]: !right() && !tallest() },
           props.class ?? "",
@@ -203,12 +209,16 @@ export function Drawer(props: DrawerProps) {
                indicator clear inside itself, and has no bottom corners to
                round. */
             flush() ? "rounded-t-3xl border-b-0 pb-[var(--spacing-safe-bottom)]" : "rounded-3xl",
+            /* A breath above the handle so the bar is not sitting on the
+               card's top edge. A side panel has no handle and keeps its own
+               inset. */
+            right() ? "" : "pt-2",
           ]}
         >
           {/* The handle: what says "this moves", before anything is tried.
-              shadcn's bar at the foot of a short strip across the top. */}
+              The bar sits in the middle of the strip, not at its foot. */}
           <Show when={!right() && draggable()}>
-            <div class="flex h-3 w-full shrink-0 items-end justify-center">
+            <div class="flex h-[1.75rem] w-full shrink-0 items-center justify-center">
               <Sheet.Handle class="!h-1 !w-24 rounded-full !bg-border !opacity-100" />
             </div>
           </Show>
