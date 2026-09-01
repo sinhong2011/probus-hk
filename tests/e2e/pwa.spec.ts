@@ -26,6 +26,12 @@ test("ships an installable manifest", async ({ page, request }) => {
   expect((await request.get("/icons/apple-touch-icon.png")).status()).toBe(200);
 });
 
+test("locks viewport scale on mobile and PWA", async ({ page }) => {
+  await page.goto("/");
+  const viewport = await page.locator('meta[name="viewport"]').getAttribute("content");
+  expect(viewport).toContain("maximum-scale=1");
+});
+
 test("declares a theme colour for both light and dark", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('meta[name="theme-color"][media*="dark"]')).toHaveCount(1);
