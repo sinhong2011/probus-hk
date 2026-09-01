@@ -4,6 +4,14 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.4.1](https://github.com/sinhong2011/probus-hk/compare/v0.4.0...v0.4.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* radar no longer covers the map with Zoom Level Not Supported ([#19](https://github.com/sinhong2011/probus-hk/issues/19)) ([00317cb](https://github.com/sinhong2011/probus-hk/commit/00317cb75d4c7374d7c14d99b4b28e2218dad1e1))
+* sit the opened-out map sheet flush, folded to a grab header ([#20](https://github.com/sinhong2011/probus-hk/issues/20)) ([9e1ca68](https://github.com/sinhong2011/probus-hk/commit/9e1ca6852afc28a28d76ab91818b522939100822))
+
 ## [0.4.0](https://github.com/sinhong2011/probus-hk/compare/v0.3.0...v0.4.0) (2026-09-01)
 
 
