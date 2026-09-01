@@ -188,6 +188,8 @@ export function RowCard(props: {
    * put; only the list moves - on a stop screen and in its preview sheet.
    */
   scroll?: boolean;
+  /** The list element itself, for a screen that wires behaviour onto it. */
+  ref?: (el: HTMLDivElement) => void;
   class?: string;
 }) {
   const frame = "rounded-xl border border-border bg-card shadow-card";
@@ -220,6 +222,7 @@ export function RowCard(props: {
     return (
       <div class={["flex min-h-0 flex-col overflow-hidden", frame, props.class ?? ""]}>
         <div
+          ref={props.ref}
           class={["app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain", grid]}
         >
           {props.children}
@@ -229,7 +232,9 @@ export function RowCard(props: {
   }
 
   return (
-    <div class={["grid overflow-hidden", frame, grid, props.class ?? ""]}>{props.children}</div>
+    <div ref={props.ref} class={["grid overflow-hidden", frame, grid, props.class ?? ""]}>
+      {props.children}
+    </div>
   );
 }
 
@@ -264,7 +269,7 @@ export function CardGrid(props: {
     <div
       ref={props.ref}
       class={[
-        "grid gap-2.5 lg:gap-4",
+        props.dense ? "grid gap-2 lg:gap-3" : "grid gap-2.5 lg:gap-4",
         props.single
           ? ""
           : props.dense

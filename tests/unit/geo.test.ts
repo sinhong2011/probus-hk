@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundingBox, distanceM, formatDistance, walkMinutes } from "~/lib/geo";
+import { bearingDegrees, boundingBox, distanceM, formatDistance, walkMinutes } from "~/lib/geo";
 
 const NATHAN_ROAD = { lat: 22.31073, lng: 114.17099 };
 const STAR_FERRY = { lat: 22.2943, lng: 114.16911 };
@@ -36,6 +36,14 @@ describe("boundingBox", () => {
     const lngSpan = box.maxLng - box.minLng;
     // At 22 degrees north a degree of longitude is shorter, so the span is wider.
     expect(lngSpan).toBeGreaterThan(latSpan);
+  });
+});
+
+describe("bearingDegrees", () => {
+  it("reads due east along Nathan Road's latitude as about 90", () => {
+    const east = bearingDegrees(NATHAN_ROAD, { lat: NATHAN_ROAD.lat, lng: NATHAN_ROAD.lng + 0.01 });
+    expect(east).toBeGreaterThan(85);
+    expect(east).toBeLessThan(95);
   });
 });
 

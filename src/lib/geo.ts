@@ -32,6 +32,15 @@ export function boundingBox(centre: LatLng, radiusM: number) {
   };
 }
 
+/** Compass bearing in degrees, clockwise from north. */
+export function bearingDegrees(from: LatLng, to: LatLng): number {
+  const lat = ((from.lat + to.lat) / 2) * (Math.PI / 180);
+  const east = (to.lng - from.lng) * Math.cos(lat);
+  const north = to.lat - from.lat;
+  if (east === 0 && north === 0) return 0;
+  return ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360;
+}
+
 /** Rough walking time in minutes at 80 m/min, floored at 1. */
 export function walkMinutes(metres: number): number {
   return Math.max(1, Math.round(metres / 80));

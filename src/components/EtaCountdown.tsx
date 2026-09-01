@@ -109,6 +109,11 @@ export function EtaCountdown(props: {
    * routes the colour is enough to say which one matters.
    */
   uniform?: boolean;
+  /**
+   * Tighter vertical rhythm for a one-line card. The default gap is sized
+   * for a stack that is the right-hand column of a tall row.
+   */
+  compact?: boolean;
   class?: string;
 }) {
   const size = () => props.size ?? "md";
@@ -200,7 +205,8 @@ export function EtaCountdown(props: {
       >
         <div
           class={[
-            "grid shrink-0 items-center justify-items-end gap-x-[3px] gap-y-1.5",
+            "grid shrink-0 items-center justify-items-end gap-x-[3px]",
+            props.compact ? "gap-y-0.5" : "gap-y-1.5",
             booked()
               ? "grid-cols-[auto_minmax(2.5rem,auto)_auto] lg:grid-cols-[auto_auto_minmax(2.5rem,auto)_auto]"
               : "grid-cols-[auto_minmax(2.5rem,auto)_auto]",

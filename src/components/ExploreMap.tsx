@@ -20,6 +20,17 @@ import {
   prefersDark,
   upsertSource,
 } from "~/lib/mapKit";
+import { syncRainRadar } from "~/lib/mapRain";
+import {
+  clearSunRide,
+  ensureSunRideLayer,
+  SUN_OVERHEAD,
+  SUN_SHADE,
+  SUN_SUN,
+  sunRideCollection,
+} from "~/lib/mapSun";
+import { useWalkRain } from "~/data/useWalkRain";
+import { now } from "~/stores/clock";
 import { settings } from "~/stores/settings";
 
 /**
@@ -44,8 +55,10 @@ const SRC_PINS = "xp-pins";
 const SRC_ME = "xp-me";
 const SRC_LEGS = "xp-legs";
 const SRC_WALKS = "xp-walks";
+const SRC_SUN = "xp-sun-ride";
 const LYR_PIN_HIT = "xp-pin-hit";
 const LYR_LEG_HIT = "xp-leg-hit";
+const LYR_SUN = "xp-sun-ride";
 
 /** A place the search matched, or an end of the journey being planned. */
 export interface ExplorePin {
@@ -186,7 +199,7 @@ function buildStage(dark: boolean): Stage {
 function ensureLayers(instance: MlMap, dark: boolean) {
   if (instance.getLayer("xp-me-dot")) return;
 
-  for (const id of [SRC_LEGS, SRC_WALKS, SRC_PINS, SRC_ME]) {
+  for (const id of [SRC_LEGS, SRC_WALKS, SRC_SUN, SRC_PINS, SRC_ME]) {
     if (!instance.getSource(id)) instance.addSource(id, { type: "geojson", data: EMPTY });
   }
 
@@ -231,6 +244,21 @@ function ensureLayers(instance: MlMap, dark: boolean) {
         16,
         ["case", selected, 6, 4],
       ],
+    },
+  });
+  /*
+   * The chosen ride's sun, over the operator colour: shade vs sun vs
+   * overhead, no percentages. Empty until 行程日照 is on and a ride exists.
+   */
+  instance.addLayer({
+    id: LYR_SUN,
+    type: "line",
+    source: SRC_SUN,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": ["match", ["get", "tone"], "shade", SUN_SHADE, "sun", SUN_SUN, SUN_OVERHEAD],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 7],
+      "line-opacity": 0.9,
     },
   });
   /*
@@ -358,6 +386,12 @@ export function ExploreMap(props: {
   selectedId?: string | null;
   /** The plan's own ends, for the walking lines and the framing. */
   ends?: ExploreEnds;
+  /**
+   * When 行程日照 is on, the clock the chosen ride is coloured at. Null
+   * means the next live bus, same as the chips — scored as now until an
+   * ETA arrives.
+   */
+  sunAt?: Date | null;
   onSelectPin?: (id: string) => void;
   onSelectJourney?: (id: string) => void;
   /**
@@ -382,6 +416,11 @@ export function ExploreMap(props: {
 }) {
   const db = useDb();
   let frame!: HTMLDivElement;
+
+  const rain = useWalkRain(() => ({
+    at: props.me ?? props.ends?.from ?? null,
+    hasWalk: (props.journeys?.length ?? 0) > 0,
+  }));
 
   const [map, setMap] = createSignal<MlMap | null>(null);
   /** See RouteMap: WebGL is not everywhere, and a black rectangle says nothing. */
@@ -444,6 +483,15 @@ export function ExploreMap(props: {
          */
         if (stage && stage.host.parentElement === frame) stage.host.remove();
       };
+    },
+  );
+
+  createEffect(
+    () => ({ instance: map(), tiles: rain()?.tiles ?? null }),
+    ({ instance, tiles }) => {
+      if (!instance) return;
+      const before = instance.getLayer("xp-leg-casing") ? "xp-leg-casing" : undefined;
+      syncRainRadar(instance, tiles, before);
     },
   );
 
@@ -660,6 +708,47 @@ export function ExploreMap(props: {
 
       upsertSource(instance, SRC_LEGS, { type: "FeatureCollection", features: legs });
       upsertSource(instance, SRC_WALKS, { type: "FeatureCollection", features: walks });
+    },
+  );
+
+  /*
+   * The lit journey's first outdoor ride, coloured the same way the route
+   * map colours a chosen stretch. Night and mixed stay unpainted. The clock
+   * is the one the chips use, so the picture matches the sentence.
+   */
+  createEffect(
+    () => ({
+      instance: map(),
+      drawn: legLines(),
+      selectedId: props.selectedId ?? null,
+      at: props.sunAt ?? new Date(now()),
+      enabled: settings.tripSun(),
+    }),
+    ({ instance, drawn, selectedId, at, enabled }) => {
+      if (!instance) return;
+      ensureSunRideLayer(instance, SRC_SUN, LYR_SUN, "xp-walk-line");
+      if (!enabled || !selectedId) {
+        clearSunRide(instance, SRC_SUN);
+        return;
+      }
+      const chosen = drawn.find((entry) => entry.journey.id === selectedId);
+      const first = chosen?.legs[0];
+      if (!first || first.leg.route.co[0] === "mtr" || first.line.length < 2) {
+        clearSunRide(instance, SRC_SUN);
+        return;
+      }
+      const line = measureLine(first.line);
+      upsertSource(
+        instance,
+        SRC_SUN,
+        sunRideCollection({
+          line,
+          from: 0,
+          to: line.length,
+          departAt: at,
+          arriveAt: new Date(at.getTime() + first.leg.minutes * 60_000),
+        }),
+      );
     },
   );
 
