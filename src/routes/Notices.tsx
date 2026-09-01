@@ -8,7 +8,7 @@ import { createWide } from "~/lib/wide";
 import { routesMentioned, type Notice } from "~/data/notices";
 import { useNotices } from "~/data/useNotices";
 import { pick, t, type Lang } from "~/lib/i18n";
-import { now } from "~/stores/clock";
+import { minute } from "~/stores/clock";
 import { settings } from "~/stores/settings";
 
 /**
@@ -178,10 +178,10 @@ function NoticeRow(props: { notice: Notice; lang: Lang; first: boolean }) {
   /*
    * Recomputed once a minute rather than once a second: "12 分鐘前" is the same
    * string for sixty ticks, and rewriting it every one of them churns the DOM
-   * of every notice on the screen for no visible change.
+   * of every notice on the screen for no visible change. The minute is the
+   * clock's own, shared - a memo of it per row was one subscription to the
+   * second-by-second tick per notice on screen.
    */
-  const minute = createMemo(() => Math.floor(now() / 60_000));
-
   const ago = createMemo(() => {
     const at = props.notice.at;
     if (!at) return null;

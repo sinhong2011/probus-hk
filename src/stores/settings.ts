@@ -1,4 +1,4 @@
-import { createEffect } from "solid-js";
+import { createEffect, createMemo, createRoot } from "solid-js";
 import { persistedCollection } from "./collection";
 import type { Lang } from "~/lib/i18n";
 
@@ -15,6 +15,15 @@ interface Persisted {
   refreshSeconds: number;
   showScheduled: boolean;
   /**
+   * Whether an arrival says the o'clock time it lands at beside the minutes.
+   *
+   * Off unless asked for. "7 分鐘" is the answer at a kerb, and a second
+   * number beside every one of them is a column of digits to read past on the
+   * way to it. A rider planning against a watch, a meeting or a last train
+   * wants the other form, and this is how they ask for it.
+   */
+  clockTimes: boolean;
+  /**
    * Where the app may draw the buses it thinks are on the route: as badges on
    * the map, as glyphs riding the rail between stops, and as the line on an
    * open stop saying how many stops short of it the nearest one still is.
@@ -27,15 +36,6 @@ interface Persisted {
    * loosest of the three. A rider who trusts one need not take all three, and
    * turning the feed off entirely stops the work rather than hiding it.
    */
-  /**
-   * Whether an arrival says the o'clock time it lands at beside the minutes.
-   *
-   * Off unless asked for. "7 分鐘" is the answer at a kerb, and a second
-   * number beside every one of them is a column of digits to read past on the
-   * way to it. A rider planning against a watch, a meeting or a last train
-   * wants the other form, and this is how they ask for it.
-   */
-  clockTimes: boolean;
   vehiclesOnMap: boolean;
   vehiclesOnList: boolean;
   vehiclesAway: boolean;
@@ -92,9 +92,25 @@ const store = persistedCollection<Row>({
     raw && typeof raw === "object" ? [{ id: ROW, ...(raw as Partial<Persisted>) }] : [],
 });
 
-/** One field of the settings row, read and written like its own signal. */
+/**
+ * One field of the settings row, read and written like its own signal.
+ *
+ * The read is memoised, and that is not an optimisation - it is what makes
+ * these behave like separate signals at all. Every setting lives in one row,
+ * so `store.rows()` is a single signal: a write to any field marks every
+ * reader of it dirty, and a reader that only wanted the theme was woken by a
+ * toggle about clock times. Downstream that was not free - the map's layers
+ * are painted by effects that read the theme, and they were repainting a map
+ * nothing had changed about. The memo stops at the value: unless this field's
+ * own value differs, nothing downstream hears anything.
+ *
+ * Owned by a root of its own because these are made once, at module scope,
+ * and live as long as the app does.
+ */
 function field<K extends keyof Persisted>(key: K) {
-  const read = () => (store.rows()[0]?.[key] ?? DEFAULTS[key]) as Persisted[K];
+  const read = createRoot(() =>
+    createMemo(() => (store.rows()[0]?.[key] ?? DEFAULTS[key]) as Persisted[K]),
+  );
   const write = (value: Persisted[K]) => {
     if (store.collection.has(ROW)) {
       store.collection.update(ROW, (draft) => {

@@ -9,7 +9,7 @@ import { fareAt, notableConcession } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
-import { now } from "~/stores/clock";
+import { minute } from "~/stores/clock";
 import { SpecialTag } from "./Chrome";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
@@ -51,9 +51,11 @@ export function RouteLine(props: LineProps) {
   const db = useDb();
   /* Whether an empty answer here means "wait" or "that was the last one".
      Read through the clock so the row turns over on the minute the last bus
-     passes rather than on a reload. */
+     passes rather than on a reload - and through the minute of it, because
+     that is how often the answer can change and this is a timetable lookup
+     per row of a list. */
   const over = () => {
-    now();
+    minute();
     return lastRunGone(db(), props.route);
   };
 

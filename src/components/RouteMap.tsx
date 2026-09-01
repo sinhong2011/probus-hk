@@ -787,8 +787,21 @@ export function RouteMap(props: {
   // scrolling.
   document.addEventListener("scroll", noteScroll, { capture: true, passive: true });
   onCleanup(() => document.removeEventListener("scroll", noteScroll, { capture: true }));
+  /** The livery the vehicle images were last drawn in - see `flagsFrom`. */
+  let busFrom: string | null = null;
   /** How many stop signs are in the sprite - see `paintStopFlags`. */
   let painted = 0;
+  /*
+   * What those signs were last drawn from.
+   *
+   * The effect that owns them re-runs whenever anything about the route's
+   * geometry moves - the stop the rider is nearest, most often, which changes
+   * every time they walk twenty metres - and it was redrawing all forty signs
+   * each time. Only these five things are baked into the pictures; the rest of
+   * the effect's work is layer properties, which are cheap. A style swap drops
+   * every image with the layers, and that path adds them back unconditionally.
+   */
+  let flagsFrom: string | null = null;
   /** How the map has framed itself so far - see the geometry effect. */
   let opened: "none" | "route" | "nearest" = "none";
   const [map, setMap] = createSignal<MlMap | null>(null);
@@ -1000,6 +1013,9 @@ export function RouteMap(props: {
           geometry: { type: "LineString", coordinates },
         })),
       });
+      // Everything the sign pictures are drawn from, in one string to compare.
+      const flagKey = `${colour}|${surface}|${rail}|${number}|${names.join("\u0000")}`;
+
       upsertSource(instance, SRC_STOPS, stopFeatures(positions, names, nearestIndex));
 
       if (!instance.getLayer("app-route-line")) {
@@ -1045,6 +1061,7 @@ export function RouteMap(props: {
           },
         });
         painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+        flagsFrom = flagKey;
         /*
          * A stop dot is four pixels across at best, which is nothing to aim a
          * thumb at. This invisible circle is what actually receives the tap.
@@ -1169,8 +1186,11 @@ export function RouteMap(props: {
         instance.setPaintProperty("app-stop-selected-glow", "circle-color", colour);
         instance.setPaintProperty(LYR_LABEL, "text-color", labelColour(colour, dark));
         // Colour, route number and stop names are all baked into the signs,
-        // so they are repainted whenever any of them moves.
-        painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+        // so they are repainted when any of them moves - and only then.
+        if (flagsFrom !== flagKey) {
+          painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+          flagsFrom = flagKey;
+        }
       }
 
       /*
@@ -1606,6 +1626,8 @@ export function RouteMap(props: {
         upsertSource(instance, SRC_BUS, { type: "FeatureCollection", features: points });
       };
 
+      const livery = `${kind}|${colour}`;
+
       draw(now);
 
       if (!instance.getLayer("app-bus-dot")) {
@@ -1686,9 +1708,15 @@ export function RouteMap(props: {
           },
         });
         paintBus(instance, colour, kind);
+        busFrom = livery;
       } else {
         instance.setPaintProperty("app-bus-band", "line-color", bandColour(dark));
-        paintBus(instance, colour, kind);
+        // Three canvases, drawn and uploaded to the GPU - and they were being
+        // redrawn on every poll of a feed that cannot change a bus's livery.
+        if (busFrom !== livery) {
+          paintBus(instance, colour, kind);
+          busFrom = livery;
+        }
       }
 
       /*

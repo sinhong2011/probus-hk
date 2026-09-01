@@ -58,7 +58,7 @@ import {
   isLastRun,
   serviceNotice,
 } from "~/lib/format";
-import { now } from "~/stores/clock";
+import { minute, now } from "~/stores/clock";
 import { distanceM, formatDistance } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import {
@@ -1479,7 +1479,9 @@ export default function RouteDetail() {
    * reload it to be told the last bus is now twenty minutes away.
    */
   const span = createMemo(() => {
-    now();
+    // On the minute, not the second: this reads two days of timetable to
+    // answer, and the answer changes when the clock's minute does.
+    minute();
     const r = route();
     return r ? serviceSpan(db(), r) : null;
   });
@@ -1812,7 +1814,8 @@ export default function RouteDetail() {
    * reload: the moment the last one passes is exactly when this changes.
    */
   const dayOver = (seq: number) => {
-    now();
+    // Read per row, and the timetable behind it turns over on the minute.
+    minute();
     const r = route();
     if (!r) return false;
     return seq < lastRunSeq() || lastRunGone(db(), r);
@@ -1917,6 +1920,10 @@ export default function RouteDetail() {
    * client-side navigation could hit.
    */
   const busesBySeq = createMemo(() => {
+    // Asked before the clock is read, not after: with the glyphs turned off
+    // this used to rebuild the whole map of them once a second and then be
+    // thrown away by the reader below.
+    if (!settings.vehiclesOnList()) return null;
     const list = vehicles()?.vehicles;
     if (!list || list.length === 0) return null;
     const at = now();
@@ -1931,8 +1938,7 @@ export default function RouteDetail() {
     return by;
   });
   const NO_BUSES: RailBus[] = [];
-  const busesAfter = (seq: number): RailBus[] =>
-    (settings.vehiclesOnList() ? busesBySeq()?.get(seq) : undefined) ?? NO_BUSES;
+  const busesAfter = (seq: number): RailBus[] => busesBySeq()?.get(seq) ?? NO_BUSES;
 
   /** Which lines call at each station, for a rail route; nothing for a bus. */
   const interchangeIndex = createMemo(() => (route()?.co[0] === "mtr" ? stationLines(db()) : null));
