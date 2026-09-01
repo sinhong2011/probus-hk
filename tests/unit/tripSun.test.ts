@@ -6,6 +6,7 @@ import {
   scoreWait,
   scoreWalk,
   sunOfferReady,
+  sunRideStrokes,
   tripSunCopy,
   type SunAt,
 } from "~/data/tripSun";
@@ -97,15 +98,15 @@ describe("scoreRide", () => {
 describe("scoreWait", () => {
   it("calls a kerb exposed when the sun is across the road", () => {
     // Heading north, sun in the east = right of the bus = road side.
-    expect(scoreWait({ heading: 0, at: NOON, lat: 22.3, lng: 114.17, sunAt: sun(90, 40) }).kind).toBe(
-      "exposed",
-    );
+    expect(
+      scoreWait({ heading: 0, at: NOON, lat: 22.3, lng: 114.17, sunAt: sun(90, 40) }).kind,
+    ).toBe("exposed");
   });
 
   it("calls a kerb shaded when the sun is on the building side", () => {
-    expect(scoreWait({ heading: 0, at: NOON, lat: 22.3, lng: 114.17, sunAt: sun(270, 40) }).kind).toBe(
-      "shaded",
-    );
+    expect(
+      scoreWait({ heading: 0, at: NOON, lat: 22.3, lng: 114.17, sunAt: sun(270, 40) }).kind,
+    ).toBe("shaded");
   });
 });
 
@@ -149,6 +150,68 @@ describe("rideSunPaint", () => {
         sunAt: sun(180, -10),
       }),
     ).toEqual([]);
+  });
+});
+
+describe("sunRideStrokes", () => {
+  it("paints one overhead stroke when the sun is high", () => {
+    const strokes = sunRideStrokes({
+      line: LINE,
+      from: 0,
+      to: LINE.length,
+      departAt: NOON,
+      arriveAt: LATER,
+      sunAt: sun(180, 82),
+    });
+    expect(strokes).toHaveLength(1);
+    expect(strokes[0]!.tone).toBe("overhead");
+  });
+
+  it("omits night and mixed rides", () => {
+    expect(
+      sunRideStrokes({
+        line: LINE,
+        from: 0,
+        to: LINE.length,
+        departAt: NOON,
+        arriveAt: LATER,
+        sunAt: sun(180, -10),
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("a picked clock, not the wall clock", () => {
+  /** Southbound, so an eastern morning sun sits on the left. */
+  const NS = measureLine([
+    [114.17, 22.31],
+    [114.17, 22.3],
+  ]);
+
+  it("scores 08:00 as a daytime ride even when the code is read at night", () => {
+    const morning = new Date("2026-03-21T08:00:00+08:00");
+    const advice = scoreRide({
+      line: NS,
+      from: 0,
+      to: NS.length,
+      departAt: morning,
+      arriveAt: new Date(morning.getTime() + 20 * 60_000),
+    });
+    expect(advice.kind).not.toBe("night");
+    expect(advice.kind).toBe("side");
+  });
+
+  it("stays quiet at a 22:00 clock on the same line", () => {
+    const evening = new Date("2026-03-21T22:00:00+08:00");
+    expect(
+      scoreRide({
+        line: NS,
+        from: 0,
+        to: NS.length,
+        departAt: evening,
+        arriveAt: new Date(evening.getTime() + 20 * 60_000),
+      }).kind,
+    ).toBe("night");
   });
 });
 

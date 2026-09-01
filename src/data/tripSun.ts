@@ -1,13 +1,7 @@
-import { measureLine, pointAt, type MeasuredLine } from "~/lib/alongLine";
+import { measureLine, pointAt, sliceLine, type MeasuredLine } from "~/lib/alongLine";
 import { bearingDegrees, type LatLng } from "~/lib/geo";
 import { t, type Lang } from "~/lib/i18n";
-import {
-  compassOf,
-  solarPosition,
-  sunBucket,
-  type Compass,
-  type SolarPosition,
-} from "~/lib/solar";
+import { compassOf, solarPosition, sunBucket, type Compass, type SolarPosition } from "~/lib/solar";
 import type { Position } from "./waypoints";
 
 export type RideSunTone = "shade" | "sun" | "overhead";
@@ -68,6 +62,28 @@ export function rideSunPaint(args: {
   return strokes.filter((stroke) => stroke.coordinates.length >= 2);
 }
 
+/**
+ * Strokes a map can paint: the recommended-window colouring, or one overhead
+ * stroke, or nothing (night, mixed, too short). Shared by the route map and
+ * the plan map so a ride is the same picture in both places.
+ */
+export function sunRideStrokes(args: {
+  line: MeasuredLine;
+  from: number;
+  to: number;
+  departAt: Date;
+  arriveAt: Date;
+  sunAt?: SunAt;
+}): RideSunStroke[] {
+  const advice = scoreRide(args);
+  if (advice.kind === "overhead") {
+    const coordinates = sliceLine(args.line, args.from, args.to);
+    return coordinates.length >= 2 ? [{ tone: "overhead", coordinates }] : [];
+  }
+  if (advice.kind !== "side") return [];
+  return rideSunPaint({ ...args, window: advice.window });
+}
+
 /** Metres between samples along a ride. Tight enough to catch a turn. */
 const SAMPLE_M = 80;
 /** A side has to carry this share of the sunlit ride to be the answer. */
@@ -91,7 +107,11 @@ export type RideAdvice =
       flipAt?: number;
     };
 
-export type WaitAdvice = { kind: "none" } | { kind: "night" } | { kind: "exposed" } | { kind: "shaded" };
+export type WaitAdvice =
+  | { kind: "none" }
+  | { kind: "night" }
+  | { kind: "exposed" }
+  | { kind: "shaded" };
 
 export type WalkAdvice =
   | { kind: "none" }
@@ -224,12 +244,7 @@ export function scoreWait(args: {
 }
 
 /** Last-mile chord versus the sun: walking into it, or with it at your back. */
-export function scoreWalk(args: {
-  from: LatLng;
-  to: LatLng;
-  at: Date;
-  sunAt?: SunAt;
-}): WalkAdvice {
+export function scoreWalk(args: { from: LatLng; to: LatLng; at: Date; sunAt?: SunAt }): WalkAdvice {
   const sun = (args.sunAt ?? solarPosition)(args.at, args.from.lat, args.from.lng);
   if (sun.elevation < 5) return sun.elevation < -0.83 ? { kind: "night" } : { kind: "none" };
   const heading = bearingDegrees(args.from, args.to);
@@ -282,7 +297,11 @@ export function tripSunCopy(
         : null;
 
   const walkLine =
-    walk.kind === "into" ? t("sunWalkInto", lang) : walk.kind === "away" ? t("sunWalkAway", lang) : null;
+    walk.kind === "into"
+      ? t("sunWalkInto", lang)
+      : walk.kind === "away"
+        ? t("sunWalkAway", lang)
+        : null;
 
   return { chip, detail, wait: waitLine, walk: walkLine };
 }
@@ -302,9 +321,6 @@ export function sunOfferReady(args: {
   hasRide: boolean;
 }): boolean {
   return (
-    !args.enabled &&
-    !args.dismissed &&
-    args.hasRide &&
-    args.elevation >= SUN_OFFER_MIN_ELEVATION
+    !args.enabled && !args.dismissed && args.hasRide && args.elevation >= SUN_OFFER_MIN_ELEVATION
   );
 }

@@ -95,7 +95,9 @@ export function WalkRainOffer(props: { lang: Lang; at: LatLng | null; hasWalk: b
           </button>
         }
       >
-        <p class="text-sm leading-relaxed text-muted-foreground">{t("rainOfferBody", props.lang)}</p>
+        <p class="text-sm leading-relaxed text-muted-foreground">
+          {t("rainOfferBody", props.lang)}
+        </p>
       </Modal>
     </Show>
   );

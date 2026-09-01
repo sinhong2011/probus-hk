@@ -31,7 +31,8 @@ When 行程日照 is on and both stops are chosen, the published polyline
 between them is overpainted: shade (recommended window is the dark one on
 that stretch) vs sun (the recommended window is the bright one) vs overhead.
 No percentages. Night stretches are omitted. The operator-coloured route
-line stays underneath.
+line stays underneath. The plan map paints the selected journey the same
+way, at the same clock the chips use.
 
 ## Honesty
 

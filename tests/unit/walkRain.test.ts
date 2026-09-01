@@ -93,6 +93,8 @@ describe("radarTileUrls", () => {
       host: "https://tilecache.rainviewer.com",
       radar: { past: [{ path: "/v2/radar/abc" }] },
     });
-    expect(urls).toEqual(["https://tilecache.rainviewer.com/v2/radar/abc/256/{z}/{x}/{y}/2/1_1.png"]);
+    expect(urls).toEqual([
+      "https://tilecache.rainviewer.com/v2/radar/abc/256/{z}/{x}/{y}/2/1_1.png",
+    ]);
   });
 });

@@ -34,16 +34,14 @@ export function solarPosition(date: Date, lat: number, lng: number): SolarPositi
   const dec = Math.asin(Math.sin(e) * Math.sin(L));
 
   const gmstHours = (18.697374558 + 24.06570982441908 * d) % 24;
-  const lmstRad = ((gmstHours + lng / 15) * 15) * DEG;
+  const lmstRad = (gmstHours + lng / 15) * 15 * DEG;
   const ha = lmstRad - ra;
 
   const latR = lat * DEG;
-  const sinEl =
-    Math.sin(latR) * Math.sin(dec) + Math.cos(latR) * Math.cos(dec) * Math.cos(ha);
+  const sinEl = Math.sin(latR) * Math.sin(dec) + Math.cos(latR) * Math.cos(dec) * Math.cos(ha);
   const elevation = Math.asin(Math.max(-1, Math.min(1, sinEl))) * RAD;
   const azimuth =
-    Math.atan2(-Math.sin(ha), Math.cos(latR) * Math.tan(dec) - Math.sin(latR) * Math.cos(ha)) *
-    RAD;
+    Math.atan2(-Math.sin(ha), Math.cos(latR) * Math.tan(dec) - Math.sin(latR) * Math.cos(ha)) * RAD;
 
   return { azimuth: (azimuth + 360) % 360, elevation };
 }
@@ -63,7 +61,7 @@ export const SUN_OVERHEAD = 70;
 export function sunBucket(azimuth: number, elevation: number, heading: number): SunBucket {
   if (elevation < SUN_UP) return "night";
   if (elevation >= SUN_OVERHEAD) return "overhead";
-  const rel = ((azimuth - heading) % 360 + 360) % 360;
+  const rel = (((azimuth - heading) % 360) + 360) % 360;
   if (rel < 40 || rel >= 320) return "ahead";
   if (rel >= 140 && rel < 220) return "behind";
   if (rel >= 40 && rel < 140) return "right";

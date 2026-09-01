@@ -57,3 +57,5 @@ later still. Running loops and night CCTV routing are out.
 - `src/data/tripSun.ts` — wait / ride / walk scoring and copy
 - `src/data/useRouteShape.ts` — cached waypoints, shared with the map
 - Ride band on `RouteDetail.tsx`, chips on `Plan.tsx`
+- Plan clock: when the setting is on, score a picked Hong Kong wall-clock
+  (default = next live bus). Night planning a morning ride is the point.

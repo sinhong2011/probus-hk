@@ -41,7 +41,7 @@ import {
   upsertSource,
 } from "~/lib/mapKit";
 import { syncRainRadar } from "~/lib/mapRain";
-import { rideSunPaint, scoreRide } from "~/data/tripSun";
+import { clearSunRide, ensureSunRideLayer, sunRideCollection } from "~/lib/mapSun";
 import { useWalkRain } from "~/data/useWalkRain";
 import { settings } from "~/stores/settings";
 
@@ -1272,26 +1272,14 @@ export function RouteMap(props: {
     }),
     ({ instance, lines, positions, ride, mtr }) => {
       if (!instance) return;
-      const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
-      if (!instance.getSource(SRC_SUN)) instance.addSource(SRC_SUN, { type: "geojson", data: empty });
-      if (!instance.getLayer("app-sun-ride") && instance.getLayer("app-route-line")) {
-        instance.addLayer(
-          {
-            id: "app-sun-ride",
-            type: "line",
-            source: SRC_SUN,
-            layout: { "line-cap": "round", "line-join": "round" },
-            paint: {
-              "line-color": ["match", ["get", "tone"], "shade", "#3ec9b0", "sun", "#e07a3d", "#8b929c"],
-              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 7],
-              "line-opacity": 0.9,
-            },
-          },
-          instance.getLayer("app-route-arrows") ? "app-route-arrows" : undefined,
-        );
-      }
-      if (!ride || mtr || !instance.getLayer("app-sun-ride")) {
-        upsertSource(instance, SRC_SUN, empty);
+      ensureSunRideLayer(
+        instance,
+        SRC_SUN,
+        "app-sun-ride",
+        instance.getLayer("app-route-arrows") ? "app-route-arrows" : undefined,
+      );
+      if (!ride || mtr) {
+        clearSunRide(instance, SRC_SUN);
         return;
       }
       const published = measureLine(stitchLines(lines));
@@ -1300,43 +1288,20 @@ export function RouteMap(props: {
       const from = placed?.measures[ride.board] ?? 0;
       const to = placed?.measures[ride.alight] ?? line.length;
       if (to - from < 30) {
-        upsertSource(instance, SRC_SUN, empty);
+        clearSunRide(instance, SRC_SUN);
         return;
       }
-      const advice = scoreRide({
-        line,
-        from,
-        to,
-        departAt: ride.departAt,
-        arriveAt: ride.arriveAt,
-      });
-      let features: FeatureCollection["features"] = [];
-      if (advice.kind === "overhead") {
-        const coordinates = sliceLine(line, from, to);
-        if (coordinates.length >= 2) {
-          features = [
-            {
-              type: "Feature",
-              properties: { tone: "overhead" },
-              geometry: { type: "LineString", coordinates },
-            },
-          ];
-        }
-      } else if (advice.kind === "side") {
-        features = rideSunPaint({
+      upsertSource(
+        instance,
+        SRC_SUN,
+        sunRideCollection({
           line,
           from,
           to,
           departAt: ride.departAt,
           arriveAt: ride.arriveAt,
-          window: advice.window,
-        }).map((stroke) => ({
-          type: "Feature" as const,
-          properties: { tone: stroke.tone },
-          geometry: { type: "LineString" as const, coordinates: stroke.coordinates },
-        }));
-      }
-      upsertSource(instance, SRC_SUN, { type: "FeatureCollection", features });
+        }),
+      );
     },
   );
 

@@ -12,7 +12,9 @@ import type { KeyedRoute } from "./types";
  *
  * `undefined` is still in flight, `null` is none published.
  */
-export function useRouteShape(route: () => KeyedRoute | null): Accessor<Position[][] | null | undefined> {
+export function useRouteShape(
+  route: () => KeyedRoute | null,
+): Accessor<Position[][] | null | undefined> {
   const query = observe<Position[][] | null>(() => {
     const r = route();
     const url = r ? waypointUrl(r) : null;

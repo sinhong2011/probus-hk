@@ -346,63 +346,65 @@ function RideBand(props: {
         <Show when={shownRide()}>
           {(ride) => (
             <>
-            <div class="flex flex-wrap items-center gap-1.5 border-t border-border px-3.5 py-2.5">
-              <Chip tone="accent" class="shrink-0">
-                <span class="tnum">
-                  {t("rideTime", props.lang)} {t("aboutMinutes", props.lang)} {ride().minutes}{" "}
-                  {t("minute", props.lang)}
-                </span>
-              </Chip>
-              <Show when={ride().fare}>
-                {(fare) => (
-                  <Chip tone="card" class="shrink-0">
-                    <span class="tnum">{fare()}</span>
-                  </Chip>
-                )}
-              </Show>
-              <Show when={arriveAt()}>
-                {(at) => (
-                  <Chip tone="card" class="shrink-0">
-                    <span class="tnum">
-                      {t("arriveAbout", props.lang)} {clockTime(at())}
-                    </span>
-                  </Chip>
-                )}
-              </Show>
-              <Show when={sun()}>{(copy) => <TripSunChips copy={copy()} lang={props.lang} />}</Show>
+              <div class="flex flex-wrap items-center gap-1.5 border-t border-border px-3.5 py-2.5">
+                <Chip tone="accent" class="shrink-0">
+                  <span class="tnum">
+                    {t("rideTime", props.lang)} {t("aboutMinutes", props.lang)} {ride().minutes}{" "}
+                    {t("minute", props.lang)}
+                  </span>
+                </Chip>
+                <Show when={ride().fare}>
+                  {(fare) => (
+                    <Chip tone="card" class="shrink-0">
+                      <span class="tnum">{fare()}</span>
+                    </Chip>
+                  )}
+                </Show>
+                <Show when={arriveAt()}>
+                  {(at) => (
+                    <Chip tone="card" class="shrink-0">
+                      <span class="tnum">
+                        {t("arriveAbout", props.lang)} {clockTime(at())}
+                      </span>
+                    </Chip>
+                  )}
+                </Show>
+                <Show when={sun()}>
+                  {(copy) => <TripSunChips copy={copy()} lang={props.lang} />}
+                </Show>
 
-              {/* The reminder this screen exists to make easy: you know where you
+                {/* The reminder this screen exists to make easy: you know where you
                   are getting off, so the app can watch for it. */}
-              <button
-                type="button"
-                aria-pressed={armed() ? "true" : "false"}
-                onClick={remind}
-                class={[
-                  "app-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
-                  {
-                    "bg-primary text-primary-foreground": armed(),
-                    "bg-card text-muted-foreground": !armed(),
-                  },
-                ]}
-              >
-                <AlarmIcon size={11} />
-                {/* Not "get off here" - that is the row's job. This one is the
+                <button
+                  type="button"
+                  aria-pressed={armed() ? "true" : "false"}
+                  onClick={remind}
+                  class={[
+                    "app-press ml-auto flex h-[1.6rem] shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.75rem] font-bold transition-colors duration-state",
+                    {
+                      "bg-primary text-primary-foreground": armed(),
+                      "bg-card text-muted-foreground": !armed(),
+                    },
+                  ]}
+                >
+                  <AlarmIcon size={11} />
+                  {/* Not "get off here" - that is the row's job. This one is the
                     app watching for it on the rider's behalf. */}
-                {t("alertDestination", props.lang)}
-              </button>
-            </div>
-            <Show when={sun()?.detail}>
-              {(detail) => (
-                <p class="px-3.5 pb-2.5 text-[0.75rem] font-medium leading-snug text-subtle-foreground">
-                  {detail()}
+                  {t("alertDestination", props.lang)}
+                </button>
+              </div>
+              <Show when={sun()?.detail}>
+                {(detail) => (
+                  <p class="px-3.5 pb-2.5 text-[0.75rem] font-medium leading-snug text-subtle-foreground">
+                    {detail()}
+                  </p>
+                )}
+              </Show>
+              <Show when={sun()?.chip}>
+                <p class="px-3.5 pb-2.5 text-[0.7rem] font-medium text-faint-foreground">
+                  {t("sunHonesty", props.lang)}
                 </p>
-              )}
-            </Show>
-            <Show when={sun()?.chip}>
-              <p class="px-3.5 pb-2.5 text-[0.7rem] font-medium text-faint-foreground">
-                {t("sunHonesty", props.lang)}
-              </p>
-            </Show>
+              </Show>
             </>
           )}
         </Show>
@@ -2630,10 +2632,7 @@ export default function RouteDetail() {
             {t("tapForEta", lang())}
           </Alert>
 
-          <TripSunOffer
-            lang={lang()}
-            hasRide={boardSeq() !== null && alightSeq() !== null}
-          />
+          <TripSunOffer lang={lang()} hasRide={boardSeq() !== null && alightSeq() !== null} />
           <WalkRainOffer
             lang={lang()}
             at={position()}

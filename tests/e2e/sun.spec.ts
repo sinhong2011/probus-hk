@@ -88,3 +88,31 @@ test("a sheet follows the banner on a daytime ride", async ({ page }) => {
     timeout: 5_000,
   });
 });
+
+test("plan scores a picked morning clock, not only the next bus", async ({ page }) => {
+  await page.goto("/settings");
+  const toggle = page.getByRole("switch", { name: "行程日照" });
+  await expect(toggle).toBeVisible({ timeout: 10_000 });
+  await toggle.click();
+
+  await page.goto("/plan");
+  const destination = page.getByLabel("目的地");
+  await expect(destination).toBeVisible({ timeout: 10_000 });
+  await destination.click();
+  await destination.fill("尖沙咀");
+  await page.locator('button:has-text("尖沙咀")').first().click();
+
+  await expect(page.getByText("全程大約", { exact: false }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const clock = page.getByRole("button", { name: "日照 · 下一班" });
+  await expect(clock).toBeVisible();
+  await clock.click();
+
+  await expect(page.getByRole("dialog", { name: "按邊個鐘計日照" })).toBeVisible();
+  await page.getByRole("tab", { name: "聽朝" }).click();
+  await page.getByRole("button", { name: "關閉" }).click();
+
+  await expect(page.getByRole("button", { name: /聽日 08:00/ })).toBeVisible();
+});

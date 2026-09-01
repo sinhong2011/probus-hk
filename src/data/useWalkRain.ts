@@ -30,7 +30,9 @@ export interface WalkRainView {
  * still might appear. Radar tiles are fetched only when the setting is on
  * and Hong Kong is wet - a dry sky does not pull RainViewer.
  */
-export function useWalkRain(opts: () => { at: LatLng | null; hasWalk: boolean } | null): Accessor<WalkRainView | null> {
+export function useWalkRain(
+  opts: () => { at: LatLng | null; hasWalk: boolean } | null,
+): Accessor<WalkRainView | null> {
   const wanted = () => {
     const o = opts();
     if (!o) return false;

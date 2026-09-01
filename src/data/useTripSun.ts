@@ -34,15 +34,17 @@ function positionsOf(stops: { location: LatLng }[]): Position[] {
  * The sun story for one ride, or `null` when the setting is off, the mode
  * is underground, the sun is down, or the geometry has not arrived yet.
  */
-export function useTripSun(opts: () => {
-  route: KeyedRoute;
-  boardSeq: number;
-  alightSeq: number | null;
-  /** Next bus that has not already gone, or null to use now. */
-  departAt: Date | null;
-  rideMinutes: number | null;
-  walkTo?: LatLng | null;
-} | null): Accessor<TripSunCopy | null> {
+export function useTripSun(
+  opts: () => {
+    route: KeyedRoute;
+    boardSeq: number;
+    alightSeq: number | null;
+    /** Next bus that has not already gone, or null to use now. */
+    departAt: Date | null;
+    rideMinutes: number | null;
+    walkTo?: LatLng | null;
+  } | null,
+): Accessor<TripSunCopy | null> {
   const db = useDb();
   const subject = () => {
     const o = opts();
