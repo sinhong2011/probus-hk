@@ -1,7 +1,7 @@
 import { settings } from "~/stores/settings";
 
 /**
- * The colours a bookmark group's tag can wear.
+ * The colours a star group's tag can wear.
  *
  * A fixed palette rather than a free colour wheel: eight hues picked to stay
  * apart from each other and legible in both themes (each name is a CSS token

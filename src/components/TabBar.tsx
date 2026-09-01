@@ -18,7 +18,7 @@ import { MoreSheet } from "./MoreSheet";
 import { SlidingPill } from "./SlidingPill";
 import { sheets } from "~/stores/sheets";
 import {
-  BookmarkIcon,
+  StarIcon,
   MegaphoneIcon,
   MoreIcon,
   PinIcon,
@@ -45,7 +45,7 @@ const SEARCH_SHORTCUT = formatForDisplay(SEARCH_KEY);
 const tabKey = (index: number): RegisterableHotkey => `Alt+${index + 1}` as RegisterableHotkey;
 
 /** The places the navigation itself can take you, and nowhere else. */
-type TabPath = "/" | "/saved" | "/search" | "/rail" | "/notices";
+type TabPath = "/" | "/starred" | "/search" | "/rail" | "/notices";
 
 interface Destination {
   href: TabPath;
@@ -56,7 +56,7 @@ interface Destination {
 /** Where the app can take you. Settings is not one of these; it is the drawer. */
 const TABS: Destination[] = [
   { href: "/", label: "home", Icon: PinIcon },
-  { href: "/saved", label: "saved", Icon: BookmarkIcon },
+  { href: "/starred", label: "starred", Icon: StarIcon },
   { href: "/search", label: "search", Icon: SearchIcon },
   { href: "/rail", label: "rail", Icon: TrainIcon },
   { href: "/notices", label: "notices", Icon: MegaphoneIcon },

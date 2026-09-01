@@ -7,7 +7,7 @@ import { router } from "~/router";
 import { installAlertEffects } from "~/stores/alerts";
 import { installClock } from "~/stores/clock";
 import { installFrequentEffects } from "~/stores/frequent";
-import { installSavedEffects } from "~/stores/saved";
+import { installStarredEffects } from "~/stores/starred";
 import { installSearchEffects } from "~/stores/searches";
 import { installTripEffects } from "~/stores/trips";
 import { installSettingsEffects } from "~/stores/settings";
@@ -16,7 +16,7 @@ import { installDismissedEffects } from "~/stores/dismissed";
 /**
  * The app is the stores plus the router.
  *
- * Everything a rider accumulates - saved stops, armed reminders, the language
+ * Everything a rider accumulates - starred stops, armed reminders, the language
  * and refresh cadence, the shared one-second tick every countdown reads - is
  * installed once here, above the router, so it survives every navigation and
  * is already warm by the time the first screen asks for it. Every request
@@ -27,7 +27,7 @@ import { installDismissedEffects } from "~/stores/dismissed";
 export function App() {
   installSettingsEffects();
   installDismissedEffects();
-  installSavedEffects();
+  installStarredEffects();
   installTripEffects();
   installAlertEffects();
   installFrequentEffects();

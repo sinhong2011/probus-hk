@@ -9,7 +9,7 @@ import { createCollection, localStorageCollectionOptions } from "~/lib/tanstack/
 
 /**
  * Everything a rider accumulates lives in a TanStack DB collection backed by
- * localStorage: bookmarks, reminders, trips, habits, settings. The
+ * localStorage: starred stops, reminders, trips, habits, settings. The
  * collection writes itself to storage, reads back what another tab wrote,
  * and makes every change a transaction. This is the few lines every store
  * needs on top of that, once.

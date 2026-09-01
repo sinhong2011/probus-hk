@@ -5,19 +5,21 @@ test.beforeEach(async ({ page }) => {
   await mockTransit(page);
 });
 
-/** Opens a stop on route 1 and bookmarks it, which is the only way in. */
-async function bookmark(page: import("@playwright/test").Page, nth: number, group?: string) {
+/** Opens a stop on route 1 and stars it, which is the only way in. */
+async function star(page: import("@playwright/test").Page, nth: number, group?: string) {
   await page.goto("/route/1%2B1%2BCHUK%20YUEN%20ESTATE%2BSTAR%20FERRY");
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
 
   await page.locator("[data-stop-seq]").nth(nth).getByRole("button").first().click();
-  const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
-  await pin.click();
+  const toggle = page
+    .locator(".app-reveal[data-open='true']")
+    .getByRole("button", { name: /加入收藏|已收藏/ });
+  await toggle.click();
 
-  // The bookmark is not made until the sheet says where it goes.
+  // The star is not made until the sheet says where it goes.
   const sheet = page.getByRole("dialog", { name: "分組" });
   await expect(sheet).toBeVisible();
-  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
   if (group !== undefined) {
     await sheet.getByRole("textbox", { name: "新增分組" }).fill(group);
@@ -27,14 +29,14 @@ async function bookmark(page: import("@playwright/test").Page, nth: number, grou
 
   await sheet.getByRole("button", { name: "加入收藏" }).click();
   await expect(sheet).toBeHidden();
-  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
 }
 
-test("a bookmark can be put in a new group as it is made", async ({ page }) => {
-  await bookmark(page, 1, "返工");
+test("a star can be put in a new group as it is made", async ({ page }) => {
+  await star(page, 1, "返工");
 
   // A group chosen at the stop is the group the list files it under.
-  await page.goto("/saved");
+  await page.goto("/starred");
   await expect(page.getByText("返工").first()).toBeVisible({ timeout: 15_000 });
 
   // The card's own group button also says 返工 now, so the filter chip is
@@ -45,28 +47,28 @@ test("a bookmark can be put in a new group as it is made", async ({ page }) => {
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible();
 });
 
-test("backing out of the group sheet makes no bookmark", async ({ page }) => {
+test("backing out of the group sheet makes no star", async ({ page }) => {
   await page.goto("/route/1%2B1%2BCHUK%20YUEN%20ESTATE%2BSTAR%20FERRY");
   await expect(page.locator("[data-stop-seq]").first()).toBeVisible({ timeout: 15_000 });
 
   await page.locator("[data-stop-seq]").nth(1).getByRole("button").first().click();
-  const pin = page.locator('[data-open="true"]').getByRole("button", { name: "pin" });
-  await pin.click();
+  const toggle = page
+    .locator(".app-reveal[data-open='true']")
+    .getByRole("button", { name: /加入收藏|已收藏/ });
+  await toggle.click();
 
   const sheet = page.getByRole("dialog", { name: "分組" });
   await sheet.getByRole("button", { name: "關閉" }).click();
   await expect(sheet).toBeHidden();
-  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
-  await page.goto("/saved");
+  await page.goto("/starred");
   await expect(page.getByText("仲未收藏過路線")).toBeVisible({ timeout: 15_000 });
 });
 
-test("bookmarks can be ordered by something other than the hand-dragged order", async ({
-  page,
-}) => {
-  await bookmark(page, 1);
-  await page.goto("/saved");
+test("stars can be ordered by something other than the hand-dragged order", async ({ page }) => {
+  await star(page, 1);
+  await page.goto("/starred");
 
   // Order rides in the header wearing its own answer; the four choices only
   // appear when the header button is asked for them.
@@ -83,11 +85,11 @@ test("bookmarks can be ordered by something other than the hand-dragged order", 
   });
 });
 
-test("a bookmark can be put in a group, and the group filters the list", async ({ page }) => {
-  await bookmark(page, 1);
+test("a star can be put in a group, and the group filters the list", async ({ page }) => {
+  await star(page, 1);
   // A second one that stays ungrouped, so the 未分組 bucket exists to filter.
-  await bookmark(page, 2);
-  await page.goto("/saved");
+  await star(page, 2);
+  await page.goto("/starred");
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 15_000 });
 
   // The group rides on the card itself - no edit mode to enter first.
@@ -97,7 +99,7 @@ test("a bookmark can be put in a group, and the group filters the list", async (
   await page.getByRole("button", { name: "儲存" }).click();
 
   // The group now exists, so it is offered as a filter. Exact, because the
-  // group sheet's own button names the group it would file the bookmark under.
+  // group sheet's own button names the group it would file the star under.
   const chip = page
     .getByRole("button", { name: "返工", exact: true })
     .and(page.locator("[aria-pressed]"));
@@ -125,9 +127,9 @@ test("a bookmark can be put in a group, and the group filters the list", async (
   );
 });
 
-test("a bookmark can be moved to another stop on its route", async ({ page }) => {
-  await bookmark(page, 1);
-  await page.goto("/saved");
+test("a star can be moved to another stop on its route", async ({ page }) => {
+  await star(page, 1);
+  await page.goto("/starred");
   const card = page.locator('a[href^="/route/"]');
   await expect(card).toContainText("天虹小學", { timeout: 15_000 });
 
@@ -148,11 +150,11 @@ test("a bookmark can be moved to another stop on its route", async ({ page }) =>
   await expect(card).not.toContainText("天虹小學");
 });
 
-test("a pinned bookmark is held at the top of the list", async ({ page }) => {
-  await bookmark(page, 1);
-  await bookmark(page, 2);
+test("a pinned star is held at the top of the list", async ({ page }) => {
+  await star(page, 1);
+  await star(page, 2);
 
-  await page.goto("/saved");
+  await page.goto("/starred");
   const cards = page.locator('a[href^="/route/"]');
   await expect(cards.first()).toContainText("天虹小學", { timeout: 15_000 });
 
@@ -163,7 +165,7 @@ test("a pinned bookmark is held at the top of the list", async ({ page }) => {
   await expect(page.locator("[data-pinned]")).toHaveCount(1);
   await expect(cards.first()).toContainText("馬仔坑遊樂場");
 
-  // A pin is part of the bookmark, so it outlives the visit.
+  // A pin is part of the star, so it outlives the visit.
   await page.reload();
   await expect(cards.first()).toContainText("馬仔坑遊樂場", { timeout: 15_000 });
 
@@ -190,8 +192,8 @@ test("an arrival reminder can be armed from a stop and called off from the list"
   await sheet.getByRole("button", { name: "1 分鐘" }).click();
   await sheet.getByRole("button", { name: /^到站通知 · 提我$/ }).click();
 
-  // Armed reminders are listed where the bookmarks are, and can be dropped.
-  await page.goto("/saved");
+  // Armed reminders are listed where the stars are, and can be dropped.
+  await page.goto("/starred");
   await expect(page.getByText("到站通知", { exact: false }).first()).toBeVisible({
     timeout: 15_000,
   });
@@ -199,14 +201,14 @@ test("an arrival reminder can be armed from a stop and called off from the list"
   await expect(page.getByText("到站通知", { exact: false })).toHaveCount(0);
 });
 
-test("a bookmark can be dragged to a new place in the list", async ({ page }) => {
-  await bookmark(page, 1);
-  await bookmark(page, 2);
+test("a star can be dragged to a new place in the list", async ({ page }) => {
+  await star(page, 1);
+  await star(page, 2);
 
-  await page.goto("/saved");
-  const cards = page.locator("[data-bookmark-id]");
+  await page.goto("/starred");
+  const cards = page.locator("[data-star-id]");
   await expect(cards).toHaveCount(2, { timeout: 15_000 });
-  const firstId = await cards.first().getAttribute("data-bookmark-id");
+  const firstId = await cards.first().getAttribute("data-star-id");
 
   // Carry the first card below the second by its grip, in finger-sized steps.
   const grip = page.getByRole("button", { name: "reorder" }).first();
@@ -222,12 +224,10 @@ test("a bookmark can be dragged to a new place in the list", async ({ page }) =>
   }
   await page.mouse.up();
 
-  // Reordered, and the order is the bookmark's own - it survives a reload.
-  await expect(cards.last()).toHaveAttribute("data-bookmark-id", firstId!);
+  // Reordered, and the order is the star's own - it survives a reload.
+  await expect(cards.last()).toHaveAttribute("data-star-id", firstId!);
   await page.reload();
-  await expect(page.locator("[data-bookmark-id]").last()).toHaveAttribute(
-    "data-bookmark-id",
-    firstId!,
-    { timeout: 15_000 },
-  );
+  await expect(page.locator("[data-star-id]").last()).toHaveAttribute("data-star-id", firstId!, {
+    timeout: 15_000,
+  });
 });

@@ -10,14 +10,21 @@ import {
   onCleanup,
   untrack,
 } from "solid-js";
-import { EmptyState, ScreenTitle, SectionLabel, SpecialTag } from "~/components/Chrome";
+import {
+  EmptyState,
+  ScreenTitle,
+  SectionLabel,
+  SpecialTag,
+  StopCode,
+} from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
 import {
   AlarmIcon,
-  BookmarkIcon,
+  PinIcon,
+  StarIcon,
   ExchangeIcon,
   GripIcon,
   LayersIcon,
@@ -27,9 +34,9 @@ import {
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { CardGrid, Page, RowCard, Section } from "~/components/Layout";
-import { routeLink } from "~/lib/links";
+import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
-import { isSpecialService, routeAt } from "~/data/db";
+import { isSpecialService, routeAt, routesAtCluster } from "~/data/db";
 import { isRunningNow, lastRunGone } from "~/data/schedule";
 import type { Eta, KeyedRoute, StopEntry } from "~/data/types";
 import { arrivals, type Arrival } from "~/data/arrivals";
@@ -42,23 +49,24 @@ import { alerts } from "~/stores/alerts";
 import { frequent } from "~/stores/frequent";
 import { useGeolocation } from "~/stores/geolocation";
 import { now } from "~/stores/clock";
-import { saved, type SavedItem } from "~/stores/saved";
-import { settings, type SavedOrder } from "~/stores/settings";
+import { isStopStar, starred, type StarredItem } from "~/stores/starred";
+import { settings, type StarredOrder } from "~/stores/settings";
 
 /** A question the group sheet is being opened to ask, and what to do with it. */
 interface GroupAsk {
   current: string;
-  /** Set when the answer makes a bookmark rather than moves one. */
+  /** Set when the answer makes a star rather than moves one. */
   confirm?: string;
   apply: (group: string) => void;
 }
 
-/** The value that sorts a bookmark with no arrival to the end of the list. */
+/** The value that sorts a star with no arrival to the end of the list. */
 const NO_ARRIVAL = Number.POSITIVE_INFINITY;
 
 interface Resolved {
-  item: SavedItem;
-  route: KeyedRoute;
+  item: StarredItem;
+  /** Absent on a stop star: the card is the kerb, not one line. */
+  route?: KeyedRoute;
   stop: StopEntry | undefined;
   stopName: string;
   running: boolean;
@@ -67,7 +75,7 @@ interface Resolved {
 /**
  * When to set off, rather than when the bus arrives.
  *
- * A bookmark is somewhere you go regularly, so the useful number is not "the
+ * A star is somewhere you go regularly, so the useful number is not "the
  * bus is 8 minutes away" but "you have 5 minutes before you need to walk". That
  * needs the walk to the stop, which is why it only appears once location is
  * available.
@@ -92,7 +100,7 @@ function leaveAdvice(etas: Eta[], metres: number | null, at: number) {
   return upcoming.length > 0 ? { leaveIn: null, walk, urgent: false, nth: -1 } : null;
 }
 
-function BookmarkCard(props: {
+function StarredCard(props: {
   entry: Resolved;
   lang: Lang;
   metres: number | null;
@@ -102,15 +110,25 @@ function BookmarkCard(props: {
   draggable: boolean;
   onRemove: () => void;
   onRegroup: () => void;
-  /** Move the bookmark to another stop on the same route. */
+  /** Move the star to another stop on the same route. */
   onRestop: () => void;
-  /** Hold the bookmark at the top of the screen, or let it go. */
+  /** Hold the star at the top of the screen, or let it go. */
   onPin: () => void;
 }) {
+  const db = useDb();
+  const stopStar = () => isStopStar(props.entry.item);
+
+  const routeCount = createMemo(() => {
+    if (!stopStar()) return 0;
+    const ids = new Set<string>([props.entry.item.stopId]);
+    for (const [, alias] of db().stopMap[props.entry.item.stopId] ?? []) ids.add(alias);
+    return routesAtCluster(db(), [...ids]).length;
+  });
+
   // From the arrivals table, which the screen fetches for every card at once.
   const etas = () => props.arrival?.etas;
 
-  const advice = () => leaveAdvice(etas() ?? [], props.metres, now());
+  const advice = () => (stopStar() ? null : leaveAdvice(etas() ?? [], props.metres, now()));
 
   /*
    * How many arrivals at the top of the stack are already out of reach, so the
@@ -123,33 +141,37 @@ function BookmarkCard(props: {
     return a.nth < 0 ? Number.POSITIVE_INFINITY : a.nth;
   };
 
-  const db = useDb();
   /* Why there is nothing coming: still to come, or gone for the night. A
-     bookmark is read at the two ends of the day more than anywhere else. */
+     star is read at the two ends of the day more than anywhere else. */
   const over = () => {
     now();
-    return lastRunGone(db(), props.entry.route);
+    const route = props.entry.route;
+    return route ? lastRunGone(db(), route) : !props.entry.running;
   };
 
   const dim = () => !props.entry.running && etas()?.length === 0;
-  const alerted = () =>
-    alerts.has("arrival", props.entry.route.key, props.entry.item.stopId) ||
-    alerts.has("destination", props.entry.route.key, props.entry.item.stopId);
+  const alerted = () => {
+    const route = props.entry.route;
+    if (!route) return false;
+    return (
+      alerts.has("arrival", route.key, props.entry.item.stopId) ||
+      alerts.has("destination", route.key, props.entry.item.stopId)
+    );
+  };
 
   return (
     <div
       class={[
-        /* A column so the strip under the card can be pushed to the bottom of
-           it: side by side in the grid, two cards share a height, and a leave-
-           now line floating halfway up one of them reads as a different kind of
-           thing from the same line sitting on the edge of its neighbour. */
-        "app-press flex flex-col overflow-hidden rounded-xl bg-card shadow-card motion-safe:app-rise",
+        /* One height for every star: three stacked arrivals, a stop with
+           no countdown, and a neighbour with two used to size the row, and
+           the shorter card stretched a hole through its middle. */
+        "app-press flex h-32 shrink-0 flex-col overflow-hidden rounded-xl bg-card shadow-card motion-safe:app-rise",
         { "opacity-60": dim() },
       ]}
-      data-bookmark-id={props.entry.item.id}
+      data-star-id={props.entry.item.id}
       data-held={props.entry.item.pinned ? "" : undefined}
     >
-      <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+      <div class="flex min-h-0 flex-1 items-center gap-2.5 px-3.5 py-2.5">
         {/* Always on show while the list is in hand order: a grip that only
             appeared in a mode was a drag nobody found. */}
         <Show when={props.draggable}>
@@ -163,58 +185,90 @@ function BookmarkCard(props: {
           </button>
         </Show>
 
-        <RoutePlate
-          route={props.entry.route.route}
-          co={props.entry.route.co}
-          size="sm"
-          muted={dim()}
-        />
-
-        <a
-          {...useLinkProps(routeLink(props.entry.route.key))}
-          class="flex min-w-0 grow flex-col gap-0.5"
-        >
-          <span class="flex min-w-0 items-center gap-1.5">
-            <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-              {t("towards", props.lang)} {pick(props.entry.route.dest, props.lang)}
+        <Show when={stopStar()}>
+          <span
+            class="flex h-[1.9375rem] min-w-[3rem] shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+            aria-hidden="true"
+          >
+            <PinIcon size={14} />
+          </span>
+          <a
+            {...useLinkProps(stopLink(props.entry.item.stopId))}
+            class="flex min-w-0 grow flex-col gap-0.5"
+          >
+            <span class="flex min-w-0 items-center gap-1.5">
+              <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                {props.entry.stopName}
+              </span>
+              <StopCode name={props.entry.stop?.name} lang={props.lang} />
             </span>
-            <Show when={isSpecialService(props.entry.route)}>
-              <SpecialTag lang={props.lang} />
-            </Show>
-          </span>
-          <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-            {[
-              props.entry.stopName,
-              props.metres !== null
-                ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-        </a>
+            <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+              {[
+                `${routeCount()} ${t("routesCount", props.lang)}`,
+                props.metres !== null
+                  ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </a>
+        </Show>
 
-        {/* An armed reminder belongs on the card it was set from, not only on
-            the screen that set it. */}
+        <Show when={!stopStar() && props.entry.route}>
+          {(route) => (
+            <>
+              <RoutePlate route={route().route} co={route().co} size="sm" muted={dim()} />
+
+              <a
+                {...useLinkProps(routeLink(route().key))}
+                class="flex min-w-0 grow flex-col gap-0.5"
+              >
+                <span class="flex min-w-0 items-center gap-1.5">
+                  <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                    {t("towards", props.lang)} {pick(route().dest, props.lang)}
+                  </span>
+                  <Show when={isSpecialService(route())}>
+                    <SpecialTag lang={props.lang} />
+                  </Show>
+                </span>
+                <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                  {[
+                    props.entry.stopName,
+                    props.metres !== null
+                      ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </a>
+            </>
+          )}
+        </Show>
+
         <Show when={alerted()}>
           <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
             <AlarmIcon size={14} />
           </span>
         </Show>
 
-        <EtaCountdown
-          etas={etas()}
-          lang={props.lang}
-          size="sm"
-          limit={2}
-          unreachable={unreachable()}
-          over={over()}
-        />
+        <Show when={!stopStar()}>
+          <EtaCountdown
+            etas={etas()}
+            lang={props.lang}
+            size="sm"
+            limit={3}
+            scheduledLabel={false}
+            unreachable={unreachable()}
+            over={over()}
+          />
+        </Show>
       </div>
 
       {/*
        * One strip under the card: the line that turns arrival times into a
-       * decision on the left, and everything that can be done to the bookmark
+       * decision on the left, and everything that can be done to the star
        * on the right. The actions used to hide behind an Edit mode, which
        * made every change a three-tap errand and left the card with no next
        * step on show; icon-sized and quiet, they can afford to just be there.
@@ -224,8 +278,8 @@ function BookmarkCard(props: {
        * competing with the route's. Indigo on the icon and the minutes says
        * the same thing, and only where the eye already reads.
        */}
-      <div class="mt-auto flex items-center gap-1.5 border-t border-border py-1 pl-3.5 pr-2">
-        {/* The group opens the strip: which drawer the bookmark is filed in,
+      <div class="flex shrink-0 items-center gap-1.5 border-t border-border py-1 pl-3.5 pr-2">
+        {/* The group opens the strip: which drawer the star is filed in,
             said once, at the corner the eye enters the row from. */}
         <Show when={props.entry.item.group}>
           {(name) => (
@@ -286,14 +340,16 @@ function BookmarkCard(props: {
           >
             <ThumbtackIcon size={12} />
           </button>
-          <button
-            type="button"
-            aria-label={t("changeStop", props.lang)}
-            onClick={props.onRestop}
-            class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
-          >
-            <ExchangeIcon size={12} />
-          </button>
+          <Show when={!stopStar()}>
+            <button
+              type="button"
+              aria-label={t("changeStop", props.lang)}
+              onClick={props.onRestop}
+              class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
+            >
+              <ExchangeIcon size={12} />
+            </button>
+          </Show>
           {/* Icon only: the name it would repeat is already printed under the
               plate, and the label survives as the button's accessible name. */}
           <button
@@ -318,7 +374,7 @@ function BookmarkCard(props: {
   );
 }
 
-export default function Saved() {
+export default function Starred() {
   const db = useDb();
   const lang = settings.lang;
   const { position } = useGeolocation();
@@ -337,24 +393,24 @@ export default function Saved() {
    * group"; "" is the ungrouped bucket, which is a real one. Replace, not
    * push - re-cutting the list is looking, not travelling.
    */
-  const searchParams = useSearch({ from: "/saved" });
+  const searchParams = useSearch({ from: "/starred" });
   const navigate = useNavigate();
   const filter = () => searchParams().group ?? null;
   const setFilter = (group: string | null) =>
     void navigate({
-      to: "/saved",
+      to: "/starred",
       search: group === null ? {} : { group },
       replace: true,
     });
   /*
-   * One sheet, two questions: where an existing bookmark should move to, and
+   * One sheet, two questions: where an existing star should move to, and
    * where a new one should land. Both end in a group, so both are asked the
    * same way - the asker just says what the answer is for.
    */
   const [asking, setAsking] = createSignal<GroupAsk | null>(null);
   const [groupOpen, setGroupOpen] = createSignal(false);
   const [sortOpen, setSortOpen] = createSignal(false);
-  /** The bookmark whose stop is being changed, while the stop sheet is up. */
+  /** The star whose stop is being changed, while the stop sheet is up. */
   const [restopping, setRestopping] = createSignal<Resolved | null>(null);
   const [stopOpen, setStopOpen] = createSignal(false);
 
@@ -385,14 +441,37 @@ export default function Saved() {
   /*
    * Referentially stable: a card whose content has not changed gets the same
    * object back, so `For` moves its node instead of rebuilding it. This is
-   * what makes a drag smooth - a reorder only changes each bookmark's rank,
+   * what makes a drag smooth - a reorder only changes each star's rank,
    * and rebuilding every card's DOM on every crossing dropped frames. The
    * comparison deliberately ignores `order`: rank is read from the list's
    * position, never off the card.
    */
   const resolved = createMemo<Resolved[]>((prev) => {
     const before = new Map((prev ?? []).map((r) => [r.item.id, r]));
-    return saved.items().flatMap((item) => {
+    return starred.items().flatMap((item) => {
+      if (isStopStar(item)) {
+        const stop = db().stopList[item.stopId];
+        const members = new Set<string>([item.stopId]);
+        for (const [, alias] of db().stopMap[item.stopId] ?? []) members.add(alias);
+        const calling = routesAtCluster(db(), [...members]);
+        const next: Resolved = {
+          item,
+          stop,
+          stopName: stop ? stripStopCode(pick(stop.name, lang())) : "",
+          running: calling.some((at) => isRunningNow(db(), at.route)),
+        };
+        const old = before.get(item.id);
+        const same =
+          old &&
+          !old.route &&
+          old.stop === next.stop &&
+          old.stopName === next.stopName &&
+          old.running === next.running &&
+          old.item.group === item.group &&
+          old.item.pinned === item.pinned &&
+          old.item.stopId === item.stopId;
+        return [same ? old : next];
+      }
       const route = routeAt(db(), item.routeKey);
       if (!route) return [];
       const stop = db().stopList[item.stopId];
@@ -425,7 +504,7 @@ export default function Saved() {
   };
 
   /*
-   * Bookmarks whose route has finished for the night are moved out of the way
+   * Stars whose route has finished for the night are moved out of the way
    * rather than deleted - they are still yours, they are just not useful at
    * two in the morning.
    *
@@ -453,27 +532,27 @@ export default function Saved() {
   const isResting = (r: Resolved) => !r.running && !live()[r.item.id];
 
   /** Groups that exist, so the filter can only offer real ones. */
-  const groups = createMemo(() => saved.groups());
+  const groups = createMemo(() => starred.groups());
   const hasUngrouped = createMemo(() => resolved().some((r) => r.item.group === ""));
 
   const matchesFilter = (r: Resolved) => filter() === null || r.item.group === filter();
 
-  const order = () => settings.savedOrder();
+  const order = () => settings.starredOrder();
   createEffect(
-    () => settings.savedOrder(),
+    () => settings.starredOrder(),
     () => {
       // Braced on purpose: the setter's return value must not become the
       // effect's cleanup - Solid 2's dev assertion halts the screen over it.
       setHandOrder(null);
     },
   );
-  /** The stored order: how the bookmarks were made, or the last adopted ranking. */
+  /** The stored order: how the stars were made, or the last adopted ranking. */
   const manual = () => order() === "manual";
 
   const sort = (list: Resolved[]): Resolved[] => {
     switch (order()) {
       case "eta":
-        // The table's own order; a bookmark it has not answered for yet goes last.
+        // The table's own order; a star it has not answered for yet goes last.
         return [...list].sort(
           (a, b) =>
             (rankOf().get(a.item.id) ?? NO_ARRIVAL) - (rankOf().get(b.item.id) ?? NO_ARRIVAL),
@@ -483,8 +562,9 @@ export default function Saved() {
       case "route":
         return [...list].sort(
           (a, b) =>
-            a.route.route.localeCompare(b.route.route, "en", { numeric: true }) ||
-            a.stopName.localeCompare(b.stopName),
+            (a.route?.route ?? a.stopName).localeCompare(b.route?.route ?? b.stopName, "en", {
+              numeric: true,
+            }) || a.stopName.localeCompare(b.stopName),
         );
       default: {
         // The stored order - unless a drag just made a newer one, which the
@@ -500,12 +580,12 @@ export default function Saved() {
   };
 
   /*
-   * Pinned bookmarks come out of the list entirely and sit in a band of their
+   * Pinned stars come out of the list entirely and sit in a band of their
    * own at the top, ranked among themselves by whatever order is in force.
    *
    * Pinning beats the dormant section too: a route that has finished for the
    * night is demoted because nothing asked for it, and a pin is exactly that
-   * asking. The card still dims itself, so a pinned bookmark with no buses
+   * asking. The card still dims itself, so a pinned star with no buses
    * looks as quiet as it is without being moved out from under the thumb.
    */
   const pinned = createMemo(() =>
@@ -535,15 +615,15 @@ export default function Saved() {
     }),
   );
 
-  /** Routes opened often enough to be worth offering as a bookmark. */
+  /** Routes opened often enough to be worth offering as a star. */
   const suggestions = createMemo(() =>
     frequent.top(3).flatMap((key) => {
       const route = routeAt(db(), key);
-      return route && !saved.items().some((i) => i.routeKey === key) ? [route] : [];
+      return route && !starred.items().some((i) => i.routeKey === key) ? [route] : [];
     }),
   );
 
-  const orders = (): SortChoice<SavedOrder>[] => [
+  const orders = (): SortChoice<StarredOrder>[] => [
     { value: "manual", label: t("sortManual", lang()), hint: t("sortManualHint", lang()) },
     { value: "eta", label: t("sortEta", lang()), hint: t("sortEtaHint", lang()) },
     { value: "distance", label: t("sortDistance", lang()), hint: t("sortDistanceHint", lang()) },
@@ -588,9 +668,9 @@ export default function Saved() {
     };
 
     const sorter = Sortable.create(el, {
-      group: "bookmarks",
+      group: "starred",
       handle: "[data-drag-handle]",
-      draggable: "[data-bookmark-id]",
+      draggable: "[data-star-id]",
       filter: "[data-held]",
       disabled: !untrack(manual),
       animation: 250,
@@ -611,11 +691,11 @@ export default function Saved() {
       },
       onEnd: (evt) => {
         const item = evt.item as HTMLElement;
-        const id = item.dataset.bookmarkId;
+        const id = item.dataset.starId;
 
         // The visual order at the moment of the drop, over every section.
-        const ids = [...document.querySelectorAll<HTMLElement>("[data-bookmark-id]")]
-          .map((card) => card.dataset.bookmarkId)
+        const ids = [...document.querySelectorAll<HTMLElement>("[data-star-id]")]
+          .map((card) => card.dataset.starId)
           .filter((value): value is string => Boolean(value));
 
         // Hand the DOM back before the store speaks: Sortable's move is
@@ -634,7 +714,7 @@ export default function Saved() {
          */
         setHandOrder(ids);
         flush();
-        saved.adopt(ids);
+        starred.adopt(ids);
 
         /*
          * The settle. Sortable's preview vanishes on release and the card
@@ -648,8 +728,8 @@ export default function Saved() {
         const released = pointOf((evt as { originalEvent?: Event }).originalEvent);
         if (!released || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         {
-          const card = [...document.querySelectorAll<HTMLElement>("[data-bookmark-id]")].find(
-            (node) => node.dataset.bookmarkId === id,
+          const card = [...document.querySelectorAll<HTMLElement>("[data-star-id]")].find(
+            (node) => node.dataset.starId === id,
           );
           if (!card) return;
           const rest = card.getBoundingClientRect();
@@ -688,33 +768,33 @@ export default function Saved() {
    * does not offer a grip that would move it somewhere it is not.
    */
   const cardFor = (entry: Resolved) => (
-    <BookmarkCard
+    <StarredCard
       entry={entry}
       lang={lang()}
       metres={metresTo(entry)}
       arrival={arrivalOf().get(entry.item.id)}
       draggable={manual() && !entry.item.pinned}
-      onRemove={() => saved.remove(entry.item.id)}
+      onRemove={() => starred.remove(entry.item.id)}
       onRegroup={() =>
         askGroup({
           current: entry.item.group,
-          apply: (group) => saved.setGroup(entry.item.id, group),
+          apply: (group) => starred.setGroup(entry.item.id, group),
         })
       }
       onRestop={() => {
         setRestopping(entry);
         requestAnimationFrame(() => setStopOpen(true));
       }}
-      onPin={() => saved.togglePin(entry.item.id)}
+      onPin={() => starred.togglePin(entry.item.id)}
     />
   );
 
   return (
     <Page>
       <ScreenTitle
-        title={t("saved", lang())}
+        title={t("starred", lang())}
         /*
-         * Which bookmarks to look at, in the band rather than under it. The
+         * Which stars to look at, in the band rather than under it. The
          * chips take whatever width the order chip leaves and scroll sideways
          * past it: a filter row that holds a whole row of the screen open is
          * paying list space for a question most riders answer once, and with
@@ -761,8 +841,8 @@ export default function Saved() {
       />
 
       {/*
-       * Above the bookmarks, and outside them: a reminder can be armed from
-       * any route, so a rider with no bookmarks at all could otherwise have a
+       * Above the stars, and outside them: a reminder can be armed from
+       * any route, so a rider with no stars at all could otherwise have a
        * live alert with nowhere on the screen that admits it exists.
        */}
       <Show when={armed().length > 0}>
@@ -810,13 +890,13 @@ export default function Saved() {
         when={resolved().length > 0}
         fallback={
           <div class="flex flex-col gap-6">
-            <EmptyState title={t("emptySaved", lang())} hint={t("emptySavedHint", lang())} />
+            <EmptyState title={t("emptyStarred", lang())} hint={t("emptyStarredHint", lang())} />
 
             {/* Rather than an empty screen, offer the routes already being
                 checked most often - one tap to keep them here. */}
             <Show when={suggestions().length > 0}>
               <Section>
-                <SectionLabel>{t("bookmarkThese", lang())}</SectionLabel>
+                <SectionLabel>{t("starThese", lang())}</SectionLabel>
                 <RowCard>
                   <For each={suggestions()}>
                     {(route) => (
@@ -837,18 +917,18 @@ export default function Saved() {
                             const stopId = route.stops[co]?.[0];
                             if (!stopId) return;
                             // Made here, grouped here - the same question the
-                            // pin on a route asks before it saves anything.
+                            // star on a route asks before it saves anything.
                             askGroup({
                               current: "",
-                              confirm: t("addBookmark", lang()),
+                              confirm: t("addStar", lang()),
                               apply: (group) =>
-                                saved.toggle({ routeKey: route.key, co, stopId, seq: 1, group }),
+                                starred.toggle({ routeKey: route.key, co, stopId, seq: 1, group }),
                             });
                           }}
                           class="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-primary px-2.5 text-[0.75rem] font-bold text-primary-foreground"
                         >
-                          <BookmarkIcon size={12} />
-                          {t("addBookmark", lang())}
+                          <StarIcon size={12} />
+                          {t("addStar", lang())}
                         </button>
                       </div>
                     )}
@@ -897,9 +977,9 @@ export default function Saved() {
           // Switching to the stored order keeps the order already on screen:
           // the ranking being looked at becomes the stored arrangement.
           if (value === "manual" && order() !== "manual") {
-            saved.adopt(sort(resolved()).map((r) => r.item.id));
+            starred.adopt(sort(resolved()).map((r) => r.item.id));
           }
-          settings.setSavedOrder(value);
+          settings.setStarredOrder(value);
         }}
         lang={lang()}
       />
@@ -918,21 +998,25 @@ export default function Saved() {
         )}
       </Show>
 
-      {/* Keyed: a different bookmark is a different sheet, so the child takes
+      {/* Keyed: a different star is a different sheet, so the child takes
           the entry itself. The accessor form threw a stale-value error the
           moment the portalled list read it, and there is nothing here that
           wants to survive the entry changing. */}
       <Show when={restopping()} keyed>
         {(entry) => (
-          <StopSheet
-            open={stopOpen()}
-            onClose={() => setStopOpen(false)}
-            route={entry.route}
-            co={entry.item.co}
-            stopId={entry.item.stopId}
-            onChoose={(choice) => saved.retarget(entry.item.id, choice)}
-            lang={lang()}
-          />
+          <Show when={entry.route}>
+            {(route) => (
+              <StopSheet
+                open={stopOpen()}
+                onClose={() => setStopOpen(false)}
+                route={route()}
+                co={entry.item.co}
+                stopId={entry.item.stopId}
+                onChoose={(choice) => starred.retarget(entry.item.id, choice)}
+                lang={lang()}
+              />
+            )}
+          </Show>
         )}
       </Show>
     </Page>

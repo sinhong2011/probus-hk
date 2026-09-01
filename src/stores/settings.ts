@@ -5,8 +5,8 @@ import type { Lang } from "~/lib/i18n";
 export type ThemeChoice = "auto" | "light" | "dark";
 /** Nearby can be read as a list of kerbs, or as one queue of departures. */
 export type NearbyMode = "stop" | "routes";
-/** How the bookmark list is ordered. `manual` is the hand-dragged order. */
-export type SavedOrder = "manual" | "eta" | "distance" | "route";
+/** How the starred list is ordered. `manual` is the hand-dragged order. */
+export type StarredOrder = "manual" | "eta" | "distance" | "route";
 
 interface Persisted {
   lang: Lang;
@@ -40,7 +40,7 @@ interface Persisted {
   vehiclesOnList: boolean;
   vehiclesAway: boolean;
   nearbyMode: NearbyMode;
-  savedOrder: SavedOrder;
+  starredOrder: StarredOrder;
   /** How long before an arrival a reminder should fire, in minutes. */
   alertLeadMinutes: number;
   /** How close to the stop an alight reminder should fire, in metres. */
@@ -67,7 +67,7 @@ const DEFAULTS: Persisted = {
   vehiclesOnList: false,
   vehiclesAway: false,
   nearbyMode: "stop",
-  savedOrder: "manual",
+  starredOrder: "manual",
   alertLeadMinutes: 3,
   alertRadiusM: 300,
   railOpen: true,
@@ -88,8 +88,20 @@ const store = persistedCollection<Row>({
   storageKey: "probus:db:settings",
   getKey: (row) => row.id,
   legacyKeys: ["probus:settings", "motherbus:settings"],
-  revive: (raw) =>
-    raw && typeof raw === "object" ? [{ id: ROW, ...(raw as Partial<Persisted>) }] : [],
+  revive: (raw) => {
+    if (!raw || typeof raw !== "object") return [];
+    const incoming = raw as Partial<Persisted> & { savedOrder?: StarredOrder };
+    const { savedOrder, ...rest } = incoming;
+    return [
+      {
+        id: ROW,
+        ...rest,
+        ...(rest.starredOrder === undefined && savedOrder !== undefined
+          ? { starredOrder: savedOrder }
+          : {}),
+      },
+    ];
+  },
 });
 
 /**
@@ -133,7 +145,7 @@ const [vehiclesOnMap, setVehiclesOnMap] = field("vehiclesOnMap");
 const [vehiclesOnList, setVehiclesOnList] = field("vehiclesOnList");
 const [vehiclesAway, setVehiclesAway] = field("vehiclesAway");
 const [nearbyMode, setNearbyMode] = field("nearbyMode");
-const [savedOrder, setSavedOrder] = field("savedOrder");
+const [starredOrder, setStarredOrder] = field("starredOrder");
 const [alertLeadMinutes, setAlertLeadMinutes] = field("alertLeadMinutes");
 const [alertRadiusM, setAlertRadiusM] = field("alertRadiusM");
 const [railOpen, setRailOpen] = field("railOpen");
@@ -165,8 +177,8 @@ export const settings = {
   setVehiclesAway,
   nearbyMode,
   setNearbyMode,
-  savedOrder,
-  setSavedOrder,
+  starredOrder,
+  setStarredOrder,
   alertLeadMinutes,
   setAlertLeadMinutes,
   alertRadiusM,

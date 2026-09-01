@@ -6,12 +6,12 @@ import { GROUP_COLORS, groupColor, groupColorVar } from "~/lib/groupColors";
 import { settings } from "~/stores/settings";
 
 /**
- * Which group a bookmark belongs to.
+ * Which group a star belongs to.
  *
  * Groups are free text and made on the spot - 返工, 週末, 阿媽屋企 - because the
- * useful division of a bookmark list is the rider's own and no fixed set of
+ * useful division of a star list is the rider's own and no fixed set of
  * categories would have guessed it. Existing groups are offered first so the
- * second bookmark in a group is a tap rather than a retyping.
+ * second star in a group is a tap rather than a retyping.
  *
  * They are laid out as chips rather than as a column of full-width rows: a
  * group name is two or three characters, and a stack of wide blocks made a
@@ -20,7 +20,7 @@ import { settings } from "~/stores/settings";
  * is it?" - rather than one option per line.
  *
  * Nothing here decides anything until the button at the bottom is pressed: the
- * sheet is also how a bookmark is made, and a half-answered question should
+ * sheet is also how a star is made, and a half-answered question should
  * leave the list exactly as it found it.
  */
 export function GroupSheet(props: {
@@ -36,11 +36,11 @@ export function GroupSheet(props: {
 }) {
   const [draft, setDraft] = createSignal("");
   const [picked, setPicked] = createSignal("");
-  /** Groups invented here, which have no bookmark in them yet to be listed by. */
+  /** Groups invented here, which have no star in them yet to be listed by. */
   const [made, setMade] = createSignal<string[]>([]);
 
   // A sheet that reopened holding the last thing typed into it would be
-  // answering the previous bookmark's question.
+  // answering the previous star's question.
   createEffect(
     () => props.open,
     (open) => {
