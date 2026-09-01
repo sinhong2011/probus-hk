@@ -1237,7 +1237,10 @@ function StopRow(props: {
            * own accent colour, the same colour they take beside the stop's
            * name, and everything unset stays grey.
            */}
-          <div class="flex items-center justify-end gap-0.5 pb-3 pl-[2.125rem] pr-1.5">
+          {/* Half the foot it used to have: the icons are 32px tall boxes
+              around 16px glyphs, so they carry their own breathing room and
+              a full pad under them read as a gap before the next stop. */}
+          <div class="flex items-center justify-end gap-0.5 pb-1.5 pl-[2.125rem] pr-1.5">
             {/*
              * The code on the pole, at the quiet end of the panel a rider has
              * opened rather than beside the name.
@@ -1249,6 +1252,9 @@ function StopRow(props: {
              * line. Down here it costs nothing and is still one tap away for
              * the rider matching a pole to a screen.
              */}
+            {/* Its own small size, not the buttons': grown to their height it
+                was a grey slab at the end of the row, weighing more than the
+                controls beside it for a string most riders never read. */}
             <StopCode name={props.stop.name} lang={props.lang} class="mr-auto" />
 
             <button
