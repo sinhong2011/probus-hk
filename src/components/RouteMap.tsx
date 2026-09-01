@@ -1,15 +1,18 @@
-import {
-  AttributionControl,
-  LngLatBounds,
-  Map as MlMap,
-  type ExpressionSpecification,
-} from "maplibre-gl";
+import { LngLatBounds, Map as MlMap, type ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
-import type { JSX } from "@solidjs/web";
+import { Portal, type JSX } from "@solidjs/web";
 import { Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { Drawer } from "~/components/Drawer";
-import { BusIcon, CloseIcon, ExpandIcon, PinIcon, RouteIcon } from "~/components/Icons";
+import {
+  BusIcon,
+  CloseIcon,
+  ExpandIcon,
+  MinusIcon,
+  PinIcon,
+  PlusIcon,
+  RouteIcon,
+} from "~/components/Icons";
 import { t, type Lang } from "~/lib/i18n";
 import { whenIdleAfter } from "~/lib/idle";
 import { useInView } from "~/lib/inView";
@@ -23,13 +26,16 @@ import {
 } from "~/data/traffic";
 import { measureOf, spreadMetres } from "~/data/placement";
 import type { VehicleFeed } from "~/data/useVehicles";
-import type { Company, KeyedRoute, StopEntry } from "~/data/types";
+import type { KeyedRoute, StopEntry } from "~/data/types";
 import { distanceM, walkMinutes, type LatLng } from "~/lib/geo";
 import { measureLine, measureStops, pointAt, sliceLine, stitchLines } from "~/lib/alongLine";
-import { kindOf } from "~/lib/operators";
+import { kindOf, vehicleKind, type VehicleKind } from "~/lib/operators";
+import { BUS, PAPER, busImage, litFace, roundedRect } from "~/lib/vehicleArt";
 import {
   MAP_ACCENT as ACCENT,
   MAP_STYLES as STYLES,
+  addFoldedAttribution,
+  MAP_CONTROL,
   lineColour,
   prefersDark,
   upsertSource,
@@ -146,11 +152,18 @@ function stateTween(instance: MlMap) {
       const t = Math.min(1, (now - started) / STATE_MS);
       const value = from + (to - from) * easeOut(t);
       at.set(slot, value);
-      try {
-        instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
-      } catch {
-        // The source is not there yet, or has gone; there is nothing to move.
+      /*
+       * The source may not be there yet, or may have gone in a style swap.
+       * Checked rather than caught: a missing source does not make
+       * `setFeatureState` throw, it makes the map fire its error event, and
+       * that prints to the console from inside MapLibre where no catch here
+       * can reach. The next state change starts a fresh tween.
+       */
+      if (!instance.getSource(SRC_STOPS)) {
+        frames.delete(slot);
+        return;
       }
+      instance.setFeatureState({ source: SRC_STOPS, id }, { [key]: value });
       if (t < 1) frames.set(slot, requestAnimationFrame(step));
       else frames.delete(slot);
     };
@@ -205,53 +218,8 @@ function setBoardFont(ctx: CanvasRenderingContext2D, weight: number, px: number)
  * hanging out of the sign. Rounding them off is what buys the width back.
  */
 const BOARD = { top: 9.5, width: 24, height: 10, margin: 3, radius: 3.5 };
-/** Paper white for the route board, and the aged cream of a timetable sheet. */
-const PAPER = "#ffffff";
+/** The aged cream of a timetable sheet; paper white comes from the art. */
 const TIMETABLE = "#e8e3d6";
-
-/** `roundRect` with a path of arcs behind it, for the browsers without it. */
-function roundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(x, y, w, h, r);
-    return;
-  }
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-/** The operator's colour, lifted or dropped, for the shading of a face. */
-function shade(colour: string, towards: "light" | "dark", amount: number) {
-  const hex = colour.replace("#", "");
-  const full = hex.length === 3 ? hex.replace(/./g, (c) => c + c) : hex;
-  const n = Number.parseInt(full, 16);
-  if (!Number.isFinite(n)) return colour;
-  const target = towards === "light" ? 255 : 0;
-  const channel = (shift: number) => {
-    const value = (n >> shift) & 255;
-    return Math.round(value + (target - value) * amount);
-  };
-  return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
-}
-
-/** A face lit from above, which is what keeps the sign from reading as a sticker. */
-function litFace(ctx: CanvasRenderingContext2D, colour: string, top: number, bottom: number) {
-  const face = ctx.createLinearGradient(0, top, 0, bottom);
-  face.addColorStop(0, shade(colour, "light", 0.22));
-  face.addColorStop(1, shade(colour, "dark", 0.18));
-  return face;
-}
 
 /**
  * Sets the font and returns the text, squeezed and if need be cut, so that a
@@ -598,339 +566,8 @@ const IMG_BUS = "app-bus-disc";
 /** The same vehicle facing the other way, for a heading with west in it. */
 const IMG_BUS_WEST = "app-bus-disc-west";
 const IMG_NOSE = "app-bus-nose";
-/** The disc's own pixel grid, and the nose's, before `icon-size` scales them. */
-const BUS = { size: 30, ratio: 3 };
+/** The nose's own pixel grid, before `icon-size` scales it. */
 const NOSE = { width: 30, height: 50, ratio: 3 };
-
-/** What is drawn on the map: the vehicle the route is actually run with. */
-type VehicleKind = "bus" | "minibus" | "rail";
-
-/** The vehicle a route's operators put on it. */
-function vehicleKind(cos: Company[]): VehicleKind {
-  if (cos.some((co) => kindOf(co) === "rail")) return "rail";
-  if (cos.some((co) => kindOf(co) === "minibus")) return "minibus";
-  return "bus";
-}
-
-/** Window glass, lit from above: the one colour the three vehicles share. */
-function glass(ctx: CanvasRenderingContext2D, top: number, bottom: number) {
-  const face = ctx.createLinearGradient(0, top, 0, bottom);
-  face.addColorStop(0, "#e4f2fb");
-  face.addColorStop(1, "#93bddc");
-  return face;
-}
-
-/** A row of windows, each a rounded pane of the same glass. */
-function windows(
-  ctx: CanvasRenderingContext2D,
-  xs: number[],
-  y: number,
-  w: number,
-  h: number,
-  r = 0.55,
-) {
-  ctx.fillStyle = glass(ctx, y, y + h);
-  for (const x of xs) {
-    roundedRect(ctx, x, y, w, h, r);
-    ctx.fill();
-  }
-}
-
-/** A road wheel: black tyre, a lighter hub, seen side on. */
-function wheel(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.fillStyle = "#22262c";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#aab2bc";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-/**
- * A body with its own radius at each corner - a cab nose rounds more than a
- * tail. Added to the current path, so a silhouette can be built from several.
- */
-function carBody(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  [tl, tr, br, bl]: [number, number, number, number],
-) {
-  ctx.moveTo(x + tl, y);
-  ctx.arcTo(x + w, y, x + w, y + h, tr);
-  ctx.arcTo(x + w, y + h, x, y + h, br);
-  ctx.arcTo(x, y + h, x, y, bl);
-  ctx.arcTo(x, y, x + w, y, tl);
-  ctx.closePath();
-}
-
-/** A wheel's outline, for the silhouette. */
-function wheelPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.moveTo(cx + r, cy);
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-}
-
-/** The thin dark edge that makes a drawing read as drawn rather than cut out. */
-function outline(ctx: CanvasRenderingContext2D) {
-  ctx.lineWidth = 0.6;
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
-  ctx.stroke();
-}
-
-/**
- * One vehicle: its outline as a single path, for the halo and the shadow
- * under it, and the drawing itself.
- */
-interface Vehicle {
-  silhouette: (ctx: CanvasRenderingContext2D) => void;
-  paint: (ctx: CanvasRenderingContext2D, colour: string) => void;
-}
-
-const BUS_BODY = { x: 3, y: 6.4, w: 24, h: 14.6, radii: [2, 3.6, 1.4, 1.4] as const };
-const BUS_WHEELS = [
-  [8.6, 21.6],
-  [21.6, 21.6],
-] as const;
-const BUS_WHEEL_R = 2.7;
-
-/**
- * A double-decker, side on, in the operator's livery: two rows of glass over
- * a belt line, the door behind the front axle, a headlamp at the nose.
- */
-const bus: Vehicle = {
-  silhouette(ctx) {
-    const { x, y, w, h, radii } = BUS_BODY;
-    carBody(ctx, x, y, w, h, [...radii]);
-    for (const [cx, cy] of BUS_WHEELS) wheelPath(ctx, cx, cy, BUS_WHEEL_R);
-  },
-  paint(ctx, colour) {
-    const { x, y, w, h, radii } = BUS_BODY;
-    ctx.fillStyle = litFace(ctx, colour, y, y + h);
-    ctx.beginPath();
-    carBody(ctx, x, y, w, h, [...radii]);
-    ctx.fill();
-    outline(ctx);
-
-    // The belt between the decks, a shade lighter than the panels around it.
-    ctx.fillStyle = shade(colour, "light", 0.38);
-    ctx.fillRect(x + 0.8, y + 6.7, w - 1.6, 0.9);
-
-    // Upper deck: a run of panes and the raked windscreen over the driver.
-    windows(ctx, [4.8, 8.6, 12.4, 16.2], y + 1.7, 3.2, 3.9, 0.7);
-    windows(ctx, [20.6], y + 1.7, 4.8, 3.9, 1.2);
-    // Lower deck: two panes, the door, and the driver's windscreen.
-    windows(ctx, [4.8, 8.6], y + 8.6, 3.2, 3.7, 0.7);
-    windows(ctx, [12.6], y + 8.6, 3.1, 5.3, 0.6);
-    windows(ctx, [20.6], y + 8.6, 4.8, 3.7, 1);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(14.15, y + 9);
-    ctx.lineTo(14.15, y + 13.6);
-    ctx.stroke();
-
-    for (const [cx, cy] of BUS_WHEELS) wheel(ctx, cx, cy, BUS_WHEEL_R);
-
-    ctx.fillStyle = "#ffd66b";
-    ctx.beginPath();
-    ctx.arc(x + w - 1.2, y + h - 2.2, 0.95, 0, Math.PI * 2);
-    ctx.fill();
-  },
-};
-
-const MINIBUS_BODY = { x: 4, y: 9.2, w: 22, h: 11.6, radii: [2.4, 4, 1.6, 1.6] as const };
-const MINIBUS_WHEELS = [
-  [9.2, 21.2],
-  [21, 21.2],
-] as const;
-const MINIBUS_WHEEL_R = 2.5;
-
-/**
- * A public light bus, side on: the cream coach the real ones are, wearing
- * the operator's colour as its roof and skirt - which is how a green minibus
- * is green.
- */
-const minibus: Vehicle = {
-  silhouette(ctx) {
-    const { x, y, w, h, radii } = MINIBUS_BODY;
-    carBody(ctx, x, y, w, h, [...radii]);
-    for (const [cx, cy] of MINIBUS_WHEELS) wheelPath(ctx, cx, cy, MINIBUS_WHEEL_R);
-  },
-  paint(ctx, colour) {
-    const { x, y, w, h, radii } = MINIBUS_BODY;
-    const cream = ctx.createLinearGradient(0, y, 0, y + h);
-    cream.addColorStop(0, "#fbf8ef");
-    cream.addColorStop(1, "#e3dcc8");
-    ctx.fillStyle = cream;
-    ctx.beginPath();
-    carBody(ctx, x, y, w, h, [...radii]);
-    ctx.fill();
-
-    // Roof and skirt in the operator's colour, cut to the body's own outline.
-    ctx.save();
-    ctx.clip();
-    ctx.fillStyle = litFace(ctx, colour, y, y + 3);
-    ctx.fillRect(x, y, w, 3);
-    ctx.fillStyle = shade(colour, "dark", 0.08);
-    ctx.fillRect(x, y + h - 1.9, w, 1.9);
-    ctx.restore();
-    ctx.beginPath();
-    carBody(ctx, x, y, w, h, [...radii]);
-    outline(ctx);
-
-    windows(ctx, [5.6, 9.6, 13.6], y + 3.8, 3.4, 4, 0.7);
-    windows(ctx, [18.2], y + 3.5, 6.3, 4.3, 1.5);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(17.3, y + 3.8);
-    ctx.lineTo(17.3, y + h - 1.9);
-    ctx.stroke();
-
-    for (const [cx, cy] of MINIBUS_WHEELS) wheel(ctx, cx, cy, MINIBUS_WHEEL_R);
-
-    ctx.fillStyle = "#ffd66b";
-    ctx.beginPath();
-    ctx.arc(x + w - 1.2, y + h - 2.9, 0.85, 0, Math.PI * 2);
-    ctx.fill();
-  },
-};
-
-const TRAIN_BODY = { x: 1.5, y: 9.4, w: 27, h: 11.2, radii: [1.6, 5.6, 4.3, 1.6] as const };
-const TRAIN_BOGIES = [
-  [4.8, 5.4],
-  [19.4, 5.4],
-] as const;
-
-/**
- * A railway car, side on: brushed steel with the line's colour along its
- * flank, a cab that slopes away at the nose, and bogies riding a rail - the
- * train the network map draws, not a bus with a different badge.
- */
-const train: Vehicle = {
-  silhouette(ctx) {
-    const { x, y, w, h, radii } = TRAIN_BODY;
-    carBody(ctx, x, y, w, h, [...radii]);
-    for (const [bx, bw] of TRAIN_BOGIES) ctx.rect(bx, y + h, bw, 2);
-  },
-  paint(ctx, colour) {
-    const { x, y, w, h, radii } = TRAIN_BODY;
-    const steel = ctx.createLinearGradient(0, y, 0, y + h);
-    steel.addColorStop(0, "#f4f6f9");
-    steel.addColorStop(0.55, "#d3d9e2");
-    steel.addColorStop(1, "#aab3bf");
-    ctx.fillStyle = steel;
-    ctx.beginPath();
-    carBody(ctx, x, y, w, h, [...radii]);
-    ctx.fill();
-
-    // The line's colour, from the windows down to the skirt.
-    ctx.save();
-    ctx.clip();
-    ctx.fillStyle = litFace(ctx, colour, y + 7.2, y + h);
-    ctx.fillRect(x, y + 7.2, w, h - 7.2);
-    ctx.restore();
-    ctx.beginPath();
-    carBody(ctx, x, y, w, h, [...radii]);
-    outline(ctx);
-
-    windows(ctx, [3.4, 7.3, 11.2, 15.1], y + 2.5, 3.2, 3.9, 0.7);
-    // The cab window follows the nose: glass that leans back where the body does.
-    ctx.fillStyle = glass(ctx, y + 2, y + 6.5);
-    ctx.beginPath();
-    ctx.moveTo(19.8, y + 2);
-    ctx.lineTo(23.9, y + 2);
-    ctx.quadraticCurveTo(27.1, y + 2.3, 27.4, y + 6.5);
-    ctx.lineTo(19.8, y + 6.5);
-    ctx.closePath();
-    ctx.fill();
-    // Door lines between the panes.
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
-    ctx.lineWidth = 0.5;
-    for (const dx of [6.75, 14.55]) {
-      ctx.beginPath();
-      ctx.moveTo(dx, y + 1.6);
-      ctx.lineTo(dx, y + h - 0.8);
-      ctx.stroke();
-    }
-    // The headlamp on the cab's nose.
-    ctx.fillStyle = "#ffd66b";
-    ctx.beginPath();
-    ctx.arc(x + w - 1.9, y + h - 2.3, 0.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bogies, and the rail they ride.
-    ctx.fillStyle = "#2b2f36";
-    for (const [bx, bw] of TRAIN_BOGIES) {
-      roundedRect(ctx, bx, y + h, bw, 2, 0.6);
-      ctx.fill();
-    }
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.42)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(1, y + h + 2.8);
-    ctx.lineTo(29, y + h + 2.8);
-    ctx.stroke();
-  },
-};
-
-const VEHICLE: Record<VehicleKind, Vehicle> = { bus, minibus, rail: train };
-
-/**
- * The vehicle itself, drawn as the thing it is.
- *
- * Not a badge with a pictogram on it: a route map is already a chain of
- * coloured discs, and one more disc among forty is furniture. What moves on
- * the map is a picture - a double-decker in its livery, a cream minibus under
- * a green roof, a steel railway car with the line's colour along it - side on,
- * the way a child draws one, so that the kind of vehicle is read before
- * anything else is. The heading is the nose in front of it, which turns with
- * the road while the drawing stays upright.
- *
- * A paper halo and a shadow are what let a red bus sit on a red line and a
- * silver train on a grey map: the halo cuts it out of whatever is under it,
- * the shadow lifts it off.
- *
- * Drawn facing right, and turned on the map to point the way it is going -
- * see the layer. `west` is the mirror image, for the half of the compass
- * where turning the right-facing drawing would put the wheels in the air.
- */
-function busImage(colour: string, kind: VehicleKind, west = false) {
-  const { size, ratio } = BUS;
-  const canvas = document.createElement("canvas");
-  canvas.width = size * ratio;
-  canvas.height = size * ratio;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.scale(ratio, ratio);
-  if (west) {
-    ctx.translate(size, 0);
-    ctx.scale(-1, 1);
-  }
-
-  const vehicle = VEHICLE[kind];
-
-  ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-  ctx.shadowBlur = 3;
-  ctx.shadowOffsetY = 1.2;
-  ctx.beginPath();
-  vehicle.silhouette(ctx);
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 2.2;
-  ctx.strokeStyle = PAPER;
-  ctx.stroke();
-  ctx.restore();
-
-  vehicle.paint(ctx, colour);
-
-  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  return { width: canvas.width, height: canvas.height, data: new Uint8Array(pixels.data.buffer) };
-}
 
 /**
  * The arrowhead in front of the bus, which is what says which way it is going.
@@ -1150,11 +787,30 @@ export function RouteMap(props: {
   // scrolling.
   document.addEventListener("scroll", noteScroll, { capture: true, passive: true });
   onCleanup(() => document.removeEventListener("scroll", noteScroll, { capture: true }));
+  /** The livery the vehicle images were last drawn in - see `flagsFrom`. */
+  let busFrom: string | null = null;
   /** How many stop signs are in the sprite - see `paintStopFlags`. */
   let painted = 0;
+  /*
+   * What those signs were last drawn from.
+   *
+   * The effect that owns them re-runs whenever anything about the route's
+   * geometry moves - the stop the rider is nearest, most often, which changes
+   * every time they walk twenty metres - and it was redrawing all forty signs
+   * each time. Only these five things are baked into the pictures; the rest of
+   * the effect's work is layer properties, which are cheap. A style swap drops
+   * every image with the layers, and that path adds them back unconditionally.
+   */
+  let flagsFrom: string | null = null;
   /** How the map has framed itself so far - see the geometry effect. */
   let opened: "none" | "route" | "nearest" = "none";
   const [map, setMap] = createSignal<MlMap | null>(null);
+  /**
+   * MapLibre's own bottom-left control column - the ⓘ lives there, and any
+   * control of ours that should stand in line with it mounts here rather
+   * than measuring where the pill happens to be.
+   */
+  const [corner, setCorner] = createSignal<HTMLElement | null>(null);
   /** The state driver, once there is a map to drive. */
   const [tween, setTween] = createSignal<((id: number, key: string, to: number) => void) | null>(
     null,
@@ -1259,7 +915,7 @@ export function RouteMap(props: {
         },
       });
 
-      instance.addControl(new AttributionControl({ compact: true }), "bottom-left");
+      addFoldedAttribution(instance);
 
       // Picking a stop on the map is the fast way into a forty-stop list. The
       // name and the flag are the stop as much as the dot under them is - a
@@ -1297,6 +953,9 @@ export function RouteMap(props: {
         instance.resize();
         setUsable(true);
         setMap(instance);
+        setCorner(
+          instance.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-bottom-left"),
+        );
       });
 
       const giveUp = window.setTimeout(() => setUsable((v) => v ?? false), 6_000);
@@ -1304,6 +963,7 @@ export function RouteMap(props: {
       return () => {
         clearTimeout(giveUp);
         setMap(null);
+        setCorner(null);
         instance.remove();
       };
     },
@@ -1353,6 +1013,9 @@ export function RouteMap(props: {
           geometry: { type: "LineString", coordinates },
         })),
       });
+      // Everything the sign pictures are drawn from, in one string to compare.
+      const flagKey = `${colour}|${surface}|${rail}|${number}|${names.join("\u0000")}`;
+
       upsertSource(instance, SRC_STOPS, stopFeatures(positions, names, nearestIndex));
 
       if (!instance.getLayer("app-route-line")) {
@@ -1398,6 +1061,7 @@ export function RouteMap(props: {
           },
         });
         painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+        flagsFrom = flagKey;
         /*
          * A stop dot is four pixels across at best, which is nothing to aim a
          * thumb at. This invisible circle is what actually receives the tap.
@@ -1522,8 +1186,11 @@ export function RouteMap(props: {
         instance.setPaintProperty("app-stop-selected-glow", "circle-color", colour);
         instance.setPaintProperty(LYR_LABEL, "text-color", labelColour(colour, dark));
         // Colour, route number and stop names are all baked into the signs,
-        // so they are repainted whenever any of them moves.
-        painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+        // so they are repainted when any of them moves - and only then.
+        if (flagsFrom !== flagKey) {
+          painted = paintStopFlags(instance, colour, surface, rail, number, names, painted);
+          flagsFrom = flagKey;
+        }
       }
 
       /*
@@ -1720,56 +1387,71 @@ export function RouteMap(props: {
     if (instance && me) instance.easeTo({ center: [me.lng, me.lat], zoom: 15, duration: 500 });
   };
 
-  /**
-   * Take me to the bus.
-   *
-   * A bus on a forty-stop route is one badge in a metre of line, and on a phone
-   * most of that line is off screen - so the one question the map exists to
-   * answer needs an answer that does not involve hunting for it. If a stop is
-   * open, this goes to the bus that stop is waiting for, because that is the
-   * bus the rider means; otherwise it frames every bus on the route.
+  /*
+   * The opened-out map rests a sheet over its foot and runs under the
+   * notch: the bottom control column lifts clear of the one, the top
+   * column drops clear of the other. Styling the columns styles everything
+   * standing in them at once.
    */
+  createEffect(
+    () => ({ mount: corner(), up: expanded() }),
+    ({ mount, up }) => {
+      if (!mount) return;
+      mount.style.bottom = up ? `${sheetHeight()}px` : "";
+      const tops = mount.parentElement?.querySelector<HTMLElement>(".maplibregl-ctrl-top-left");
+      if (tops) tops.style.top = up ? "max(0px, calc(env(safe-area-inset-top) - 10px))" : "";
+    },
+  );
+
+  /**
+   * Take me to the bus - and, pressed again, to the one behind it.
+   *
+   * A bus on a forty-stop route is one badge in a metre of line, and on a
+   * phone most of that line is off screen - so the one question the map
+   * exists to answer needs an answer that does not involve hunting. The
+   * first press goes to the bus that matters most: the one the open stop is
+   * waiting for, or failing that the one furthest along. Each press after
+   * steps back through the rest and wraps, so a route with three buses is
+   * three presses rather than a search - and with one bus, every press is
+   * "find it again".
+   */
+  let visitedBus = "";
   const frameBuses = () => {
     const instance = map();
     const measured = track();
     if (!instance || !measured || trails.size === 0) return;
 
-    const here = [...trails.values()].map((trail) => ({
-      measure: trail.measure,
-      position: pointAt(measured.line, trail.measure).position,
-    }));
+    const here = [...trails.entries()]
+      .map(([id, trail]) => ({
+        id,
+        measure: trail.measure,
+        position: pointAt(measured.line, trail.measure).position,
+      }))
+      // Front of the route first, so "next" reads down the stop list.
+      .sort((a, b) => b.measure - a.measure);
 
     const selected = props.selectedIndex;
     const limit = selected === undefined ? undefined : measured.measures[selected];
-    // The last bus still short of that stop is the next one to reach it.
-    const coming =
-      limit === undefined
-        ? undefined
-        : here
-            .filter((bus) => bus.measure <= limit)
-            .reduce<(typeof here)[number] | undefined>(
-              (best, bus) => (best && best.measure > bus.measure ? best : bus),
-              undefined,
-            );
+    // The last bus still short of the open stop is the next to reach it.
+    const coming = limit === undefined ? undefined : here.find((bus) => bus.measure <= limit);
 
-    if (coming) {
-      instance.easeTo({
-        center: coming.position,
-        // Off-centre by half the sheet, so the bus does not land behind it.
-        offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
-        // Close enough to read the road it is on, without throwing away a
-        // wider view the rider has deliberately zoomed out to.
-        zoom: Math.max(instance.getZoom(), 15),
-        duration: 600,
-      });
-      return;
-    }
+    const at = here.findIndex((bus) => bus.id === visitedBus);
+    // A remembered bus has gone - or nothing is remembered: start over at
+    // the one that matters. Otherwise, the next one back.
+    const target = (
+      at === -1 ? (coming ?? here[0]) : here[(at + 1) % here.length]
+    ) as (typeof here)[number];
+    visitedBus = target.id;
 
-    const bounds = new LngLatBounds();
-    for (const bus of here) bounds.extend(bus.position);
-    if (!bounds.isEmpty()) {
-      instance.fitBounds(bounds, { padding: framePadding(72), maxZoom: 15.5, duration: 600 });
-    }
+    instance.easeTo({
+      center: target.position,
+      // Off-centre by half the sheet, so the bus does not land behind it.
+      offset: expanded() ? [0, -sheetHeight() / 2] : [0, 0],
+      // Close enough to read the road it is on, without throwing away a
+      // wider view the rider has deliberately zoomed out to.
+      zoom: Math.max(instance.getZoom(), 15),
+      duration: 600,
+    });
   };
 
   /**
@@ -1799,6 +1481,13 @@ export function RouteMap(props: {
     if (!bounds.isEmpty()) {
       instance.fitBounds(bounds, { padding: framePadding(48), maxZoom: 15, duration: 500 });
     }
+  };
+
+  // A mouse has no pinch, and scroll-to-zoom is not discoverable from a
+  // still map; a whole zoom level per press, about what one pinch covers.
+  const zoomStep = (delta: number) => {
+    const instance = map();
+    if (instance) instance.zoomTo(instance.getZoom() + delta, { duration: 240 });
   };
 
   /**
@@ -1842,7 +1531,11 @@ export function RouteMap(props: {
   createEffect(
     () => ({
       instance: map(),
-      vehicles: props.feed?.vehicles ?? [],
+      // Drawing a bus on a map is the strongest of the three claims the
+      // inference makes, so it is the rider's to ask for - see
+      // `settings.vehiclesOnMap`. Off, the layer empties like any other tick
+      // with nothing on the road.
+      vehicles: settings.vehiclesOnMap() ? (props.feed?.vehicles ?? []) : [],
       measured: track(),
       colour: lineColour(props.route),
       kind: vehicleKind(props.route.co),
@@ -1933,6 +1626,8 @@ export function RouteMap(props: {
         upsertSource(instance, SRC_BUS, { type: "FeatureCollection", features: points });
       };
 
+      const livery = `${kind}|${colour}`;
+
       draw(now);
 
       if (!instance.getLayer("app-bus-dot")) {
@@ -2013,9 +1708,15 @@ export function RouteMap(props: {
           },
         });
         paintBus(instance, colour, kind);
+        busFrom = livery;
       } else {
         instance.setPaintProperty("app-bus-band", "line-color", bandColour(dark));
-        paintBus(instance, colour, kind);
+        // Three canvases, drawn and uploaded to the GPU - and they were being
+        // redrawn on every poll of a feed that cannot change a bus's livery.
+        if (busFrom !== livery) {
+          paintBus(instance, colour, kind);
+          busFrom = livery;
+        }
       }
 
       /*
@@ -2293,7 +1994,17 @@ export function RouteMap(props: {
    * corner says which one it is, every time, including when everything is
    * working.
    */
-  const note = (): "loading" | "estimated" | "unplaceable" | "none" | VehicleFeed["status"] => {
+  const note = ():
+    | "loading"
+    | "estimated"
+    | "unplaceable"
+    | "none"
+    | VehicleFeed["status"]
+    | null => {
+    // Nothing to be honest about: a rider who has not asked for buses on the
+    // map is not waiting for any, and a corner saying "搵緊架車…" for ever
+    // would be the map inventing a question nobody put to it.
+    if (!settings.vehiclesOnMap()) return null;
     const feed = props.feed;
     if (!feed) return "loading";
     if (feed.status !== "ready") return feed.status;
@@ -2323,8 +2034,7 @@ export function RouteMap(props: {
     }
   };
 
-  const controlClass =
-    "app-press app-glass flex size-[1.6rem] items-center justify-center rounded-full text-foreground lg:size-9";
+  const controlClass = MAP_CONTROL;
 
   return (
     <>
@@ -2345,37 +2055,6 @@ export function RouteMap(props: {
           style={{ height: usable() === false ? "0" : undefined, overflow: "hidden" }}
           aria-label="route map"
         />
-
-        {/*
-         * The status line. It is the honesty label when there are buses - they
-         * are inferences, not position reports, and the map has to say so
-         * somewhere a rider can find it - and it is the explanation when there
-         * are none, which is the harder half: a blank map that says nothing is
-         * indistinguishable from a broken one.
-         */}
-        <Show when={usable()}>
-          <div
-            class="app-glass pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-1.5 py-0.5 lg:gap-1.5 lg:px-2.5 lg:py-1"
-            style={expanded() ? { top: "max(0.625rem, env(safe-area-inset-top))" } : undefined}
-          >
-            <span
-              class={[
-                "size-1 rounded-full lg:size-2",
-                {
-                  // Waiting has to look like waiting, or it looks like nothing.
-                  "animate-pulse bg-subtle-foreground": note() === "loading",
-                  "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
-                },
-              ]}
-              style={
-                note() === "estimated" ? { "background-color": lineColour(props.route) } : undefined
-              }
-            />
-            <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.75rem]">
-              {noteLabel()}
-            </span>
-          </div>
-        </Show>
 
         {/*
          * Opened out, the map takes the whole window - and takes the arrivals
@@ -2439,28 +2118,6 @@ export function RouteMap(props: {
                 <CloseIcon size={15} />
               </Show>
             </button>
-            <Show when={drawn() > 0}>
-              <button
-                type="button"
-                aria-label={t("mapFindBus", props.lang)}
-                title={t("mapFindBus", props.lang)}
-                onClick={frameBuses}
-                class={`${controlClass} text-primary`}
-              >
-                <BusIcon size={15} />
-              </button>
-            </Show>
-            <Show when={props.me}>
-              <button
-                type="button"
-                aria-label={t("mapMyLocation", props.lang)}
-                title={t("mapMyLocation", props.lang)}
-                onClick={recentre}
-                class={controlClass}
-              >
-                <PinIcon size={15} />
-              </button>
-            </Show>
             <button
               type="button"
               aria-label={t("mapWholeRoute", props.lang)}
@@ -2470,7 +2127,114 @@ export function RouteMap(props: {
             >
               <RouteIcon size={15} />
             </button>
+            {/* A pair, spaced as one: in and out are halves of one control. */}
+            <div class="flex flex-col gap-1">
+              <button
+                type="button"
+                aria-label={t("mapZoomIn", props.lang)}
+                onClick={() => zoomStep(1)}
+                class={controlClass}
+              >
+                <PlusIcon size={15} />
+              </button>
+              <button
+                type="button"
+                aria-label={t("mapZoomOut", props.lang)}
+                onClick={() => zoomStep(-1)}
+                class={controlClass}
+              >
+                <MinusIcon size={15} />
+              </button>
+            </div>
           </div>
+
+          {/* Where am I, opposite where is the bus: the two questions a rider
+              stands at a kerb with, one at each lower corner. Above the sheet
+              once the opened-out map has one. */}
+          <Show when={props.me}>
+            <div
+              class="absolute bottom-2.5 right-2.5"
+              style={expanded() ? { bottom: `${sheetHeight() + 10}px` } : undefined}
+            >
+              <button
+                type="button"
+                aria-label={t("mapMyLocation", props.lang)}
+                title={t("mapMyLocation", props.lang)}
+                onClick={recentre}
+                class={controlClass}
+              >
+                <PinIcon size={15} />
+              </button>
+            </div>
+          </Show>
+
+          {/* The question the map exists to answer, at the thumb's corner -
+              and beside it, in a whisper, the honesty label: the buses are
+              inferences, not position reports, and when there are none this
+              is the explanation, without which a blank map reads as a broken
+              one. Both mount into MapLibre's own bottom-left control column
+              rather than being placed by hand, so everything in that corner
+              shares one stacking system instead of trading magic offsets. */}
+          <Show when={usable() && corner()} keyed>
+            {(mount) => (
+              <Portal mount={mount}>
+                <div
+                  class="maplibregl-ctrl flex items-center gap-1.5"
+                  ref={(el) =>
+                    queueMicrotask(() => {
+                      // Whichever node the portal actually parented to the
+                      // column - itself, or a wrapper - goes first in it.
+                      const node = el.parentElement === mount ? el : el.parentElement;
+                      if (node?.parentElement === mount && node !== mount.firstChild) {
+                        mount.insertBefore(node, mount.firstChild);
+                      }
+                    })
+                  }
+                >
+                  <Show when={drawn() > 0}>
+                    <button
+                      type="button"
+                      aria-label={t("mapFindBus", props.lang)}
+                      title={t("mapFindBus", props.lang)}
+                      onClick={frameBuses}
+                      class={controlClass}
+                    >
+                      <BusIcon size={15} />
+                    </button>
+                  </Show>
+                  {/* The button's own height, so the corner reads as one row
+                      of controls rather than a button with a sticker beside
+                      it. Gone entirely where the rider has not asked for buses
+                      on the map: the label exists to explain an empty map, and
+                      a map with nothing to draw on it is not empty, it is what
+                      was asked for. */}
+                  <Show when={note() !== null}>
+                    <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
+                      <span
+                        class={[
+                          "size-1 rounded-full lg:size-1.5",
+                          {
+                            // Waiting has to look like waiting, or it looks
+                            // like nothing.
+                            "animate-pulse bg-subtle-foreground": note() === "loading",
+                            "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
+                          },
+                        ]}
+                        style={
+                          note() === "estimated"
+                            ? { "background-color": lineColour(props.route) }
+                            : undefined
+                        }
+                      />
+                      <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
+                        {noteLabel()}
+                      </span>
+                    </div>
+                  </Show>
+                </div>
+              </Portal>
+            )}
+          </Show>
         </Show>
       </div>
       <Show when={usable() === false}>

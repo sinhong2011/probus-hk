@@ -57,6 +57,12 @@ const MESSAGES = {
   searchRange: m.search_range,
   searchRangeHint: m.search_range_hint,
   showScheduled: m.show_scheduled,
+  showClockTimes: m.show_clock_times,
+  showVehicles: m.show_vehicles,
+  showVehiclesMap: m.show_vehicles_map,
+  showVehiclesList: m.show_vehicles_list,
+  showVehiclesAway: m.show_vehicles_away,
+  showVehiclesHint: m.show_vehicles_hint,
   reduceMotion: m.reduce_motion,
   offlineData: m.offline_data,
   routeDatabase: m.route_database,
@@ -338,6 +344,10 @@ const MESSAGES = {
   trafficCamera: m.traffic_camera,
   cameraFailed: m.camera_failed,
   cameraSource: m.camera_source,
+  cameraOpenMap: m.camera_open_map,
+  mapGoogle: m.map_google,
+  mapApple: m.map_apple,
+  mapSystem: m.map_system,
   specialDepartures: m.special_departures,
 } as const satisfies Record<string, Message>;
 

@@ -217,6 +217,19 @@ test("draws the bus on the rail between the stops it is between", async ({ page 
   // A countdown that jumps from fourteen minutes at one stop to one at the
   // next reads as a mistake until the bus between them is drawn.
   await mockRunningBuses(page);
+  // Every drawn vehicle is inferred, so a rider asks for it - see
+  // `settings.vehiclesOnList`. Asked for here, or there is nothing to draw.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "e2e-vehicles",
+          data: { id: "settings", vehiclesOnList: true },
+        },
+      }),
+    );
+  });
   await page.goto(`/route/${KMB_1}`);
   await expect(page.locator("[data-rail-bus]").first()).toBeAttached({ timeout: 15_000 });
 });
@@ -257,12 +270,14 @@ test("numbers the stops so a position on the route is legible", async ({ page })
   await expect(page.locator("[data-stop-seq]").first()).toContainText("1");
 });
 
-test("shows the full fare and the concession on every stop", async ({ page }) => {
+test("shows the full fare on every stop, without the flat two dollars", async ({ page }) => {
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
   await expect(page.getByText(/車費\s?\$\d/).first()).toBeVisible();
-  await expect(page.getByText(/樂悠車費\s?\$2\.0/).first()).toBeVisible();
+  // $6.7 is under ten dollars, so the concession is the same $2 on every
+  // stop and is not printed. A rider who pays it already knows it.
+  await expect(page.getByText(/樂悠車費\s?\$2\.0/)).toHaveCount(0);
 });
 
 test("shows the next arrival on every stop without tapping", async ({ page }) => {
@@ -285,11 +300,11 @@ test("opening a stop reveals the departures after the next one", async ({ page }
   await row.click();
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
-  // The row keeps the next bus; the ones after it live in the panel it opens,
-  // under a label that says they come after it, each with the clock time it
-  // lands at - a wait that long is only worth reading against a watch.
-  const later = page.locator('[data-open="true"]').getByLabel(/分鐘 \d\d:\d\d$/);
-  await expect(later.first()).toBeVisible({ timeout: 10_000 });
+  // The row keeps the next bus; the waits after it continue that column,
+  // and each clock time sits on the left under the fare. Closed panels keep
+  // the same markup for the collapse, so the open one has to be named.
+  const later = page.locator('[data-open="true"] [data-later-arrivals]');
+  await expect(later).toBeVisible({ timeout: 10_000 });
 });
 
 test("closing a stop puts its later departures away again", async ({ page }) => {
@@ -340,17 +355,44 @@ test("pinning a stop puts it on the saved screen", async ({ page }) => {
   await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 });
 
-test("an open stop links through to its own page", async ({ page }) => {
+test("an open stop previews its other lines over this route", async ({ page }) => {
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
 
   await stopRows(page).nth(2).click();
-  // Every row carries its own panel so the collapse can animate both ways, so
-  // the link has to be taken from the row that is actually open.
-  await page.locator('[data-open="true"] a[href^="/stop/"]').first().click();
+  await page.locator('[data-open="true"]').getByRole("button", { name: "車站詳情" }).click();
 
+  const preview = page.getByRole("dialog");
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText("途經路線")).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(/[?&]preview=/);
+
+  await preview.getByRole("link", { name: "車站詳情" }).click();
   await expect(page).toHaveURL(/\/stop\//);
-  await expect(page.getByText("途經路線", { exact: false })).toBeVisible({ timeout: 10_000 });
+});
+
+test("starring a stop from its preview puts it on the saved screen", async ({ page }) => {
+  await page.goto(`/route/${KMB_1}`);
+  await expect(stopRows(page).first()).toBeVisible({ timeout: 10_000 });
+
+  await stopRows(page).nth(2).click();
+  await page.locator('[data-open="true"]').getByRole("button", { name: "車站詳情" }).click();
+
+  const preview = page.getByRole("dialog").filter({ hasText: "途經路線" });
+  await expect(preview).toBeVisible();
+
+  const star = preview.getByRole("button", { name: /加入收藏|已收藏/ });
+  await expect(star).toHaveAttribute("aria-pressed", "false");
+  await star.click();
+
+  await page
+    .getByRole("dialog", { name: "分組" })
+    .getByRole("button", { name: "加入收藏" })
+    .click();
+  await expect(star).toHaveAttribute("aria-pressed", "true");
+
+  await page.goto("/saved");
+  await expect(page.getByText("往 尖沙咀碼頭").first()).toBeVisible({ timeout: 10_000 });
 });
 
 test("the tab you came from stays lit on a route page", async ({ page }) => {
@@ -421,6 +463,18 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
 
 test("says how far up the road the bus still is", async ({ page }) => {
   await mockRunningBuses(page);
+  // Off until asked for - see `settings.vehiclesAway`.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "e2e-vehicles-away",
+          data: { id: "settings", vehiclesAway: true },
+        },
+      }),
+    );
+  });
   await page.goto(`/route/${KMB_1}`);
 
   // The page opens the stop the rider is standing at, which is the stop the

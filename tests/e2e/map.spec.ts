@@ -3,6 +3,21 @@ import { mockBasemap, mockRunningBuses, mockTransit } from "./support/mock";
 
 const KMB_1 = encodeURIComponent("1+1+CHUK YUEN ESTATE+STAR FERRY");
 
+/** Drawn buses are off until asked for - see `settings.vehiclesOnMap`. */
+async function askForMapBuses(page: import("@playwright/test").Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "e2e-vehicles-map",
+          data: { id: "settings", vehiclesOnMap: true },
+        },
+      }),
+    );
+  });
+}
+
 /**
  * MapLibre loads its tile-parsing worker as a separate file resolved from
  * `import.meta.url`, which does not survive bundling. When it 404s the map
@@ -103,6 +118,7 @@ test("puts the buses on the map, and says they are estimates", async ({ page }) 
   await mockRunningBuses(page);
 
   await mockBasemap(page);
+  await askForMapBuses(page);
 
   await page.goto(`/route/${KMB_1}`);
 
@@ -143,6 +159,7 @@ test("puts the buses on the map, and says they are estimates", async ({ page }) 
 test("says why there are no buses, instead of saying nothing", async ({ page }) => {
   await mockTransit(page, { etaFails: true });
   await mockBasemap(page);
+  await askForMapBuses(page);
   await page.goto(`/route/${KMB_1}`);
 
   const note = page.getByText("攞唔到實時位置");
@@ -165,6 +182,7 @@ test("says why there are no buses, instead of saying nothing", async ({ page }) 
 test("tells a timetable from a tracked bus", async ({ page }) => {
   await mockTransit(page);
   await mockBasemap(page);
+  await askForMapBuses(page);
   await page.route("**/data.etabus.gov.hk/v1/transport/kmb/route-eta/**", (route) =>
     route.fulfill({
       status: 200,

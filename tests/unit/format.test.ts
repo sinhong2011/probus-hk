@@ -8,6 +8,7 @@ import {
   followingMinutes,
   formatFare,
   isLastRun,
+  notableConcession,
 } from "~/lib/format";
 import { plateStyle } from "~/lib/operators";
 
@@ -122,9 +123,28 @@ describe("concessionFare", () => {
   });
 });
 
+describe("notableConcession", () => {
+  it("says nothing where the concession is the flat two dollars", () => {
+    // The same on every route in Hong Kong, and forty rows of it down a
+    // route page is forty repetitions of a figure riders already know.
+    expect(notableConcession("5.1")).toBeNull();
+    expect(notableConcession("10")).toBeNull();
+  });
+
+  it("gives the figure above ten dollars, where it differs by route", () => {
+    expect(notableConcession("10.8")).toBe("$2.2");
+    expect(notableConcession("21.8")).toBe("$4.4");
+  });
+
+  it("has nothing to say about a missing fare", () => {
+    expect(notableConcession(null)).toBeNull();
+    expect(notableConcession("free")).toBeNull();
+  });
+});
+
 describe("fareLabel", () => {
-  it("shows the full fare beside the concession", () => {
-    expect(fareLabel("9.3")).toBe("$9.3 · $2.0");
+  it("shows the full fare beside a concession worth printing", () => {
+    expect(fareLabel("9.3")).toBe("$9.3");
     expect(fareLabel("21.8")).toBe("$21.8 · $4.4");
   });
 

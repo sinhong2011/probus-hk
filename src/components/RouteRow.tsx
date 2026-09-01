@@ -5,11 +5,11 @@ import { isSpecialService } from "~/data/db";
 import { lastRunGone } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { Eta, KeyedRoute } from "~/data/types";
-import { concessionFare, fareAt } from "~/lib/format";
+import { fareAt, notableConcession } from "~/lib/format";
 import { pick, t, type Lang } from "~/lib/i18n";
 import { routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
-import { now } from "~/stores/clock";
+import { minute } from "~/stores/clock";
 import { SpecialTag } from "./Chrome";
 import { EtaCountdown, type CountdownSize } from "./EtaCountdown";
 import { RoutePlate, type PlateSize } from "./RoutePlate";
@@ -18,11 +18,27 @@ interface LineProps {
   route: KeyedRoute;
   seq: number;
   lang: Lang;
-  etas: Eta[];
+  etas: Eta[] | undefined;
   plateSize?: PlateSize;
   countdownSize?: CountdownSize;
   /** Overrides the operator/fare subtitle, e.g. with a stop name. */
   subtitle?: string;
+  /** Extra classes on the row, e.g. a tighter pad inside a sheet. */
+  class?: string;
+  /**
+   * A denser row for a sheet: less pad, a shorter stack of arrivals. The
+   * default padding cannot be overridden from `class` - two `py-*` utilities
+   * in one string, and source order keeps the looser one.
+   */
+  compact?: boolean;
+  /** Cap on stacked arrivals; passed through to the countdown. */
+  limit?: number;
+  /** One minute size down the arrival stack; for a dense sheet of routes. */
+  uniformStack?: boolean;
+  /** Same-width route plates so destinations line up down the list. */
+  plateFixed?: boolean;
+  /** Fired as the row is followed, so a sheet over the page can put itself away. */
+  onClick?: () => void;
 }
 
 function subtitleFor(props: LineProps): string {
@@ -37,8 +53,9 @@ function subtitleFor(props: LineProps): string {
       // Only NLB really charges differently at weekends.
       parts.push(`${fare} · ${t("holidayFare", props.lang)} ${holiday}`);
     } else {
-      // The $2 concession matters to a lot of riders, so it is always shown.
-      const concession = concessionFare(props.route.fares?.[props.seq - 1]);
+      // The concession, where it is not the flat $2 every route charges - see
+      // `notableConcession`.
+      const concession = notableConcession(props.route.fares?.[props.seq - 1]);
       parts.push(concession ? `${fare} · ${concession}` : fare);
     }
   }
@@ -50,22 +67,33 @@ export function RouteLine(props: LineProps) {
   const db = useDb();
   /* Whether an empty answer here means "wait" or "that was the last one".
      Read through the clock so the row turns over on the minute the last bus
-     passes rather than on a reload. */
+     passes rather than on a reload - and through the minute of it, because
+     that is how often the answer can change and this is a timetable lookup
+     per row of a list. */
   const over = () => {
-    now();
+    minute();
     return lastRunGone(db(), props.route);
   };
 
   return (
     <a
-      {...useLinkProps(routeLink(props.route.key))}
-      class="app-tap flex items-center gap-3 px-3.5 py-2.5"
+      {...useLinkProps({ ...routeLink(props.route.key), onClick: props.onClick })}
+      class={[
+        "app-tap flex w-full min-w-0 max-w-full items-center transition-colors duration-state hover:bg-raised",
+        props.compact ? "gap-2 px-3 py-4" : "gap-2.5 px-3.5 py-4.5",
+        props.class ?? "",
+      ]}
     >
-      <RoutePlate route={props.route.route} co={props.route.co} size={props.plateSize ?? "sm"} />
+      <RoutePlate
+        route={props.route.route}
+        co={props.route.co}
+        size={props.plateSize ?? "xs"}
+        fixed
+      />
 
-      <div class="flex min-w-0 grow flex-col gap-0.5">
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
         <span class="flex min-w-0 items-center gap-1.5">
-          <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+          <span class="min-w-0 truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
             {t("towards", props.lang)} {pick(props.route.dest, props.lang)}
           </span>
           <Show when={isSpecialService(props.route)}>
@@ -77,12 +105,17 @@ export function RouteLine(props: LineProps) {
         </span>
       </div>
 
-      <EtaCountdown
-        etas={props.etas}
-        lang={props.lang}
-        size={props.countdownSize ?? "sm"}
-        over={over()}
-      />
+      <div class="ml-auto min-w-18 shrink-0 text-right">
+        <EtaCountdown
+          etas={props.etas}
+          lang={props.lang}
+          size={props.countdownSize ?? "sm"}
+          limit={props.limit}
+          uniform={props.uniformStack}
+          over={over()}
+          notices={false}
+        />
+      </div>
     </a>
   );
 }
@@ -95,9 +128,5 @@ export function RouteRow(props: Omit<LineProps, "etas">) {
     stopIdByCo: stopIdsFor(props.route, props.seq),
   }));
 
-  return (
-    <Show when={etas()} fallback={<RouteLine {...props} etas={[]} />}>
-      {(list) => <RouteLine {...props} etas={list()} />}
-    </Show>
-  );
+  return <RouteLine {...props} etas={etas()} />;
 }

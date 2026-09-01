@@ -210,10 +210,12 @@ const routeDetailRoute = createRoute({
     const stop = asCount(search.stop);
     const map = search.map === true;
     const info = search.info === true;
+    const preview = asText(search.preview);
     return {
       ...(stop === undefined ? {} : { stop }),
       ...(map ? { map } : {}),
       ...(info ? { info } : {}),
+      ...(preview ? { preview } : {}),
     };
   },
   component: lazyScreen(() => import("~/routes/RouteDetail")),

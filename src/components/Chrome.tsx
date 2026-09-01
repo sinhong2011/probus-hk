@@ -40,11 +40,19 @@ export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class
 }
 
 /** Small-caps section heading used down the whole app. */
-export function SectionLabel(props: { children: JSX.Element; trailing?: JSX.Element }) {
+export function SectionLabel(props: {
+  children: JSX.Element;
+  /** Beside the title on the left - a count, a chip. */
+  aside?: JSX.Element;
+  trailing?: JSX.Element;
+}) {
   return (
-    <div class="flex items-baseline justify-between">
-      <span class="text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
-        {props.children}
+    <div class="flex items-center justify-between gap-2">
+      <span class="flex min-w-0 items-center gap-2">
+        <span class="shrink-0 text-[0.75rem] font-bold uppercase tracking-[0.16em] text-subtle-foreground">
+          {props.children}
+        </span>
+        <Show when={props.aside}>{props.aside}</Show>
       </span>
       <Show when={props.trailing}>{props.trailing}</Show>
     </div>
@@ -100,17 +108,16 @@ export function Reveal(props: { open: boolean; children: JSX.Element; class?: st
 
 /** Inset divider matching the card's left padding. */
 /**
- * One fare, as a tag on the line that names it - set a step below the words
- * around it. A fare is a thing to check, not the answer the row is giving,
- * and at the same size as the small type beside it the tags were the loudest
- * thing on the line.
+ * One fare, on the line that names it.
+ *
+ * A number, not a chip: an amount already looks like an amount - it wears a
+ * dollar sign and it is the only figure on the line - and boxing it made a
+ * pair of them the loudest thing on a row whose answer is the countdown at
+ * the other end. What is left is the difference that matters: lining figures,
+ * a heavier weight, and the ink a step up from the words that name them.
  */
 export function FareTag(props: { children: JSX.Element }) {
-  return (
-    <span class="tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.59rem] font-bold text-muted-foreground">
-      {props.children}
-    </span>
-  );
+  return <span class="tnum shrink-0 font-bold text-muted-foreground">{props.children}</span>;
 }
 
 /**
@@ -141,9 +148,12 @@ export function Chip(props: {
   tone?: "plain" | "accent" | "warn" | "card";
   /** For the flex behaviour of the row it sits in, e.g. `shrink-0`. */
   class?: string;
+  /** When the chip is only a numeral or icon, say what it counts. */
+  label?: string;
 }) {
   return (
     <span
+      aria-label={props.label}
       /* `whitespace-nowrap`, because the chip is a fixed height: a value that
          wraps does not make the chip taller, it spills out of it. "52 m" broke
          across two lines the moment a long stop name claimed the row. */
@@ -184,10 +194,14 @@ export function LivePill(props: { label: string }) {
 }
 
 /**
- * The screen's own header: large Chinese over a small roman subtitle on a
- * phone, and on a wide screen the toolbar the window has room for - title,
- * context and the screen's controls on one line, held to the top while the
- * list scrolls under it.
+ * The screen's own header: context on one side, the screen's controls on the
+ * other, held to the top of a wide window while the list scrolls under it.
+ *
+ * One line at every width. The title is spoken but not drawn, so stacking the
+ * context over the controls on a phone spent a whole row saying nothing - an
+ * empty half above a lonely chip - and the two halves of one band read as two
+ * unrelated ones. The context takes the room that is left and truncates; the
+ * controls keep their size.
  *
  * The controls belong here rather than on a row of their own below: a desktop
  * window is short and wide, and a second band of chips pushed the first card
@@ -201,7 +215,11 @@ export function ScreenTitle(props: {
    * at a time, and printing both is a translation exercise, not a heading.
    */
   subtitle?: string;
-  /** Context for the screen - where you are, what is live - beside the title. */
+  /**
+   * Context for the screen - where you are, what the list is cut to - at the
+   * head of the band. It gets the room the controls do not use, so anything
+   * that can outgrow it should truncate or scroll on its own.
+   */
   trailing?: JSX.Element;
   /**
    * A row above the title, in practice the breadcrumb. It belongs inside the
@@ -209,7 +227,7 @@ export function ScreenTitle(props: {
    * padding, and anything left sitting there is what it covers.
    */
   lead?: JSX.Element;
-  /** The screen's controls, right-aligned in the toolbar on a wide screen. */
+  /** The screen's controls, at the far end of the band and never squeezed. */
   controls?: JSX.Element;
   /**
    * Held to the top of a wide window while the page scrolls. Off inside a
@@ -241,26 +259,24 @@ export function ScreenTitle(props: {
     >
       {props.lead}
 
-      <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-        <div class="flex items-end justify-between gap-4 lg:min-w-0 lg:items-baseline lg:justify-start lg:gap-3">
-          <div class="flex min-w-0 shrink-0 flex-col gap-[3px] lg:flex-row lg:items-baseline lg:gap-2.5">
-            {/* The name stays for screen readers; visually the tab bar and
-                the sidebar already say where you are, and the heading
-                repeating them was the tallest thing on every screen. */}
-            <h1 class="sr-only">{props.title}</h1>
-            <Show when={props.subtitle}>
-              <span class="text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
-                {props.subtitle}
-              </span>
-            </Show>
-          </div>
+      <div class="flex items-center justify-between gap-3 lg:gap-6">
+        <div class="flex min-w-0 flex-1 items-center gap-2.5 lg:items-baseline">
+          {/* The name stays for screen readers; visually the tab bar and
+              the sidebar already say where you are, and the heading
+              repeating them was the tallest thing on every screen. */}
+          <h1 class="sr-only">{props.title}</h1>
+          <Show when={props.subtitle}>
+            <span class="truncate text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
+              {props.subtitle}
+            </span>
+          </Show>
           <Show when={props.trailing}>
-            <div class="flex min-w-0 justify-end lg:pl-2">{props.trailing}</div>
+            <div class="flex min-w-0 flex-1">{props.trailing}</div>
           </Show>
         </div>
 
         <Show when={props.controls}>
-          <div class="flex items-center gap-2 lg:shrink-0 lg:justify-end">{props.controls}</div>
+          <div class="flex shrink-0 items-center gap-2 lg:justify-end">{props.controls}</div>
         </Show>
       </div>
     </div>
@@ -337,13 +353,16 @@ export function Segmented<T extends string | number>(props: {
               class={[
                 // `whitespace-nowrap`: a two-character label broken across two
                 // lines is not a shorter label, it is a broken one.
-                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 transition-colors duration-state",
+                // Weight stays put: bolding the chosen label grew its box,
+                // and a heading that wrapped around a wider control was the
+                // whole list jumping.
+                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 font-bold leading-none transition-colors duration-state",
                 props.fill ? "grow basis-0" : "shrink-0",
                 props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
                 props.pill ? "rounded-full" : "rounded-md",
                 {
-                  "font-bold text-foreground": on(),
-                  "font-semibold text-subtle-foreground": !on(),
+                  "text-foreground": on(),
+                  "text-subtle-foreground": !on(),
                 },
               ]}
             >

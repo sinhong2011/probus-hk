@@ -19,10 +19,10 @@ export function Skeleton(props: { width: string; height: string; class?: string 
 }
 
 /** The countdown's shape: one wide numeral over a narrower unit. */
-export function EtaSkeleton(props: { size?: "sm" | "md" | "lg" }) {
+export function EtaSkeleton(props: { size?: "sm" | "md" | "lg"; class?: string }) {
   const height = () => ({ sm: "1.5rem", md: "1.85rem", lg: "2.15rem" })[props.size ?? "md"];
   return (
-    <div class="flex shrink-0 flex-col items-end gap-1.5" aria-hidden="true">
+    <div class={["flex shrink-0 flex-col items-end gap-1.5", props.class ?? ""]} aria-hidden="true">
       <Skeleton width="2.6rem" height={height()} />
       <Skeleton width="1.6rem" height="0.5rem" />
     </div>

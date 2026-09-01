@@ -41,6 +41,7 @@ import IconSearch from "~icons/lineicons/search-alt";
 import IconStarFat from "~icons/lineicons/star-fat";
 import IconStarFill from "~icons/lineicons/star-fill";
 import IconInformation from "~icons/lineicons/information";
+import IconAlignTextLeft from "~icons/lineicons/align-text-left";
 import IconClipboard from "~icons/lineicons/clipboard";
 import IconWarning from "~icons/lineicons/warning";
 import IconSortAmount from "~icons/lineicons/sort-amount-asc";
@@ -288,6 +289,8 @@ export const ShareIcon = wrap(IconShare as IconComponent);
 export const FlagIcon = wrap(IconFlag as IconComponent);
 /** What else there is to know: the stop's own page, and everything at it. */
 export const InfoIcon = wrap(IconInformation as IconComponent);
+/** The same job as `InfoIcon`, as a page of lines rather than an "i". */
+export const DetailsIcon = wrap(IconAlignTextLeft as IconComponent);
 /** The app has hit an error of its own - not a network one. */
 export const WarningIcon = wrap(IconWarning as IconComponent);
 /** Copy the text beside it. */

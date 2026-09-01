@@ -49,8 +49,12 @@ export function StopCard(props: {
   const ordered = createMemo(() => {
     const map = etas();
     const withTime = routes().map((at) => {
-      const list = map?.get(etaKey(at.route.key)) ?? [];
-      return { at, etas: list, next: list[0]?.at.getTime() ?? Number.POSITIVE_INFINITY };
+      const list = map?.get(etaKey(at.route.key));
+      return {
+        at,
+        etas: map === undefined ? undefined : (list ?? []),
+        next: list?.[0]?.at.getTime() ?? Number.POSITIVE_INFINITY,
+      };
     });
     withTime.sort((a, b) => a.next - b.next);
     return props.maxRoutes ? withTime.slice(0, props.maxRoutes) : withTime;

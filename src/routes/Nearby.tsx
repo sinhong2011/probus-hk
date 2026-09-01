@@ -541,7 +541,7 @@ export default function Nearby() {
       <ScreenTitle
         title={t("home", lang())}
         trailing={
-          <div class="flex min-w-0 items-center gap-1.5 pb-1 text-primary lg:pb-0">
+          <div class="flex min-w-0 items-center gap-1.5 text-primary">
             <PinIcon size={15} />
             <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
               {nearestName() ??
@@ -708,7 +708,6 @@ export default function Nearby() {
                           seq={row.at.seq}
                           lang={lang()}
                           etas={row.etas}
-                          plateSize="sm"
                           countdownSize="sm"
                           /* Which kerb, and how far: in a merged list that is
                              the fact the grouping used to carry. */

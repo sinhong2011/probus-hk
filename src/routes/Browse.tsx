@@ -93,7 +93,7 @@ function SortStrip(props: {
               aria-pressed={on() ? "true" : "false"}
               onClick={() => props.onToggle(sort.id)}
               class={[
-                "app-press flex h-8 items-center gap-1 rounded-full px-3 text-[0.81rem] font-bold transition-colors duration-state",
+                "app-press flex h-8 items-center gap-1 rounded-full px-3 text-[0.81rem] font-bold leading-none transition-colors duration-state",
                 {
                   "bg-primary text-primary-foreground": on(),
                   "bg-secondary text-muted-foreground hover:text-foreground": !on(),
@@ -101,11 +101,11 @@ function SortStrip(props: {
               ]}
             >
               {t(sort.label, props.lang)}
-              <Show when={on()}>
-                <span aria-hidden="true" class="tnum">
-                  {props.sorted(sort.id) === "desc" ? "↓" : "↑"}
-                </span>
-              </Show>
+              {/* Held even while off, or lighting a sort grew the chip and
+                  the row wrapped under it. */}
+              <span aria-hidden="true" class={["tnum w-3 text-center", { invisible: !on() }]}>
+                {props.sorted(sort.id) === "desc" ? "↓" : "↑"}
+              </span>
             </button>
           );
         }}

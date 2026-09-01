@@ -1,4 +1,4 @@
-import type { Bilingual, Company } from "~/data/types";
+import type { Bilingual, Company, KeyedRoute } from "~/data/types";
 
 export interface OperatorStyle {
   name: Bilingual;
@@ -118,6 +118,24 @@ export function kindOf(co: Company): Kind {
   return KINDS[co];
 }
 
+/**
+ * Which of the three vehicles a route runs, for anything that draws one.
+ *
+ * Narrower than `Kind`: a drawn vehicle is a picture, and there are three
+ * pictures - a bus, a minibus, a train. It lives here rather than beside
+ * either drawing because the marker creeping along the map and the glyph
+ * creeping up the rail in the stop list are the same vehicle at two scales,
+ * and a route running a train on one and a bus on the other is two answers to
+ * one question. A joint route takes the largest thing on it.
+ */
+export type VehicleKind = "bus" | "minibus" | "rail";
+
+export function vehicleKind(cos: Company[]): VehicleKind {
+  if (cos.some((co) => kindOf(co) === "rail")) return "rail";
+  if (cos.some((co) => kindOf(co) === "minibus")) return "minibus";
+  return "bus";
+}
+
 export function operatorRank(co: Company): number {
   const index = PRECEDENCE.indexOf(co);
   return index < 0 ? PRECEDENCE.length : index;
@@ -221,4 +239,19 @@ export function operatorLabel(co: Company[], lang: "zh" | "en"): string {
   }
   const only = co[0];
   return only ? OPERATORS[only].name[lang] : "";
+}
+
+/**
+ * Reads the plate colour back out so a line matches the operator's brand.
+ *
+ * Here rather than beside the map that first wanted it: the stop list paints
+ * its creeping vehicle in the same colour, and importing it from the map
+ * module dragged MapLibre into a page that only ever lazily loads it.
+ */
+export function lineColour(route: KeyedRoute): string {
+  const style = plateStyle(route.co, route.route);
+  if (/^#[0-9a-f]{6}$/i.test(style.background)) return style.background;
+  // A joint route has a gradient plate; use the first operator's colour.
+  const first = /#([0-9a-f]{6})/i.exec(style.background);
+  return first ? `#${first[1]}` : "#d71920";
 }

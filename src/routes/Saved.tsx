@@ -13,7 +13,7 @@ import {
 import { EmptyState, ScreenTitle, SectionLabel, SpecialTag } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
-import { SortSheet, type SortChoice } from "~/components/SortSheet";
+import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
 import {
   AlarmIcon,
@@ -22,7 +22,6 @@ import {
   GripIcon,
   LayersIcon,
   TrashIcon,
-  SortIcon,
   ThumbtackIcon,
   WalkIcon,
 } from "~/components/Icons";
@@ -551,9 +550,6 @@ export default function Saved() {
     { value: "route", label: t("sortRoute", lang()), hint: t("sortRouteHint", lang()) },
   ];
 
-  /** What the header button wears: the answer, not the name of the question. */
-  const orderLabel = () => orders().find((o) => o.value === order())?.label ?? "";
-
   const askGroup = (ask: GroupAsk) => {
     setAsking(ask);
     requestAnimationFrame(() => setGroupOpen(true));
@@ -717,22 +713,49 @@ export default function Saved() {
     <Page>
       <ScreenTitle
         title={t("saved", lang())}
+        /*
+         * Which bookmarks to look at, in the band rather than under it. The
+         * chips take whatever width the order chip leaves and scroll sideways
+         * past it: a filter row that holds a whole row of the screen open is
+         * paying list space for a question most riders answer once, and with
+         * the title spoken rather than drawn there was an empty half of the
+         * header sitting directly above it.
+         */
         trailing={
+          <Show when={resolved().length > 0 && groups().length > 0}>
+            <div class="app-scroll flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-0.5">
+              <FilterChip
+                label={t("allItems", lang())}
+                active={filter() === null}
+                onSelect={() => setFilter(null)}
+              />
+              <For each={groups()}>
+                {(group) => (
+                  <FilterChip
+                    label={group}
+                    color={groupColorVar(groupColor(group))}
+                    active={filter() === group}
+                    onSelect={() => setFilter(group)}
+                  />
+                )}
+              </For>
+              <Show when={hasUngrouped()}>
+                <FilterChip
+                  label={t("ungrouped", lang())}
+                  active={filter() === ""}
+                  onSelect={() => setFilter("")}
+                />
+              </Show>
+            </div>
+          </Show>
+        }
+        controls={
           <Show when={resolved().length > 0}>
-            {/* Order is a setting made once, so it rides in the header
-                wearing its own answer rather than holding a row open above
-                the list for ever. The same quiet chip the other screens put
-                in their headers - at pill size it outweighed the title it
-                sat beside. */}
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={() => setSortOpen(true)}
-              class="app-press flex h-[1.6rem] min-w-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-subtle-foreground"
-            >
-              <SortIcon size={12} />
-              <span class="truncate">{orderLabel()}</span>
-            </button>
+            {/* Order is a setting made once, so it rides in the header as
+                the question rather than holding a row open above the list
+                for ever. The same quiet chip the other screens put in their
+                headers - at pill size it outweighed the title it sat beside. */}
+            <SortTrigger label={t("sortBy", lang())} onClick={() => setSortOpen(true)} />
           </Show>
         }
       />
@@ -837,42 +860,6 @@ export default function Saved() {
         }
       >
         <div class="flex flex-col gap-6">
-          {/*
-           * The only band of controls above the list, and it answers one
-           * question: which bookmarks to look at. Order is a different kind of
-           * question and now lives in the header - two rows of identically
-           * shaped pills, one filtering and one sorting, read as one confused
-           * control rather than as two.
-           */}
-          <Show when={groups().length > 0}>
-            <div class="-mb-2">
-              <div class="flex items-center gap-2 overflow-x-auto pb-0.5 app-scroll">
-                <FilterChip
-                  label={t("allItems", lang())}
-                  active={filter() === null}
-                  onSelect={() => setFilter(null)}
-                />
-                <For each={groups()}>
-                  {(group) => (
-                    <FilterChip
-                      label={group}
-                      color={groupColorVar(groupColor(group))}
-                      active={filter() === group}
-                      onSelect={() => setFilter(group)}
-                    />
-                  )}
-                </For>
-                <Show when={hasUngrouped()}>
-                  <FilterChip
-                    label={t("ungrouped", lang())}
-                    active={filter() === ""}
-                    onSelect={() => setFilter("")}
-                  />
-                </Show>
-              </div>
-            </div>
-          </Show>
-
           <Show when={position() === null}>
             <p class="-mb-3 text-[0.75rem] font-medium text-subtle-foreground">
               {t("noLocation", lang())}

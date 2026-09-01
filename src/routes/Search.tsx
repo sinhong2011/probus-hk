@@ -40,7 +40,7 @@ import {
   searchStops,
 } from "~/data/db";
 import type { KeyedRoute, RouteDb } from "~/data/types";
-import { concessionFare, formatFare } from "~/lib/format";
+import { formatFare, notableConcession } from "~/lib/format";
 import { pick, stripStopCode, t, type Lang, type MessageKey } from "~/lib/i18n";
 import { kindOf, operatorShort, type Kind } from "~/lib/operators";
 import { frequent } from "~/stores/frequent";
@@ -148,17 +148,22 @@ function RouteItem(props: {
               <SpecialTag lang={props.lang} />
             </Show>
           </span>
-          {/* Where it starts, and what it costs - the full fare and the
-              two-dollar concession each in a tag, so the two amounts read as
-              amounts and not as more of the place name. */}
+          {/* Where it starts, and what it costs. Nothing boxes the amounts any
+              more, so the dot between them does the work the two tags used to:
+              without it the pair ran together as one figure. */}
           <span class="flex min-w-0 items-center gap-1 text-[0.75rem] font-medium text-subtle-foreground">
             <span class="truncate">{pick(props.route.orig, props.lang)}</span>
             <Show when={formatFare(props.route.fares?.[0])}>
               {(fare) => (
                 <>
                   <FareTag>{fare()}</FareTag>
-                  <Show when={concessionFare(props.route.fares?.[0])}>
-                    {(amount) => <FareTag>{amount()}</FareTag>}
+                  <Show when={notableConcession(props.route.fares?.[0])}>
+                    {(amount) => (
+                      <>
+                        <span class="shrink-0">·</span>
+                        <FareTag>{amount()}</FareTag>
+                      </>
+                    )}
                   </Show>
                 </>
               )}

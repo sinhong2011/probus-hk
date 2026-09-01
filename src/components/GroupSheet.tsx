@@ -262,7 +262,7 @@ function Chip(props: {
       onClick={props.onSelect}
       style={paint()}
       class={[
-        "app-press flex h-8 max-w-full items-center gap-1.5 rounded-full px-3 text-[0.81rem]",
+        "app-press flex h-[1.6rem] max-w-full items-center gap-1.5 rounded-full px-2.5 text-[0.75rem]",
         {
           "font-bold": props.selected,
           // Neutral while colourless - "no group" is an absence being

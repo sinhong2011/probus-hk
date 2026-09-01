@@ -40,6 +40,12 @@
   "search_range": "Custom search range",
   "search_range_hint": "Nearby lists the stops inside this circle, drawn around where you are standing",
   "show_scheduled": "Show scheduled",
+  "show_clock_times": "Show exact arrival times",
+  "show_vehicles": "Show where the buses are",
+  "show_vehicles_map": "On the map",
+  "show_vehicles_list": "On the route list",
+  "show_vehicles_away": "How many stops away",
+  "show_vehicles_hint": "Worked out from the arrival times, not reported by the bus",
   "reduce_motion": "Reduce motion",
   "offline_data": "Offline data",
   "route_database": "Route database",
@@ -321,5 +327,9 @@
   "traffic_camera": "Traffic snapshot",
   "camera_failed": "The picture didn't load",
   "camera_source": "Pictures from the Transport Department, refreshed every two minutes",
+  "camera_open_map": "Open in maps",
+  "map_google": "Google",
+  "map_apple": "Apple",
+  "map_system": "Geo",
   "special_departures": "Special departures"
 }

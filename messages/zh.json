@@ -40,6 +40,12 @@
   "search_range": "自訂搜尋範圍",
   "search_range_hint": "「附近」會列出圈入面嘅車站，個圈以你企嘅位置做中心",
   "show_scheduled": "顯示預定班次",
+  "show_clock_times": "顯示準確到站時間",
+  "show_vehicles": "顯示架車位置",
+  "show_vehicles_map": "地圖上嘅車",
+  "show_vehicles_list": "路線上嘅車",
+  "show_vehicles_away": "仲差幾多個站",
+  "show_vehicles_hint": "由到站時間推算出嚟，唔係架車自己報位",
   "reduce_motion": "減少動態效果",
   "offline_data": "離線資料",
   "route_database": "路線資料庫",
@@ -321,5 +327,9 @@
   "traffic_camera": "交通快拍",
   "camera_failed": "載唔到張相",
   "camera_source": "相片嚟自運輸署，每兩分鐘更新一次",
+  "camera_open_map": "用地圖開",
+  "map_google": "Google",
+  "map_apple": "Apple",
+  "map_system": "地理",
   "special_departures": "特別班次"
 }

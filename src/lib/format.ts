@@ -109,10 +109,29 @@ export function concessionFare(full: string | null | undefined): string | null {
   return `$${value.toFixed(1)}`;
 }
 
-/** "$9.3 · $2.0" - full fare beside the concession, as riders compare them. */
+/** What the scheme is named after, and what most fares come to under it. */
+const FLAT_CONCESSION = "$2.0";
+
+/**
+ * The concession worth printing beside a full fare.
+ *
+ * Above ten dollars it is a fifth of the fare, a different number on every
+ * route and the only way to know what a long ride costs at the concession -
+ * so it is printed. At or below ten it is the flat two dollars the scheme is
+ * named for, the same on every route in Hong Kong, and printing it down a
+ * forty-stop list was the same two characters forty times over. A rider
+ * entitled to it knows the two-dollar fare; what they cannot know without
+ * being told is when their ride costs more than that.
+ */
+export function notableConcession(full: string | null | undefined): string | null {
+  const value = concessionFare(full);
+  return value === FLAT_CONCESSION ? null : value;
+}
+
+/** "$21.8 · $4.4" - full fare beside the concession, where that is not the flat $2. */
 export function fareLabel(full: string | null | undefined): string | null {
   const paid = formatFare(full);
   if (!paid) return null;
-  const concession = concessionFare(full);
+  const concession = notableConcession(full);
   return concession ? `${paid} · ${concession}` : paid;
 }

@@ -289,6 +289,61 @@ export default function SettingsSheet() {
                   onChange={(v) => settings.setShowScheduled(v)}
                 />
               </Row>
+              <Hairline />
+              {/* The o'clock time beside the countdown. Off by default: the
+                  minutes are the answer at a kerb, and this is the form for
+                  planning against a watch or a last train. */}
+              <Row title={t("showClockTimes", lang())}>
+                <Toggle
+                  label={t("showClockTimes", lang())}
+                  checked={settings.clockTimes()}
+                  onChange={(v) => settings.setClockTimes(v)}
+                />
+              </Row>
+            </Card>
+          </Section>
+
+          {/*
+           * Three switches for one inference, all off until asked for.
+           *
+           * The caveat is said once, under the heading, because it is true of
+           * all three and repeating it on every row would make three rows of
+           * small print out of three choices. Each row then says only where
+           * the buses would be drawn, which is the part a rider is choosing
+           * between: they are not equally strong claims - a bus on a map
+           * points at a place, a glyph on the rail only at a gap between two
+           * stops, and a count of stops is the loosest of the three - so the
+           * rider takes the ones they trust rather than all or nothing.
+           */}
+          <Section class="gap-3">
+            <SectionLabel>{t("showVehicles", lang())}</SectionLabel>
+            <p class="-mt-1 px-1 text-[0.75rem] font-medium text-subtle-foreground">
+              {t("showVehiclesHint", lang())}
+            </p>
+            <Card raised>
+              <Row title={t("showVehiclesMap", lang())}>
+                <Toggle
+                  label={t("showVehiclesMap", lang())}
+                  checked={settings.vehiclesOnMap()}
+                  onChange={(v) => settings.setVehiclesOnMap(v)}
+                />
+              </Row>
+              <Hairline />
+              <Row title={t("showVehiclesList", lang())}>
+                <Toggle
+                  label={t("showVehiclesList", lang())}
+                  checked={settings.vehiclesOnList()}
+                  onChange={(v) => settings.setVehiclesOnList(v)}
+                />
+              </Row>
+              <Hairline />
+              <Row title={t("showVehiclesAway", lang())}>
+                <Toggle
+                  label={t("showVehiclesAway", lang())}
+                  checked={settings.vehiclesAway()}
+                  onChange={(v) => settings.setVehiclesAway(v)}
+                />
+              </Row>
             </Card>
           </Section>
 

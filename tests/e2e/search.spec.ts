@@ -30,15 +30,16 @@ test("dims keys that cannot lead to a real route", async ({ page }) => {
   await expect(page.getByRole("button", { name: "1", exact: true })).toBeDisabled();
 });
 
-test("shows the fare and the two-dollar concession together", async ({ page }) => {
+test("shows the fare without repeating the two-dollar concession", async ({ page }) => {
   await page.getByRole("button", { name: "1", exact: true }).click();
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 10_000 });
 
-  // KMB 1 costs $6.7, which is under the ten-dollar flat-rate threshold.
-  // Each amount is its own tag on the row.
+  // KMB 1 costs $6.7, under the ten-dollar flat-rate threshold. The $2
+  // concession is the same on every such fare, so the row keeps the full
+  // amount and drops the repeat.
   const first = page.locator('a[href^="/route/"]').first();
   await expect(first.getByText("$6.7", { exact: true })).toBeVisible();
-  await expect(first.getByText("$2.0", { exact: true })).toBeVisible();
+  await expect(first.getByText("$2.0", { exact: true })).toHaveCount(0);
 });
 
 test("finds stops by name, not just routes by number", async ({ page }) => {
