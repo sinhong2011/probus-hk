@@ -26,10 +26,10 @@ import {
 } from "~/data/traffic";
 import { measureOf, spreadMetres } from "~/data/placement";
 import type { VehicleFeed } from "~/data/useVehicles";
-import type { Company, KeyedRoute, StopEntry } from "~/data/types";
+import type { KeyedRoute, StopEntry } from "~/data/types";
 import { distanceM, walkMinutes, type LatLng } from "~/lib/geo";
 import { measureLine, measureStops, pointAt, sliceLine, stitchLines } from "~/lib/alongLine";
-import { kindOf } from "~/lib/operators";
+import { kindOf, vehicleKind, type VehicleKind } from "~/lib/operators";
 import {
   MAP_ACCENT as ACCENT,
   MAP_STYLES as STYLES,
@@ -613,16 +613,6 @@ const IMG_NOSE = "app-bus-nose";
 /** The disc's own pixel grid, and the nose's, before `icon-size` scales them. */
 const BUS = { size: 30, ratio: 3 };
 const NOSE = { width: 30, height: 50, ratio: 3 };
-
-/** What is drawn on the map: the vehicle the route is actually run with. */
-type VehicleKind = "bus" | "minibus" | "rail";
-
-/** The vehicle a route's operators put on it. */
-function vehicleKind(cos: Company[]): VehicleKind {
-  if (cos.some((co) => kindOf(co) === "rail")) return "rail";
-  if (cos.some((co) => kindOf(co) === "minibus")) return "minibus";
-  return "bus";
-}
 
 /** Window glass, lit from above: the one colour the three vehicles share. */
 function glass(ctx: CanvasRenderingContext2D, top: number, bottom: number) {

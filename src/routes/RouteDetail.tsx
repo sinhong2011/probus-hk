@@ -28,9 +28,11 @@ import {
   FlagIcon,
   InfoIcon,
   MegaphoneIcon,
+  MinibusIcon,
   ShareIcon,
   StarFillIcon,
   StarIcon,
+  TrainIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { NotFound } from "~/routes/NotFound";
@@ -58,7 +60,7 @@ import {
 import { now } from "~/stores/clock";
 import { distanceM } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
-import { operatorLabel, plateStyle } from "~/lib/operators";
+import { operatorLabel, plateStyle, vehicleKind, type VehicleKind } from "~/lib/operators";
 import { centerWhileItSettles } from "~/lib/scroll";
 import { useGeolocation } from "~/stores/geolocation";
 import { frequent } from "~/stores/frequent";
@@ -367,6 +369,19 @@ function RideBand(props: {
 }
 
 /**
+ * The vehicle a route runs, as the glyph the list draws for it.
+ *
+ * The same three the map paints its markers from, picked by the same rule -
+ * see `vehicleKind`. A train creeping up the rail beside a station list and a
+ * bus creeping along the map were one vehicle wearing two faces.
+ */
+const VEHICLE_ICON: Record<VehicleKind, typeof BusIcon> = {
+  bus: BusIcon,
+  minibus: MinibusIcon,
+  rail: TrainIcon,
+};
+
+/**
  * How far off the bus is, in words. Shared by the stop row and the sheet under
  * an opened-out map, which are the same sentence in two places.
  */
@@ -669,6 +684,14 @@ function StopRow(props: {
   );
   onCleanup(() => props.onEtasChange(undefined));
   const nameParts = () => splitStopName(stripStopCode(pick(props.stop.name, props.lang)));
+  /*
+   * The vehicle drawn beside this route, wherever the row draws one: creeping
+   * up the rail between two stops, or beside a word about the one that is
+   * coming. The map picks its marker from the same rule, so a light rail
+   * route is a train in both places. A row belongs to one route for its whole
+   * life, so this is settled once rather than followed.
+   */
+  const VehicleIcon = VEHICLE_ICON[vehicleKind(props.route.co)];
   const fare = () => fareAt(props.route.fares, props.seq);
   const concession = () => concessionFare(props.route.fares?.[props.seq - 1]);
 
@@ -854,7 +877,7 @@ function StopRow(props: {
                     "box-shadow": "0 0 0 2px var(--card)",
                   }}
                 >
-                  <BusIcon size={10} />
+                  <VehicleIcon size={10} />
                 </span>
               )}
             </For>
@@ -1047,7 +1070,7 @@ function StopRow(props: {
                   next().short ? "text-warning" : "text-subtle-foreground",
                 ]}
               >
-                <BusIcon size={11} />
+                <VehicleIcon size={11} />
                 <span class="truncate">
                   {t("towards", props.lang)} {stripStopCode(pick(next().name, props.lang))}
                 </span>
@@ -1185,7 +1208,7 @@ function StopRow(props: {
                 the rider is, and a bus three stops out is a fact about the
                 road, not a thing to be drawn to. */}
             <div class="flex items-center gap-1.5 px-3.5 pb-1.5 pl-[2.125rem] text-[0.75rem] font-semibold text-muted-foreground">
-              <BusIcon size={12} />
+              <VehicleIcon size={12} />
               <span>{awayLabel(props.busAway as number, props.lang)}</span>
             </div>
           </Show>
