@@ -17,7 +17,22 @@ async function revealActions(
   await page.mouse.down();
   await page.mouse.move(box.x + 32, y, { steps: 12 });
   await page.mouse.up();
-  await expect(row.locator("[data-swipe-open]")).toBeVisible();
+  await expect(row.locator('[data-swipe-open="trailing"]')).toBeVisible();
+}
+
+/** The other way: drag the row right until the reorder grip snaps open. */
+async function revealGrip(
+  page: import("@playwright/test").Page,
+  row: import("@playwright/test").Locator,
+) {
+  const box = await row.boundingBox();
+  if (!box) throw new Error("no row to swipe");
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 24, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 32, y, { steps: 12 });
+  await page.mouse.up();
+  await expect(row.locator('[data-swipe-open="leading"]')).toBeVisible();
 }
 
 /** Opens a stop on route 1 and stars it, which is the only way in. */
@@ -251,6 +266,10 @@ test("a star can be dragged to a new place in the list", async ({ page }) => {
   const cards = page.locator("[data-star-id]");
   await expect(cards).toHaveCount(2, { timeout: 15_000 });
   const firstId = await cards.first().getAttribute("data-star-id");
+
+  // The grip is behind a swipe right, so the row itself stays a list of arrivals.
+  await expect(page.getByRole("button", { name: "reorder" })).toHaveCount(0);
+  await revealGrip(page, cards.first());
 
   // Carry the first card below the second by its grip, in finger-sized steps.
   const grip = page.getByRole("button", { name: "reorder" }).first();

@@ -299,6 +299,7 @@ const MESSAGES = {
   groupName: m.group_name,
   noGroup: m.no_group,
   removeStar: m.remove_star,
+  reorder: m.reorder,
   changeStop: m.change_stop,
   pinTop: m.pin_top,
   unpinTop: m.unpin_top,

@@ -1,46 +1,59 @@
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { ChevronLeftIcon } from "./Icons";
+import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
+
+export type SwipeSide = "leading" | "trailing";
 
 /**
  * The face of a row that slides aside to show the deeds behind it.
  *
- * iOS Mail's gesture: a horizontal pan reveals the actions, a vertical pan
- * is left to the page (`touch-action: pan-y` on the face). The parent says
- * which row is open, so opening one closes the rest. A pointing device gets
- * a hover chevron instead of a peek: the rightmost deed is Delete, and a
- * sliver of that red reads as a broken row, not as a handle.
+ * Swipe left for the trailing deeds (pin, restop, group, delete). Swipe
+ * right for the leading deed (the reorder grip). A vertical pan is left
+ * to the page (`touch-action: pan-y`). The parent says which row is open,
+ * so opening one closes the rest. A pointing device gets hover chevrons
+ * instead of a peek: the trailing rightmost deed is Delete, and a sliver
+ * of that red reads as a broken row, not as a handle.
  */
 export function SwipeActions(props: {
-  open: boolean;
-  onOpen: () => void;
+  open: SwipeSide | false;
+  onOpen: (side: SwipeSide) => void;
   onClose: () => void;
   /** Fires as the finger lands, so a sibling that is already open can close. */
   onEngage?: () => void;
-  /** Spoken name of the hover chevron; omit it and the chevron stays off. */
+  /** Spoken name of the trailing hover chevron; omit it and that chevron stays off. */
   hintLabel?: string;
+  /** Spoken name of the leading hover chevron. */
+  leadingHintLabel?: string;
+  /** Revealed by a swipe right: the reorder grip, when the list can be dragged. */
+  leading?: JSX.Element;
   actions: JSX.Element;
   children: JSX.Element;
   class?: string;
 }) {
   const [offset, setOffset] = createSignal(0, { ownedWrite: true });
   const [dragging, setDragging] = createSignal(false, { ownedWrite: true });
-  const [width, setWidth] = createSignal(0, { ownedWrite: true });
+  const [trailingW, setTrailingW] = createSignal(0, { ownedWrite: true });
+  const [leadingW, setLeadingW] = createSignal(0, { ownedWrite: true });
 
-  const watchActions = (el: HTMLElement) => {
-    const measure = () => setWidth(el.offsetWidth);
+  const watch = (set: (n: number) => void) => (el: HTMLElement) => {
+    const measure = () => set(el.offsetWidth);
     measure();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    onCleanup(() => observer.disconnect());
+    onCleanup(() => {
+      observer.disconnect();
+      set(0);
+    });
   };
 
   createEffect(
-    () => [props.open, width(), dragging()] as const,
-    ([open, max, drag]) => {
+    () => [props.open, trailingW(), leadingW(), dragging()] as const,
+    ([open, trail, lead, drag]) => {
       if (drag) return;
-      setOffset(open ? max : 0);
+      if (open === "trailing") setOffset(trail);
+      else if (open === "leading") setOffset(-lead);
+      else setOffset(0);
     },
   );
 
@@ -53,8 +66,10 @@ export function SwipeActions(props: {
   let suppressClick = false;
   let face: HTMLElement | undefined;
 
-  const clamp = (value: number, max: number) => {
-    if (value < 0) return value * 0.2;
+  const clamp = (value: number) => {
+    const max = trailingW();
+    const min = -leadingW();
+    if (value < min) return min + (value - min) * 0.2;
     if (value > max) return max + (value - max) * 0.2;
     return value;
   };
@@ -69,12 +84,29 @@ export function SwipeActions(props: {
   };
 
   const snap = () => {
-    const max = width();
     const next = offset();
-    const open = next > max * 0.35 || (props.open && next > max * 0.65);
-    setOffset(open ? max : 0);
-    if (open) props.onOpen();
-    else props.onClose();
+    const trail = trailingW();
+    const lead = leadingW();
+    const side = props.open;
+
+    if (next > 0 && trail > 0) {
+      const open = next > trail * 0.35 || (side === "trailing" && next > trail * 0.65);
+      if (open) {
+        setOffset(trail);
+        props.onOpen("trailing");
+        return;
+      }
+    }
+    if (next < 0 && lead > 0) {
+      const open = next < -lead * 0.35 || (side === "leading" && next < -lead * 0.65);
+      if (open) {
+        setOffset(-lead);
+        props.onOpen("leading");
+        return;
+      }
+    }
+    setOffset(0);
+    props.onClose();
   };
 
   const reset = () => {
@@ -111,14 +143,14 @@ export function SwipeActions(props: {
     }
     if (axis !== "x") return;
     moved = true;
-    setOffset(clamp(startOffset - dx, width()));
+    setOffset(clamp(startOffset - dx));
   };
 
   const onPointerUp = (event: PointerEvent) => {
     if (!tracking) return;
     const wasX = axis === "x";
     const didMove = moved;
-    const wasOpen = props.open;
+    const wasOpen = Boolean(props.open);
     release(event.pointerId);
     reset();
     if (wasX) {
@@ -137,7 +169,9 @@ export function SwipeActions(props: {
     release(event.pointerId);
     reset();
     suppressClick = false;
-    setOffset(props.open ? width() : 0);
+    if (props.open === "trailing") setOffset(trailingW());
+    else if (props.open === "leading") setOffset(-leadingW());
+    else setOffset(0);
   };
 
   const onClick = (event: MouseEvent) => {
@@ -158,26 +192,51 @@ export function SwipeActions(props: {
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      props.onOpen();
+      if (props.open === "leading") props.onClose();
+      else props.onOpen("trailing");
     }
-    if (event.key === "Escape" || event.key === "ArrowRight") {
+    if (event.key === "ArrowRight") {
+      if (props.open === "trailing") {
+        event.preventDefault();
+        props.onClose();
+        return;
+      }
+      if (leadingW() > 0) {
+        event.preventDefault();
+        props.onOpen("leading");
+        return;
+      }
+    }
+    if (event.key === "Escape") {
       if (!props.open) return;
       event.preventDefault();
       props.onClose();
     }
   };
 
+  const open = () => props.open;
+
   return (
     <div
       class={["app-swipe relative overflow-hidden", props.class ?? ""]}
-      data-swipe-open={props.open ? "" : undefined}
+      data-swipe-open={open() ? open() : undefined}
       onKeyDown={onKeyDown}
     >
+      <Show when={props.leading}>
+        <div
+          ref={watch(setLeadingW)}
+          class="absolute inset-y-0 left-0 flex"
+          aria-hidden={open() === "leading" ? undefined : "true"}
+          style={{ "pointer-events": open() === "leading" ? "auto" : "none" }}
+        >
+          {props.leading}
+        </div>
+      </Show>
       <div
-        ref={watchActions}
+        ref={watch(setTrailingW)}
         class="absolute inset-y-0 right-0 flex"
-        aria-hidden={props.open ? undefined : "true"}
-        style={{ "pointer-events": props.open ? "auto" : "none" }}
+        aria-hidden={open() === "trailing" ? undefined : "true"}
+        style={{ "pointer-events": open() === "trailing" ? "auto" : "none" }}
       >
         {props.actions}
       </div>
@@ -186,16 +245,32 @@ export function SwipeActions(props: {
         class="app-swipe-face relative bg-card"
         data-dragging={dragging() ? "" : undefined}
         style={{
-          translate: `-${offset()}px 0`,
-          "pointer-events": props.open ? "auto" : undefined,
+          translate: `${-offset()}px 0`,
+          "pointer-events": open() ? "auto" : undefined,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
       >
-        <div style={{ "pointer-events": props.open ? "none" : undefined }}>{props.children}</div>
-        <Show when={props.hintLabel && !props.open}>
+        <div style={{ "pointer-events": open() ? "none" : undefined }}>{props.children}</div>
+        <Show when={props.leadingHintLabel && props.leading && !open()}>
+          <button
+            type="button"
+            data-swipe-hint
+            tabIndex={-1}
+            aria-label={props.leadingHintLabel}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              props.onOpen("leading");
+            }}
+            class="app-swipe-hint absolute inset-y-0 left-0 z-10 items-center justify-center bg-card px-2 text-faint-foreground"
+          >
+            <ChevronRightIcon size={14} />
+          </button>
+        </Show>
+        <Show when={props.hintLabel && !open()}>
           <button
             type="button"
             data-swipe-hint
@@ -204,7 +279,7 @@ export function SwipeActions(props: {
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              props.onOpen();
+              props.onOpen("trailing");
             }}
             class="app-swipe-hint absolute inset-y-0 right-0 z-10 items-center justify-center bg-card px-2 text-faint-foreground"
           >

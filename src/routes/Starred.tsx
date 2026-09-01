@@ -15,7 +15,7 @@ import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
-import { SwipeActions, SwipeDeed } from "~/components/SwipeActions";
+import { SwipeActions, SwipeDeed, type SwipeSide } from "~/components/SwipeActions";
 import {
   AlarmIcon,
   PinIcon,
@@ -106,9 +106,10 @@ function leaveLabel(
 
 /**
  * One star as a list row. The deeds (pin, stop, group, delete) live behind
- * a swipe, the way a mail message hides Delete: they used to hold a whole
- * strip open under every favourite, which is what made a list of stars a
- * list of cards, and on a phone that left four of them on screen.
+ * a swipe left, the way a mail message hides Delete; the reorder grip lives
+ * behind a swipe right. They used to hold a whole strip open under every
+ * favourite, which is what made a list of stars a list of cards, and on a
+ * phone that left four of them on screen.
  */
 function StarredRow(props: {
   entry: Resolved;
@@ -116,8 +117,8 @@ function StarredRow(props: {
   metres: number | null;
   arrival: Arrival | undefined;
   draggable: boolean;
-  open: boolean;
-  onOpen: () => void;
+  open: SwipeSide | false;
+  onOpen: (side: SwipeSide) => void;
   onClose: () => void;
   onEngage: () => void;
   onRemove: () => void;
@@ -181,6 +182,25 @@ function StarredRow(props: {
         onClose={props.onClose}
         onEngage={props.onEngage}
         hintLabel={t("more", props.lang)}
+        leadingHintLabel={props.draggable ? t("reorder", props.lang) : undefined}
+        leading={
+          <Show when={props.draggable}>
+            <button
+              type="button"
+              aria-label="reorder"
+              data-drag-handle
+              class="flex min-w-14 shrink-0 cursor-grab touch-none flex-col items-center justify-center gap-0.5 bg-muted-foreground px-1.5 text-background"
+            >
+              <GripIcon size={16} />
+              <span
+                aria-hidden="true"
+                class="max-w-[4.25rem] text-center text-[0.625rem] leading-[1.15] font-bold break-words"
+              >
+                {t("reorder", props.lang)}
+              </span>
+            </button>
+          </Show>
+        }
         actions={
           <>
             <SwipeDeed
@@ -222,17 +242,6 @@ function StarredRow(props: {
                 aria-hidden="true"
               />
             )}
-          </Show>
-
-          <Show when={props.draggable}>
-            <button
-              type="button"
-              aria-label="reorder"
-              data-drag-handle
-              class="-ml-1 cursor-grab touch-none text-faint-foreground"
-            >
-              <GripIcon size={14} />
-            </button>
           </Show>
 
           <Show when={stopStar()}>
@@ -382,13 +391,15 @@ export default function Starred() {
   /** The star whose stop is being changed, while the stop sheet is up. */
   const [restopping, setRestopping] = createSignal<Resolved | null>(null);
   const [stopOpen, setStopOpen] = createSignal(false);
-  /** Which star has its swipe deeds showing; one at a time. */
-  const [openStar, setOpenStar] = createSignal<string | null>(null, { ownedWrite: true });
+  /** Which star has its swipe deeds showing, and on which side; one at a time. */
+  const [openStar, setOpenStar] = createSignal<{ id: string; side: SwipeSide } | null>(null, {
+    ownedWrite: true,
+  });
 
   createEffect(
     () => openStar(),
-    (id) => {
-      if (!id) return;
+    (open) => {
+      if (!open) return;
       const close = (event: PointerEvent) => {
         const target = event.target as HTMLElement | null;
         if (target?.closest("[data-star-id]")) return;
@@ -671,7 +682,10 @@ export default function Starred() {
       fallbackClass: "app-lift",
       ghostClass: "app-drag-ghost",
       onStart: (evt) => {
-        setOpenStar(null);
+        // Keep this row's leading grip showing so the handle stays under
+        // the finger; close any other row that was open.
+        const id = (evt.item as HTMLElement).dataset.starId;
+        setOpenStar((cur) => (cur && cur.id === id && cur.side === "leading" ? cur : null));
         const at = pointOf((evt as { originalEvent?: Event }).originalEvent);
         const rect = evt.item.getBoundingClientRect();
         grip = at ? { x: at.x - rect.left, y: at.y - rect.top } : { x: 0, y: 0 };
@@ -761,13 +775,13 @@ export default function Starred() {
       metres={metresTo(entry)}
       arrival={arrivalOf().get(entry.item.id)}
       draggable={manual() && !entry.item.pinned}
-      open={openStar() === entry.item.id}
-      onOpen={() => setOpenStar(entry.item.id)}
+      open={openStar()?.id === entry.item.id ? openStar()!.side : false}
+      onOpen={(side) => setOpenStar({ id: entry.item.id, side })}
       onClose={() => {
-        if (openStar() === entry.item.id) setOpenStar(null);
+        if (openStar()?.id === entry.item.id) setOpenStar(null);
       }}
       onEngage={() => {
-        if (openStar() !== entry.item.id) setOpenStar(null);
+        if (openStar()?.id !== entry.item.id) setOpenStar(null);
       }}
       onRemove={() => starred.remove(entry.item.id)}
       onRegroup={() =>
