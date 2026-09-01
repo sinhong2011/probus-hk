@@ -298,11 +298,11 @@ test("opening a stop reveals the departures after the next one", async ({ page }
   await row.click();
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
-  // The row keeps the next bus; the ones after it live in the panel it opens,
-  // under a label that says they come after it, each with the clock time it
-  // lands at - a wait that long is only worth reading against a watch.
-  const later = page.locator('[data-open="true"]').getByLabel(/分鐘 \d\d:\d\d$/);
-  await expect(later.first()).toBeVisible({ timeout: 10_000 });
+  // The row keeps the next bus; the ones after it stack under that countdown
+  // on the right, each with the clock time it lands at - a wait that long is
+  // only worth reading against a watch.
+  const later = page.locator("[data-later-arrivals]");
+  await expect(later).toBeVisible({ timeout: 10_000 });
 });
 
 test("closing a stop puts its later departures away again", async ({ page }) => {

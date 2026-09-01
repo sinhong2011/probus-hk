@@ -401,14 +401,14 @@ function awayLabel(away: number, lang: Lang): string {
 
 /**
  * The two departures after the one the row is counting down, stacked under
- * it.
+ * it on the right.
  *
  * A column, not a row: three arrivals are one series, and a series reads down -
- * the eye goes 28, 37 without being led, and the clock times line up into a
- * second column so the pair reads as a small timetable. Nothing here needs a
- * container or a label; sitting directly under the countdown, in its accent,
- * already says what they are, and the word that used to head them was one
- * more thing to read on the way to the numbers.
+ * the eye goes 28, 37 without being led. Clock times sit to the left of the
+ * minutes so the countdown stays the right edge, lining up with the hero
+ * above. Nothing here needs a container or a label; sitting directly under
+ * the countdown, in its accent, already says what they are, and the word that
+ * used to head them was one more thing to read on the way to the numbers.
  *
  * Each carries the clock time it lands at. That is the point of the second
  * number: "45 分鐘" is something you have to add to a watch before it means
@@ -426,69 +426,69 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
 
   return (
     <Show when={rest().length > 0}>
-      <div class={`flex items-baseline ${props.class ?? ""}`}>
-        <div class="flex min-w-0 flex-col gap-[3px]">
-          {/* Keyed by position: the tick rebuilds these objects every second,
-              and a value-keyed list would remount the digits with it. */}
-          <For each={rest()} keyed={false}>
-            {(row, index) => (
-              <span
-                // The digits are hidden from assistive tech (ten per column),
-                // so the spoken value has to live on the line itself.
-                aria-label={[
-                  `${row().state.kind === "arriving" ? 0 : row().state.minutes} ${t("minute", props.lang)}`,
-                  clockTime(row().at),
-                  row().state.remark ? pick(row().state.remark as Bilingual, props.lang) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                // A frame apart, so the pair reads as arriving in order rather
-                // than as one block appearing.
-                style={{ "animation-delay": `${index * 45}ms` }}
-                class="app-pop flex items-baseline gap-1.5"
-              >
-                {/* Right-aligned, so a tilde or a second digit pushes the
-                    number out to the left and the units stay in line. */}
-                <span class="flex min-w-[2.9rem] items-baseline justify-end gap-[3px]">
-                  {/* The same accent as the countdown above them: these are
-                      the same answer for the two buses after it, and in grey
-                      they read as a footnote to the row rather than as the
-                      rest of it. Weaker, because the first one is still the
-                      one the rider is deciding on - but a step up the scale
-                      from where they were: a rider who has opened a row is
-                      reading these to decide whether to wait, and at footnote
-                      size that decision was set in the smallest type on the
-                      page. */}
-                  <span class="tnum text-[1.13rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
-                    <Show when={row().state.scheduled}>
-                      <span class="opacity-60">~</span>
-                    </Show>
-                    <RollingNumber
-                      value={row().state.kind === "arriving" ? 0 : row().state.minutes}
-                    />
-                  </span>
-                  <span class="text-[0.75rem] font-semibold text-subtle-foreground">
-                    {t("minute", props.lang)}
-                  </span>
+      <div
+        data-later-arrivals
+        class={`flex min-w-0 flex-col items-end gap-[3px] ${props.class ?? ""}`}
+      >
+        {/* Keyed by position: the tick rebuilds these objects every second,
+            and a value-keyed list would remount the digits with it. */}
+        <For each={rest()} keyed={false}>
+          {(row, index) => (
+            <span
+              // The digits are hidden from assistive tech (ten per column),
+              // so the spoken value has to live on the line itself.
+              aria-label={[
+                `${row().state.kind === "arriving" ? 0 : row().state.minutes} ${t("minute", props.lang)}`,
+                clockTime(row().at),
+                row().state.remark ? pick(row().state.remark as Bilingual, props.lang) : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              // A frame apart, so the pair reads as arriving in order rather
+              // than as one block appearing.
+              style={{ "animation-delay": `${index * 45}ms` }}
+              class="app-pop flex items-baseline justify-end gap-1.5"
+            >
+              {/* An operator that marks one of these as the last of the day
+                  is answering a question the number alone cannot. Anything
+                  longer than that is already up beside the stop's name. */}
+              <EtaRemark state={row().state} lang={props.lang} notices={false} />
+
+              {/* The same switch the countdown above reads: a rider who
+                  has not asked for o'clock times is not shown them here
+                  either - see `settings.clockTimes`. Left of the minutes so
+                  the unit stays on the same edge as the hero. */}
+              <Show when={settings.clockTimes()}>
+                <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                  {clockTime(row().at)}
                 </span>
+              </Show>
 
-                {/* The same switch the countdown above reads: a rider who
-                    has not asked for o'clock times is not shown them here
-                    either - see `settings.clockTimes`. */}
-                <Show when={settings.clockTimes()}>
-                  <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                    {clockTime(row().at)}
-                  </span>
-                </Show>
-
-                {/* An operator that marks one of these as the last of the day
-                    is answering a question the number alone cannot. Anything
-                    longer than that is already up beside the stop's name. */}
-                <EtaRemark state={row().state} lang={props.lang} notices={false} />
+              <span class="flex items-baseline justify-end gap-[3px]">
+                {/* The same accent as the countdown above them: these are
+                    the same answer for the two buses after it, and in grey
+                    they read as a footnote to the row rather than as the
+                    rest of it. Weaker, because the first one is still the
+                    one the rider is deciding on - but a step up the scale
+                    from where they were: a rider who has opened a row is
+                    reading these to decide whether to wait, and at footnote
+                    size that decision was set in the smallest type on the
+                    page. */}
+                <span class="tnum text-[1.13rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
+                  <Show when={row().state.scheduled}>
+                    <span class="opacity-60">~</span>
+                  </Show>
+                  <RollingNumber
+                    value={row().state.kind === "arriving" ? 0 : row().state.minutes}
+                  />
+                </span>
+                <span class="text-[0.75rem] font-semibold text-subtle-foreground">
+                  {t("minute", props.lang)}
+                </span>
               </span>
-            )}
-          </For>
-        </div>
+            </span>
+          )}
+        </For>
       </div>
     </Show>
   );
@@ -774,11 +774,16 @@ function StopRow(props: {
        * button is neither valid nor reachable - this way the row still opens
        * from anywhere on it, and the one thing that opens something else can.
        */}
-      {/* The countdown sits on the row's centre line, where the dot on the
-          rail opposite it now sits: hung from the top it lined up with the
-          name and left the fare under it facing nothing, and on a row whose
-          name runs to two lines it read as belonging to the line above. */}
-      <div class="relative flex w-full items-center px-3.5 py-2 text-left">
+      {/* Closed, the countdown sits on the row's centre line with the rail
+          dot, facing name and fare together. Opened, it hangs from the top
+          so the later departures can continue down the same right edge
+          instead of floating in the middle of a taller row. */}
+      <div
+        class={[
+          "relative flex w-full px-3.5 py-2 text-left",
+          props.open && !props.picking ? "items-start" : "items-center",
+        ]}
+      >
         <button
           type="button"
           onClick={() => (props.picking ? props.onAlight() : props.onToggle())}
@@ -1278,9 +1283,11 @@ function StopRow(props: {
             </div>
           </Show>
 
-          {/* The later departures, on their own line now that the actions have
-              moved down to sit with the button they belong beside. */}
-          <LaterArrivals class="px-3.5 pb-2 pl-[2.125rem]" etas={etas() ?? []} lang={props.lang} />
+          {/* The later departures, stacked under the countdown they continue.
+              Right-aligned to that column: sitting under the fare made a wait
+              look like a fact about the stop, and the three numbers are one
+              series the eye already started on the right. */}
+          <LaterArrivals class="px-3.5 pb-2" etas={shown() ?? []} lang={props.lang} />
 
           {/*
            * One row of everything there is to do with this stop, gathered at
