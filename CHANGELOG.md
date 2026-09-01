@@ -4,6 +4,13 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.4.0](https://github.com/sinhong2011/probus-hk/compare/v0.3.0...v0.4.0) (2026-09-01)
+
+
+### Features
+
+* keep stars, not bookmarks ([#15](https://github.com/sinhong2011/probus-hk/issues/15)) ([4e8358b](https://github.com/sinhong2011/probus-hk/commit/4e8358bd45337fa31f2205c7fd67dd265a8cf03c))
+
 ## [0.3.0](https://github.com/sinhong2011/probus-hk/compare/v0.2.3...v0.3.0) (2026-08-31)
 
 
