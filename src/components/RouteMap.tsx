@@ -1886,7 +1886,11 @@ export function RouteMap(props: {
   createEffect(
     () => ({
       instance: map(),
-      vehicles: props.feed?.vehicles ?? [],
+      // Drawing a bus on a map is the strongest of the three claims the
+      // inference makes, so it is the rider's to ask for - see
+      // `settings.vehiclesOnMap`. Off, the layer empties like any other tick
+      // with nothing on the road.
+      vehicles: settings.vehiclesOnMap() ? (props.feed?.vehicles ?? []) : [],
       measured: track(),
       colour: lineColour(props.route),
       kind: vehicleKind(props.route.co),
@@ -2337,7 +2341,17 @@ export function RouteMap(props: {
    * corner says which one it is, every time, including when everything is
    * working.
    */
-  const note = (): "loading" | "estimated" | "unplaceable" | "none" | VehicleFeed["status"] => {
+  const note = ():
+    | "loading"
+    | "estimated"
+    | "unplaceable"
+    | "none"
+    | VehicleFeed["status"]
+    | null => {
+    // Nothing to be honest about: a rider who has not asked for buses on the
+    // map is not waiting for any, and a corner saying "搵緊架車…" for ever
+    // would be the map inventing a question nobody put to it.
+    if (!settings.vehiclesOnMap()) return null;
     const feed = props.feed;
     if (!feed) return "loading";
     if (feed.status !== "ready") return feed.status;
@@ -2537,28 +2551,33 @@ export function RouteMap(props: {
                   </Show>
                   {/* The button's own height, so the corner reads as one row
                       of controls rather than a button with a sticker beside
-                      it. */}
-                  <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
-                    <span
-                      class={[
-                        "size-1 rounded-full lg:size-1.5",
-                        {
-                          // Waiting has to look like waiting, or it looks
-                          // like nothing.
-                          "animate-pulse bg-subtle-foreground": note() === "loading",
-                          "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
-                        },
-                      ]}
-                      style={
-                        note() === "estimated"
-                          ? { "background-color": lineColour(props.route) }
-                          : undefined
-                      }
-                    />
-                    <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
-                      {noteLabel()}
-                    </span>
-                  </div>
+                      it. Gone entirely where the rider has not asked for buses
+                      on the map: the label exists to explain an empty map, and
+                      a map with nothing to draw on it is not empty, it is what
+                      was asked for. */}
+                  <Show when={note() !== null}>
+                    <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
+                      <span
+                        class={[
+                          "size-1 rounded-full lg:size-1.5",
+                          {
+                            // Waiting has to look like waiting, or it looks
+                            // like nothing.
+                            "animate-pulse bg-subtle-foreground": note() === "loading",
+                            "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
+                          },
+                        ]}
+                        style={
+                          note() === "estimated"
+                            ? { "background-color": lineColour(props.route) }
+                            : undefined
+                        }
+                      />
+                      <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
+                        {noteLabel()}
+                      </span>
+                    </div>
+                  </Show>
                 </div>
               </Portal>
             )}

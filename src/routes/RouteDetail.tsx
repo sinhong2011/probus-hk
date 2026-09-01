@@ -646,11 +646,6 @@ function StopRow(props: {
     alerts.has("arrival", props.route.key, props.stopId) ||
     alerts.has("destination", props.route.key, props.stopId);
   /*
-   * A section fare holds for a run of stops, so printing it on every row is
-   * forty repetitions of the same two numbers. It is worth saying only where
-   * it changes - which is exactly where a rider needs to know.
-   */
-  /*
    * The operator's own word on this stop - a diversion, a road closed - which
    * is about the stop rather than about any one departure, and is a sentence
    * rather than a badge. It rides beside the name, where it has the width to
@@ -698,7 +693,6 @@ function StopRow(props: {
     const short = name.zh !== terminus.zh && name.en.toLowerCase() !== terminus.en.toLowerCase();
     return { name, short };
   });
-  const fareChanged = () => fare() !== null && fare() !== fareAt(props.route.fares, props.seq - 1);
   /*
    * What riding from the boarding station to this one costs. Asked only on
    * the rows where the rider is deciding about this station - open, chosen as
@@ -717,7 +711,15 @@ function StopRow(props: {
       ref={watchRow}
       data-stop-seq={props.seq}
       class={[
-        "flex flex-col transition-opacity duration-state",
+        /*
+         * A hairline top and bottom, so a stop is a row of a list rather than
+         * a paragraph in a column of them - and an open one is a block with
+         * two edges instead of a run of loose lines bleeding into the next
+         * stop. Neighbours share their edge (the seam is drawn on top, and
+         * the first row leaves it to the card), or every seam would be two
+         * lines thick and the list would read as ruled paper.
+         */
+        "flex flex-col border-t border-border transition-opacity duration-state first:border-t-0",
         {
           "opacity-60": props.passed && !props.open && !props.dimmed,
           // While a ride is being planned the stops outside it are context,
@@ -981,7 +983,11 @@ function StopRow(props: {
           {/* The amounts wear a tag, so the two numbers on the line are the
               two things on it that can be read at a glance; the words that
               name them are the quieter half. */}
-          <Show when={fare() !== null && (fareChanged() || props.open)}>
+          {/* On every row that has one. A section fare repeats down a run of
+              stops, but what a ride costs is half of what a rider is deciding
+              between two stops with, and making them open a row to see it put
+              the price behind a tap while the time sat in the open. */}
+          <Show when={fare() !== null}>
             {/* Set off from the name rather than tucked under it: the tags
                 give the line a shape of its own, and at the list's own
                 line-spacing it read as a second line of the stop's name. */}
@@ -1104,12 +1110,17 @@ function StopRow(props: {
               {/* One size smaller down the list than in the open row: the
                   list is for scanning forty of these, and the stop a rider
                   opened is the one whose number they are reading. */}
+              {/* The clock time on every row, not only the open one. "32
+                  分鐘" is a number to add to a watch; 10:39 is either before
+                  or after where the rider has to be, and asking them to open
+                  a row for it made the countdown the only answer they could
+                  scan. */}
               <EtaCountdown
                 etas={shown()}
                 lang={props.lang}
                 size={props.open ? "md" : "sm"}
                 limit={1}
-                clock={props.open}
+                clock
                 over={props.dayOver}
                 /* Said in full beside the name, a tap away; a second copy
                    here would be the same sentence cut to six characters. */
@@ -1162,6 +1173,9 @@ function StopRow(props: {
            * straight. The countdown says when; this says where, and the two
            * disagreeing is itself worth seeing - a bus three stops away with
            * one minute on the clock is a bus stuck in traffic.
+           *
+           * Inferred rather than reported, so it is off until a rider turns it
+           * on in settings - see `settings.showVehicles`.
            */}
           <Show when={props.busAway !== null}>
             {/* No pop on the way in: the count changes as the bus moves, and
@@ -1193,14 +1207,14 @@ function StopRow(props: {
            * icons alone, because a bookmark, an alarm, a share and an arrow
            * need no introduction; "where do you get off" does.
            *
-           * Only the flag is filled. It is the one thing on this panel a rider
-           * came here to do, and a filled pill is what says so; the other four
-           * shed their boxes, because five containers under the arrivals made
-           * the open panel a wall of them and left nothing looking like the
-           * action. What the fills were carrying for those four was state, and
-           * state is carried here the way the row above carries it: an armed
-           * alarm and a made bookmark go the app's own accent colour, the same
-           * colour they take beside the stop's name.
+           * Nothing here is filled. Five containers under the arrivals made
+           * the open panel a wall of boxes, and the last of them - a pill
+           * around the flag - was the loudest thing on a row whose point is
+           * the numbers above it. What the fills were carrying was state, and
+           * state is carried here the way the row above carries it: a set
+           * boarding point, an armed alarm and a made bookmark go the app's
+           * own accent colour, the same colour they take beside the stop's
+           * name, and everything unset stays grey.
            */}
           <div class="flex items-center justify-end gap-0.5 pb-3 pl-[2.125rem] pr-1.5">
             <button
@@ -1210,11 +1224,10 @@ function StopRow(props: {
               title={boardLabel()}
               aria-pressed={props.role === "board" || props.role === "alight" ? "true" : "false"}
               class={[
-                "app-press mr-auto flex h-6 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[0.75rem] font-bold transition-colors duration-state lg:h-7 lg:px-2 lg:text-[0.81rem]",
+                "app-bare app-press mr-auto flex h-8 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[0.75rem] font-bold transition-colors duration-state hover:bg-secondary lg:px-2 lg:text-[0.81rem]",
                 {
-                  "bg-primary text-primary-foreground hover:bg-primary/90":
-                    props.role === "board" || props.role === "alight",
-                  "bg-secondary text-muted-foreground hover:text-foreground":
+                  "text-primary": props.role === "board" || props.role === "alight",
+                  "text-subtle-foreground hover:text-foreground":
                     props.role !== "board" && props.role !== "alight",
                 },
               ]}
@@ -1734,8 +1747,18 @@ export default function RouteDetail() {
   /**
    * Where the buses are. Nobody publishes that, so it is worked backwards out
    * of the arrival times - see `~/data/vehicles`.
+   *
+   * Everything drawn from it is opt-in and asked for separately - the map's
+   * badges, the glyphs on the rail, the count on an open stop - and they all
+   * read this one feed, so wanting none of them stops the work rather than
+   * hiding its results. What survives is what the operator actually published,
+   * the countdowns; the ride estimate falls back to the timetable's own
+   * journey time.
    */
   const vehicles = useVehicles(() => {
+    if (!settings.vehiclesOnMap() && !settings.vehiclesOnList() && !settings.vehiclesAway()) {
+      return null;
+    }
     const r = route();
     const list = stops();
     if (!r || list.length === 0) return null;
@@ -1784,7 +1807,8 @@ export default function RouteDetail() {
     return by;
   });
   const NO_BUSES: RailBus[] = [];
-  const busesAfter = (seq: number): RailBus[] => busesBySeq()?.get(seq) ?? NO_BUSES;
+  const busesAfter = (seq: number): RailBus[] =>
+    (settings.vehiclesOnList() ? busesBySeq()?.get(seq) : undefined) ?? NO_BUSES;
 
   /** Which lines call at each station, for a rail route; nothing for a bus. */
   const interchangeIndex = createMemo(() => (route()?.co[0] === "mtr" ? stationLines(db()) : null));
@@ -1926,7 +1950,7 @@ export default function RouteDetail() {
                   lang={lang()}
                   passed={nearestIndex() >= 0 && index() < nearestIndex()}
                   isNearest={index() === nearestIndex()}
-                  busAway={openSeq() === seq() ? stopsAway(seq()) : null}
+                  busAway={settings.vehiclesAway() && openSeq() === seq() ? stopsAway(seq()) : null}
                   onNoticeChange={(key) => noteNotice(seq(), key)}
                   onEtasChange={(list) => noteEtas(seq(), list)}
                   noticeAbove={sameNotice(seq() - 1, seq())}

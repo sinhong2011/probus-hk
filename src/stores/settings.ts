@@ -14,6 +14,22 @@ interface Persisted {
   radiusM: number;
   refreshSeconds: number;
   showScheduled: boolean;
+  /**
+   * Where the app may draw the buses it thinks are on the route: as badges on
+   * the map, as glyphs riding the rail between stops, and as the line on an
+   * open stop saying how many stops short of it the nearest one still is.
+   *
+   * Three switches rather than one, all off until asked for. They are the same
+   * inference - nobody publishes where a bus is, so every one of them is
+   * worked backwards out of a run of arrival times - but they are not the same
+   * offer: a bus drawn on a map is a claim about a place, a glyph on the rail
+   * is a claim about a gap between two stops, and a count of stops is the
+   * loosest of the three. A rider who trusts one need not take all three, and
+   * turning the feed off entirely stops the work rather than hiding it.
+   */
+  vehiclesOnMap: boolean;
+  vehiclesOnList: boolean;
+  vehiclesAway: boolean;
   nearbyMode: NearbyMode;
   savedOrder: SavedOrder;
   /** How long before an arrival a reminder should fire, in minutes. */
@@ -37,6 +53,9 @@ const DEFAULTS: Persisted = {
   radiusM: 400,
   refreshSeconds: 20,
   showScheduled: true,
+  vehiclesOnMap: false,
+  vehiclesOnList: false,
+  vehiclesAway: false,
   nearbyMode: "stop",
   savedOrder: "manual",
   alertLeadMinutes: 3,
@@ -83,6 +102,9 @@ const [theme, setTheme] = field("theme");
 const [radiusM, setRadiusM] = field("radiusM");
 const [refreshSeconds, setRefreshSeconds] = field("refreshSeconds");
 const [showScheduled, setShowScheduled] = field("showScheduled");
+const [vehiclesOnMap, setVehiclesOnMap] = field("vehiclesOnMap");
+const [vehiclesOnList, setVehiclesOnList] = field("vehiclesOnList");
+const [vehiclesAway, setVehiclesAway] = field("vehiclesAway");
 const [nearbyMode, setNearbyMode] = field("nearbyMode");
 const [savedOrder, setSavedOrder] = field("savedOrder");
 const [alertLeadMinutes, setAlertLeadMinutes] = field("alertLeadMinutes");
@@ -106,6 +128,12 @@ export const settings = {
   setRefreshSeconds,
   showScheduled,
   setShowScheduled,
+  vehiclesOnMap,
+  setVehiclesOnMap,
+  vehiclesOnList,
+  setVehiclesOnList,
+  vehiclesAway,
+  setVehiclesAway,
   nearbyMode,
   setNearbyMode,
   savedOrder,
