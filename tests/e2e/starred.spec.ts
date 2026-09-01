@@ -70,17 +70,19 @@ test("stars can be ordered by something other than the hand-dragged order", asyn
   await star(page, 1);
   await page.goto("/starred");
 
-  // Order rides in the header wearing its own answer; the four choices only
-  // appear when the header button is asked for them.
+  // The trigger names the question, not the answer, so it never resizes.
+  // Which order is on lives in the sheet.
   const sort = page.locator('button[aria-haspopup="dialog"]');
-  await expect(sort).toContainText("自訂", { timeout: 15_000 });
+  await expect(sort).toContainText("排序", { timeout: 15_000 });
   await sort.click();
+  await expect(page.getByRole("radio", { name: "自訂" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("radio", { name: "路線號" }).click();
-  await expect(sort).toContainText("路線號");
+  await expect(sort).toContainText("排序");
 
   // The choice is part of how the screen is read, so it outlives the visit.
   await page.reload();
-  await expect(page.locator('button[aria-haspopup="dialog"]')).toContainText("路線號", {
+  await page.locator('button[aria-haspopup="dialog"]').click();
+  await expect(page.getByRole("radio", { name: "路線號" })).toHaveAttribute("aria-checked", "true", {
     timeout: 15_000,
   });
 });

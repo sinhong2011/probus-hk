@@ -301,8 +301,9 @@ test("opening a stop reveals the departures after the next one", async ({ page }
 
   await expect(row).toHaveAttribute("aria-expanded", "true");
   // The row keeps the next bus; the waits after it continue that column,
-  // and each clock time sits on the left under the fare.
-  const later = page.locator("[data-later-arrivals]");
+  // and each clock time sits on the left under the fare. Closed panels keep
+  // the same markup for the collapse, so the open one has to be named.
+  const later = page.locator('[data-open="true"] [data-later-arrivals]');
   await expect(later).toBeVisible({ timeout: 10_000 });
 });
 
