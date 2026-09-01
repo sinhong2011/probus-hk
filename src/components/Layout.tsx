@@ -252,8 +252,8 @@ export function CardGrid(props: {
    *
    * For a grid of compact cards: two fixed columns stretched each card to
    * half a desktop window, which put a hand's width of nothing between a
-   * route's name and its arrival time. Sized from a minimum card width, the
-   * same window carries three or four readable cards instead.
+   * route's name and its arrival time. Three is the most a row can hold
+   * before a destination and its countdown sit too far apart.
    */
   dense?: boolean;
   /** The grid element itself, for a screen that wires behaviour onto it. */
@@ -268,7 +268,7 @@ export function CardGrid(props: {
         props.single
           ? ""
           : props.dense
-            ? "lg:grid-cols-[repeat(auto-fill,minmax(21rem,1fr))]"
+            ? "lg:grid-cols-2 xl:grid-cols-3"
             : "lg:grid-cols-2 min-[110rem]:grid-cols-3",
         props.class ?? "",
       ]}
