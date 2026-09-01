@@ -899,7 +899,10 @@ function StopRow(props: {
                      `max-w-none` because the rail it hangs on is two pixels
                      wide, and the base stylesheet caps an image at its
                      parent's width - which squashed the drawing to a line. */
-                  class="absolute left-1/2 size-5 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
+                  /* Nudged off the rail rather than straddling it: the line is
+                     the road, and a vehicle sitting exactly on it hides the
+                     stretch it is meant to be travelling. */
+                  class="absolute left-1/2 ml-[3px] size-4 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
                   style={{ top: `${bus.fraction * 200}%` }}
                 />
               )}
