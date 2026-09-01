@@ -49,10 +49,10 @@ export function ModeSwitch(props: { lang: Lang }) {
               aria-selected={current() ? "true" : "false"}
               data-pill-active={current() ? "true" : "false"}
               class={[
-                "app-press relative z-10 flex h-7 grow items-center justify-center rounded-full text-[0.81rem] transition-colors duration-state",
+                "app-press relative z-10 flex h-7 grow items-center justify-center rounded-full text-[0.81rem] font-bold leading-none transition-colors duration-state",
                 {
-                  "font-bold text-foreground": current(),
-                  "font-semibold text-subtle-foreground": !current(),
+                  "text-foreground": current(),
+                  "text-subtle-foreground": !current(),
                 },
               ]}
             >

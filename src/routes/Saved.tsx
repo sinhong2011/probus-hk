@@ -13,7 +13,7 @@ import {
 import { EmptyState, ScreenTitle, SectionLabel, SpecialTag } from "~/components/Chrome";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
-import { SortSheet, type SortChoice } from "~/components/SortSheet";
+import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
 import {
   AlarmIcon,
@@ -22,7 +22,6 @@ import {
   GripIcon,
   LayersIcon,
   TrashIcon,
-  SortIcon,
   ThumbtackIcon,
   WalkIcon,
 } from "~/components/Icons";
@@ -551,9 +550,6 @@ export default function Saved() {
     { value: "route", label: t("sortRoute", lang()), hint: t("sortRouteHint", lang()) },
   ];
 
-  /** What the header button wears: the answer, not the name of the question. */
-  const orderLabel = () => orders().find((o) => o.value === order())?.label ?? "";
-
   const askGroup = (ask: GroupAsk) => {
     setAsking(ask);
     requestAnimationFrame(() => setGroupOpen(true));
@@ -755,20 +751,11 @@ export default function Saved() {
         }
         controls={
           <Show when={resolved().length > 0}>
-            {/* Order is a setting made once, so it rides in the header
-                wearing its own answer rather than holding a row open above
-                the list for ever. The same quiet chip the other screens put
-                in their headers - at pill size it outweighed the title it
-                sat beside. */}
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={() => setSortOpen(true)}
-              class="app-press flex h-[1.6rem] min-w-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold text-subtle-foreground"
-            >
-              <SortIcon size={12} />
-              <span class="truncate">{orderLabel()}</span>
-            </button>
+            {/* Order is a setting made once, so it rides in the header as
+                the question rather than holding a row open above the list
+                for ever. The same quiet chip the other screens put in their
+                headers - at pill size it outweighed the title it sat beside. */}
+            <SortTrigger label={t("sortBy", lang())} onClick={() => setSortOpen(true)} />
           </Show>
         }
       />
