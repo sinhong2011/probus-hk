@@ -119,6 +119,13 @@ export const HKO_WARNSUM =
   "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc";
 export const RAINVIEWER_MAPS = "https://api.rainviewer.com/public/weather-maps.json";
 
+/**
+ * RainViewer radar tiles stop at z7. A request past that returns a PNG
+ * that says "Zoom Level Not Supported", which would cover the walk the
+ * rider is actually looking at. MapLibre overzooms from this instead.
+ */
+export const RAIN_TILE_MAX_ZOOM = 7;
+
 export function radarTileUrls(raw: unknown): string[] | null {
   if (!raw || typeof raw !== "object") return null;
   const host = (raw as { host?: unknown }).host;

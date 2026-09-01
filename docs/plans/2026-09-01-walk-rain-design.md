@@ -15,7 +15,9 @@ the past hour, or a thunderstorm / rainstorm warning is up):
   name. District rain at the rider (or the stop) is the chip; a warning
   without local millimetres still speaks.
 - RainViewer radar tiles on the route map and the search/plan map, under the
-  walk line. Dry sky: no overlay.
+  walk line. Dry sky: no overlay. RainViewer only publishes through z7, so
+  the map overzooms that tile at street zoom rather than showing their
+  "Zoom Level Not Supported" placeholder.
 
 HKO `rhrread` and `warnsum` are fetched in the browser (open CORS). The
 gridded 2-hour nowcast is not (no CORS, 2.7 MB). Tropical cyclone signals
