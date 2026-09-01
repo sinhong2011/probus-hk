@@ -446,8 +446,12 @@ function LaterArrivals(props: { etas: Eta[]; lang: Lang; class?: string }) {
                       the same answer for the two buses after it, and in grey
                       they read as a footnote to the row rather than as the
                       rest of it. Weaker, because the first one is still the
-                      one the rider is deciding on. */}
-                  <span class="tnum text-[0.94rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
+                      one the rider is deciding on - but a step up the scale
+                      from where they were: a rider who has opened a row is
+                      reading these to decide whether to wait, and at footnote
+                      size that decision was set in the smallest type on the
+                      page. */}
+                  <span class="tnum text-[1.13rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
                     <Show when={row().state.scheduled}>
                       <span class="opacity-60">~</span>
                     </Show>
