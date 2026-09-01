@@ -771,6 +771,23 @@
   .app-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
+
+  /*
+   * The sliding face of a swipe-to-reveal row. Vertical pans stay with the
+   * page; a horizontal pan is our gesture, so the browser is told not to
+   * take those. `translate` is set from the pointer while dragging, and
+   * eases to rest once the finger is up - unless the rider asked for
+   * reduced motion, in which case it just jumps.
+   */
+  .app-swipe-face {
+    touch-action: pan-y;
+    user-select: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .app-swipe-face:not([data-dragging]) {
+      transition: translate 0.28s var(--ease-out);
+    }
+  }
   /*
    * Liquid-glass surface for controls floating over imagery - the map's
    * buttons and its status note. Mostly the picture behind it, bent: a heavy

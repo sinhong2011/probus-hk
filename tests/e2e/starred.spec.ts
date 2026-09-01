@@ -5,6 +5,21 @@ test.beforeEach(async ({ page }) => {
   await mockTransit(page);
 });
 
+/** iOS Mail's gesture: drag the row left until the deeds behind it snap open. */
+async function revealActions(
+  page: import("@playwright/test").Page,
+  row: import("@playwright/test").Locator,
+) {
+  const box = await row.boundingBox();
+  if (!box) throw new Error("no row to swipe");
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width - 24, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 32, y, { steps: 12 });
+  await page.mouse.up();
+  await expect(row.locator("[data-swipe-open]")).toBeVisible();
+}
+
 /** Opens a stop on route 1 and stars it, which is the only way in. */
 async function star(page: import("@playwright/test").Page, nth: number, group?: string) {
   await page.goto("/route/1%2B1%2BCHUK%20YUEN%20ESTATE%2BSTAR%20FERRY");
@@ -98,8 +113,10 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
   await page.goto("/starred");
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 15_000 });
 
-  // The group rides on the card itself - no edit mode to enter first.
-  await page.getByRole("button", { name: "唔分組" }).first().click();
+  // Deeds live behind a swipe, so the list itself stays a list of arrivals.
+  const row = page.locator("[data-star-id]").first();
+  await revealActions(page, row);
+  await page.getByRole("button", { name: "唔分組" }).click();
 
   await page.getByRole("textbox", { name: "新增分組" }).fill("返工");
   await page.getByRole("button", { name: "儲存" }).click();
@@ -139,6 +156,7 @@ test("a star can be moved to another stop on its route", async ({ page }) => {
   const card = page.locator('a[href^="/route/"]');
   await expect(card).toContainText("天虹小學", { timeout: 15_000 });
 
+  await revealActions(page, page.locator("[data-star-id]").first());
   await page.getByRole("button", { name: "換站" }).click();
 
   // The sheet knows which stop it is at now, and one tap moves it.
@@ -164,8 +182,9 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   const cards = page.locator('a[href^="/route/"]');
   await expect(cards.first()).toContainText("天虹小學", { timeout: 15_000 });
 
-  // Pin the second one: the actions sit on the card itself, in card order.
-  await page.getByRole("button", { name: "置頂", exact: true }).nth(1).click();
+  // Pin the second one from behind a swipe, in list order.
+  await revealActions(page, page.locator("[data-star-id]").nth(1));
+  await page.getByRole("button", { name: "置頂", exact: true }).click();
 
   // To the head of the list, wearing the thumbtack.
   await expect(page.locator("[data-pinned]")).toHaveCount(1);
@@ -176,6 +195,7 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   await expect(cards.first()).toContainText("馬仔坑遊樂場", { timeout: 15_000 });
 
   // And it comes off the same way it went on.
+  await revealActions(page, page.locator("[data-pinned]"));
   await page.getByRole("button", { name: "取消置頂" }).click();
   await expect(page.locator("[data-pinned]")).toHaveCount(0);
   await expect(cards.first()).toContainText("天虹小學");

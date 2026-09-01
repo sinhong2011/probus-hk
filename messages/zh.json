@@ -246,6 +246,7 @@
   "new_group": "新增分組",
   "group_name": "分組名稱",
   "no_group": "唔分組",
+  "remove_star": "移除",
   "change_stop": "換站",
   "pin_top": "置頂",
   "unpin_top": "取消置頂",
