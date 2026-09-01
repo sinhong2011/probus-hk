@@ -905,8 +905,11 @@ function StopRow(props: {
                      outside, where there is nothing but card, and flips so
                      that its wheels still face the road it is driving on -
                      turned a quarter without the flip, a bus on this side of
-                     the line is one lying on its roof. */
-                  class="absolute left-1/2 -ml-[5px] size-4 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 scale-y-[-1] transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
+                     the line is one lying on its roof. Over the dot rather
+                     than under it: a bus about to reach a stop is in front of
+                     it, and half a drawing disappearing behind a mark reads
+                     as a glitch rather than as depth. */
+                  class="absolute left-1/2 z-10 -ml-[7px] size-4 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 scale-y-[-1] transition-[top] duration-1000 ease-linear motion-reduce:transition-none"
                   style={{ top: `${bus.fraction * 200}%` }}
                 />
               )}
