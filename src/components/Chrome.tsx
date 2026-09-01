@@ -28,7 +28,7 @@ export function StopCode(props: { name: Bilingual | undefined; lang: Lang; class
             // Set well under the name it follows: the code is what a rider
             // checks once they are already at the right row, so it only has
             // to be legible, not weigh the same as the name.
-            "tnum shrink-0 rounded bg-secondary px-1 py-px text-[0.55rem] font-bold tracking-[0.06em] text-faint-foreground",
+            "tnum shrink-0 rounded border border-border bg-secondary px-1 py-px text-[0.55rem] font-bold tracking-[0.06em] text-faint-foreground",
             props.class ?? "",
           ]}
         >
