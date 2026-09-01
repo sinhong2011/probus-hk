@@ -6,11 +6,49 @@ const KMB_1 = encodeURIComponent("1+1+CHUK YUEN ESTATE+STAR FERRY");
 /** 10:00 Hong Kong time on a March morning, sun well up. */
 const DAYTIME = new Date("2026-03-20T02:00:00Z");
 
-const stopRows = (page: import("@playwright/test").Page) => page.locator("button[aria-expanded]");
+function etaIso(minutesFromDaytime: number): string {
+  const at = new Date(DAYTIME.getTime() + minutesFromDaytime * 60_000);
+  const hk = new Date(at.getTime() + 8 * 60 * 60 * 1000);
+  return `${hk.toISOString().slice(0, 19)}+08:00`;
+}
+
+/** Stop rows only — the tab bar's 更多 is also `aria-expanded`. */
+const stopRows = (page: import("@playwright/test").Page) =>
+  page.getByRole("button", { name: /^\d+\.\s/ });
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(DAYTIME);
   await mockTransit(page);
+  // Arrivals must land on the frozen March morning, or the sun is scored at
+  // tonight's real ETA and the chips stay dark.
+  await page.route("**/data.etabus.gov.hk/**", (route) => {
+    const data = [];
+    for (let seq = 1; seq <= 40; seq++) {
+      for (const dir of ["O", "I"]) {
+        for (const [index, offset] of [3.5, 11.5, 24.5].entries()) {
+          data.push({
+            co: "KMB",
+            route: "1",
+            dir,
+            service_type: 1,
+            seq,
+            eta_seq: index + 1,
+            eta: etaIso(offset),
+            rmk_tc: "",
+            rmk_en: "",
+            dest_tc: "尖沙咀碼頭",
+            dest_en: "STAR FERRY",
+          });
+        }
+      }
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ type: "StopETA", version: "1.0", data }),
+    });
+  });
   await page.route("**/hkbus.github.io/route-waypoints/**", (route) =>
     route.fulfill({
       status: 200,
@@ -34,13 +72,23 @@ test.beforeEach(async ({ page }) => {
       }),
     }),
   );
+  // Live HKO would otherwise put the rain offer over the sun one.
+  await page.route("**/data.weather.gov.hk/**", (route) => {
+    const url = route.request().url();
+    if (url.includes("rhrread")) {
+      return route.fulfill({
+        json: { rainfall: { data: [{ place: "油尖旺", max: 0 }] } },
+      });
+    }
+    return route.fulfill({ json: {} });
+  });
 });
 
 async function pickARide(page: import("@playwright/test").Page) {
   await page.goto(`/route/${KMB_1}`);
   await expect(stopRows(page).first()).toBeVisible({ timeout: 15_000 });
   await stopRows(page).first().click();
-  await page.getByRole("button", { name: "喺呢度上車" }).click();
+  await page.getByRole("button", { name: "喺呢度上車" }).first().click();
   await stopRows(page).nth(8).click();
 }
 
@@ -59,7 +107,10 @@ test("offers the feature on a daytime ride, once, and turning it on prints a win
   const offer = page.getByText("可以睇吓呢程坐邊邊窗少曬");
   await expect(offer).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole("button", { name: "試吓" }).first().click();
+  await page
+    .locator("[role=status]", { hasText: "可以睇吓呢程坐邊邊窗少曬" })
+    .getByRole("button", { name: "試吓" })
+    .click();
   await expect(offer).toHaveCount(0);
   await expect(page.getByText(/坐[左右]邊窗|頭頂好曬|兩邊都會曬/)).toBeVisible({
     timeout: 10_000,
@@ -110,9 +161,10 @@ test("plan scores a picked morning clock, not only the next bus", async ({ page 
   await expect(clock).toBeVisible();
   await clock.click();
 
-  await expect(page.getByRole("dialog", { name: "按邊個鐘計日照" })).toBeVisible();
-  await page.getByRole("tab", { name: "聽朝" }).click();
-  await page.getByRole("button", { name: "關閉" }).click();
+  const clockSheet = page.getByRole("dialog", { name: "按邊個鐘計日照" });
+  await expect(clockSheet).toBeVisible();
+  await clockSheet.getByRole("tab", { name: "聽朝" }).click();
+  await clockSheet.getByRole("button", { name: "關閉" }).click();
 
   await expect(page.getByRole("button", { name: /聽日 08:00/ })).toBeVisible();
 });
