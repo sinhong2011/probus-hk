@@ -82,9 +82,13 @@ test("stars can be ordered by something other than the hand-dragged order", asyn
   // The choice is part of how the screen is read, so it outlives the visit.
   await page.reload();
   await page.locator('button[aria-haspopup="dialog"]').click();
-  await expect(page.getByRole("radio", { name: "路線號" })).toHaveAttribute("aria-checked", "true", {
-    timeout: 15_000,
-  });
+  await expect(page.getByRole("radio", { name: "路線號" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+    {
+      timeout: 15_000,
+    },
+  );
 });
 
 test("a star can be put in a group, and the group filters the list", async ({ page }) => {
