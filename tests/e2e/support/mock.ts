@@ -305,3 +305,32 @@ export async function mockTransit(page: Page, options: MockOptions = {}) {
   });
   await page.route("**/api.rainviewer.com/**", (route) => route.abort());
 }
+
+/** A 1×1 red PNG so radar is a visible wash, not RainViewer's placeholder. */
+const RAIN_TILE_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+/**
+ * RainViewer catalogue + tiles. Register after `mockTransit` so this wins
+ * over the dry abort.
+ */
+export async function mockRainRadar(page: Page) {
+  await page.route("**/api.rainviewer.com/**", (route) =>
+    route.fulfill({
+      json: {
+        host: "https://tilecache.rainviewer.com",
+        radar: { past: [{ path: "/v2/radar/e2e" }] },
+      },
+    }),
+  );
+  await page.route("**/tilecache.rainviewer.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      headers: { "access-control-allow-origin": "*" },
+      body: RAIN_TILE_PNG,
+    }),
+  );
+}

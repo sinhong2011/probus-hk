@@ -65,6 +65,20 @@ export function ensureSunRideLayer(
   );
 }
 
+export function paintSunRide(instance: MlMap, sourceId: string, data: FeatureCollection) {
+  upsertSource(instance, sourceId, data);
+  const tones = [
+    ...new Set(
+      data.features.map((feature) =>
+        typeof feature.properties?.tone === "string" ? feature.properties.tone : "",
+      ),
+    ),
+  ].filter(Boolean);
+  const el = instance.getContainer();
+  if (tones.length) el.dataset.sunRide = tones.join(" ");
+  else delete el.dataset.sunRide;
+}
+
 export function clearSunRide(instance: MlMap, sourceId: string) {
-  upsertSource(instance, sourceId, EMPTY);
+  paintSunRide(instance, sourceId, EMPTY);
 }

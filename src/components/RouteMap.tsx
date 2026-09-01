@@ -41,7 +41,7 @@ import {
   upsertSource,
 } from "~/lib/mapKit";
 import { syncRainRadar } from "~/lib/mapRain";
-import { clearSunRide, ensureSunRideLayer, sunRideCollection } from "~/lib/mapSun";
+import { clearSunRide, ensureSunRideLayer, paintSunRide, sunRideCollection } from "~/lib/mapSun";
 import { useWalkRain } from "~/data/useWalkRain";
 import { settings } from "~/stores/settings";
 
@@ -1291,7 +1291,7 @@ export function RouteMap(props: {
         clearSunRide(instance, SRC_SUN);
         return;
       }
-      upsertSource(
+      paintSunRide(
         instance,
         SRC_SUN,
         sunRideCollection({

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { rainRasterSpec } from "~/lib/mapRain";
 import {
   districtOf,
   hkIsWet,
@@ -7,6 +8,7 @@ import {
   radarTileUrls,
   rainOfferReady,
   rainfallAt,
+  RAIN_TILE_MAX_ZOOM,
   walkRainCopy,
 } from "~/data/walkRain";
 
@@ -96,5 +98,13 @@ describe("radarTileUrls", () => {
     expect(urls).toEqual([
       "https://tilecache.rainviewer.com/v2/radar/abc/256/{z}/{x}/{y}/2/1_1.png",
     ]);
+  });
+
+  it("caps the raster at RainViewer's last real zoom, so street zoom overzooms", () => {
+    const spec = rainRasterSpec([
+      "https://tilecache.rainviewer.com/v2/radar/abc/256/{z}/{x}/{y}/2/1_1.png",
+    ]);
+    expect(spec.maxzoom).toBe(RAIN_TILE_MAX_ZOOM);
+    expect(RAIN_TILE_MAX_ZOOM).toBe(7);
   });
 });
