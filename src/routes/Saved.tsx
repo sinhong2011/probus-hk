@@ -717,7 +717,43 @@ export default function Saved() {
     <Page>
       <ScreenTitle
         title={t("saved", lang())}
+        /*
+         * Which bookmarks to look at, in the band rather than under it. The
+         * chips take whatever width the order chip leaves and scroll sideways
+         * past it: a filter row that holds a whole row of the screen open is
+         * paying list space for a question most riders answer once, and with
+         * the title spoken rather than drawn there was an empty half of the
+         * header sitting directly above it.
+         */
         trailing={
+          <Show when={resolved().length > 0 && groups().length > 0}>
+            <div class="app-scroll flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-0.5">
+              <FilterChip
+                label={t("allItems", lang())}
+                active={filter() === null}
+                onSelect={() => setFilter(null)}
+              />
+              <For each={groups()}>
+                {(group) => (
+                  <FilterChip
+                    label={group}
+                    color={groupColorVar(groupColor(group))}
+                    active={filter() === group}
+                    onSelect={() => setFilter(group)}
+                  />
+                )}
+              </For>
+              <Show when={hasUngrouped()}>
+                <FilterChip
+                  label={t("ungrouped", lang())}
+                  active={filter() === ""}
+                  onSelect={() => setFilter("")}
+                />
+              </Show>
+            </div>
+          </Show>
+        }
+        controls={
           <Show when={resolved().length > 0}>
             {/* Order is a setting made once, so it rides in the header
                 wearing its own answer rather than holding a row open above
@@ -837,42 +873,6 @@ export default function Saved() {
         }
       >
         <div class="flex flex-col gap-6">
-          {/*
-           * The only band of controls above the list, and it answers one
-           * question: which bookmarks to look at. Order is a different kind of
-           * question and now lives in the header - two rows of identically
-           * shaped pills, one filtering and one sorting, read as one confused
-           * control rather than as two.
-           */}
-          <Show when={groups().length > 0}>
-            <div class="-mb-2">
-              <div class="flex items-center gap-2 overflow-x-auto pb-0.5 app-scroll">
-                <FilterChip
-                  label={t("allItems", lang())}
-                  active={filter() === null}
-                  onSelect={() => setFilter(null)}
-                />
-                <For each={groups()}>
-                  {(group) => (
-                    <FilterChip
-                      label={group}
-                      color={groupColorVar(groupColor(group))}
-                      active={filter() === group}
-                      onSelect={() => setFilter(group)}
-                    />
-                  )}
-                </For>
-                <Show when={hasUngrouped()}>
-                  <FilterChip
-                    label={t("ungrouped", lang())}
-                    active={filter() === ""}
-                    onSelect={() => setFilter("")}
-                  />
-                </Show>
-              </div>
-            </div>
-          </Show>
-
           <Show when={position() === null}>
             <p class="-mb-3 text-[0.75rem] font-medium text-subtle-foreground">
               {t("noLocation", lang())}

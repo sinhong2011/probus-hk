@@ -109,10 +109,9 @@ export default function Notices() {
       <ScreenTitle
         title={t("notices", lang())}
         subtitle={status() || undefined}
-        /* The same button in the slot each width wants it in: beside the
-           status on a phone, at the far end of the bar on a desktop. */
-        trailing={wide() ? undefined : again()}
-        controls={wide() ? again() : undefined}
+        /* One slot at every width now that the band is one row - the button
+           keeps the far end, and only its shape follows the room it has. */
+        controls={again()}
       />
 
       <Show

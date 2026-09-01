@@ -184,10 +184,14 @@ export function LivePill(props: { label: string }) {
 }
 
 /**
- * The screen's own header: large Chinese over a small roman subtitle on a
- * phone, and on a wide screen the toolbar the window has room for - title,
- * context and the screen's controls on one line, held to the top while the
- * list scrolls under it.
+ * The screen's own header: context on one side, the screen's controls on the
+ * other, held to the top of a wide window while the list scrolls under it.
+ *
+ * One line at every width. The title is spoken but not drawn, so stacking the
+ * context over the controls on a phone spent a whole row saying nothing - an
+ * empty half above a lonely chip - and the two halves of one band read as two
+ * unrelated ones. The context takes the room that is left and truncates; the
+ * controls keep their size.
  *
  * The controls belong here rather than on a row of their own below: a desktop
  * window is short and wide, and a second band of chips pushed the first card
@@ -201,7 +205,11 @@ export function ScreenTitle(props: {
    * at a time, and printing both is a translation exercise, not a heading.
    */
   subtitle?: string;
-  /** Context for the screen - where you are, what is live - beside the title. */
+  /**
+   * Context for the screen - where you are, what the list is cut to - at the
+   * head of the band. It gets the room the controls do not use, so anything
+   * that can outgrow it should truncate or scroll on its own.
+   */
   trailing?: JSX.Element;
   /**
    * A row above the title, in practice the breadcrumb. It belongs inside the
@@ -209,7 +217,7 @@ export function ScreenTitle(props: {
    * padding, and anything left sitting there is what it covers.
    */
   lead?: JSX.Element;
-  /** The screen's controls, right-aligned in the toolbar on a wide screen. */
+  /** The screen's controls, at the far end of the band and never squeezed. */
   controls?: JSX.Element;
   /**
    * Held to the top of a wide window while the page scrolls. Off inside a
@@ -241,26 +249,24 @@ export function ScreenTitle(props: {
     >
       {props.lead}
 
-      <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-        <div class="flex items-end justify-between gap-4 lg:min-w-0 lg:items-baseline lg:justify-start lg:gap-3">
-          <div class="flex min-w-0 shrink-0 flex-col gap-[3px] lg:flex-row lg:items-baseline lg:gap-2.5">
-            {/* The name stays for screen readers; visually the tab bar and
-                the sidebar already say where you are, and the heading
-                repeating them was the tallest thing on every screen. */}
-            <h1 class="sr-only">{props.title}</h1>
-            <Show when={props.subtitle}>
-              <span class="text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
-                {props.subtitle}
-              </span>
-            </Show>
-          </div>
+      <div class="flex items-center justify-between gap-3 lg:gap-6">
+        <div class="flex min-w-0 flex-1 items-center gap-2.5 lg:items-baseline">
+          {/* The name stays for screen readers; visually the tab bar and
+              the sidebar already say where you are, and the heading
+              repeating them was the tallest thing on every screen. */}
+          <h1 class="sr-only">{props.title}</h1>
+          <Show when={props.subtitle}>
+            <span class="truncate text-[0.88rem] font-semibold tracking-[0.02em] text-subtle-foreground lg:text-[0.81rem] lg:uppercase lg:tracking-[0.14em]">
+              {props.subtitle}
+            </span>
+          </Show>
           <Show when={props.trailing}>
-            <div class="flex min-w-0 justify-end lg:pl-2">{props.trailing}</div>
+            <div class="flex min-w-0 flex-1">{props.trailing}</div>
           </Show>
         </div>
 
         <Show when={props.controls}>
-          <div class="flex items-center gap-2 lg:shrink-0 lg:justify-end">{props.controls}</div>
+          <div class="flex shrink-0 items-center gap-2 lg:justify-end">{props.controls}</div>
         </Show>
       </div>
     </div>
