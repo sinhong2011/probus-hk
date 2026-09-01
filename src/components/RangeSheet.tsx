@@ -235,11 +235,7 @@ export default function RangeSheet(props: {
       label={t("searchRange", lang())}
       class={wide() ? "" : "sm:max-w-[32rem]"}
     >
-      <DrawerHeader
-        title={t("searchRange", lang())}
-        onClose={() => sheets.closeRange()}
-        closeLabel={t("close", lang())}
-      />
+      <DrawerHeader title={t("searchRange", lang())} />
 
       <div class="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6">
         <div

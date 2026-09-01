@@ -351,11 +351,7 @@ function LinesSheet(props: { lang: Lang; onLine: (code: string) => void; onClose
 
   return (
     <div class="flex flex-col pb-2.5">
-      <DrawerHeader
-        title={t("allLines", props.lang)}
-        onClose={props.onClose}
-        closeLabel={t("close", props.lang)}
-      >
+      <DrawerHeader title={t("allLines", props.lang)}>
         <span class="text-[0.75rem] font-medium text-subtle-foreground">
           {t("networkMap", props.lang)}
         </span>
@@ -436,7 +432,7 @@ function StationSheet(props: {
 
   return (
     <div class="flex flex-col pb-3">
-      <DrawerHeader title={name()} onClose={props.onClose} closeLabel={t("close", props.lang)}>
+      <DrawerHeader title={name()}>
         <Show when={props.here}>
           <Chip tone="accent" class="shrink-0">
             <PinIcon size={11} />
@@ -553,8 +549,6 @@ function LineSheet(props: {
                   <span class="truncate">{OPERATORS.lightRail.name[props.lang]}</span>
                 </span>
               }
-              onClose={props.onClose}
-              closeLabel={t("close", props.lang)}
             >
               <span class="tnum text-[0.75rem] font-medium text-subtle-foreground">
                 {trams().length} {t("routes", props.lang)}
@@ -589,8 +583,6 @@ function LineSheet(props: {
                 <span class="truncate">{pick(lineName(props.code), props.lang)}</span>
               </span>
             }
-            onClose={props.onClose}
-            closeLabel={t("close", props.lang)}
           >
             <span class="tnum text-[0.75rem] font-medium text-subtle-foreground">
               {stations().length} {t("stops", props.lang)}

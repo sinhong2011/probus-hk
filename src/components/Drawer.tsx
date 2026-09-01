@@ -262,43 +262,22 @@ export function Drawer(props: DrawerProps) {
 }
 
 /**
- * The header a sheet over a map wants: a title, a line under it, and the way
- * out. Set as shadcn sets its drawer header - padded, the title at base
- * weight, the line under it muted - with the close as the small ghost cross
- * shadcn puts in the corner of what it opens.
+ * The header a sheet over a map wants: a title and a line under it. Set as
+ * shadcn sets its drawer header - padded, the title at base weight, the line
+ * under it muted. Sheets dismiss by drag, scrim tap, or Escape instead of a
+ * corner close button.
  */
 export function DrawerHeader(props: {
   title: JSX.Element;
-  onClose: () => void;
-  closeLabel: string;
   /** The line under the title: a count, a chip, what the sheet is for. */
   children?: JSX.Element;
 }) {
   return (
-    <div class="relative flex shrink-0 flex-col gap-0.5 p-4 pb-3 pr-12">
+    <div class="relative flex shrink-0 flex-col gap-0.5 p-4 pb-3">
       <h2 class="truncate text-base font-medium text-foreground">{props.title}</h2>
       <Show when={props.children}>
         <div class="flex items-center gap-2 text-sm text-muted-foreground">{props.children}</div>
       </Show>
-      <button
-        type="button"
-        onClick={props.onClose}
-        aria-label={props.closeLabel}
-        class="app-press absolute right-3 top-3 flex size-8 items-center justify-center rounded-md text-foreground opacity-70 transition-opacity duration-state active:opacity-100"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          aria-hidden="true"
-        >
-          <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
-        </svg>
-      </button>
     </div>
   );
 }
