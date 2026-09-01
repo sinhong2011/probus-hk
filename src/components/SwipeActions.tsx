@@ -2,19 +2,14 @@ import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { ChevronLeftIcon } from "./Icons";
 
-/** A mouse or trackpad that can hover: swipe is not the obvious gesture there. */
-const FINE_POINTER = "(hover: hover) and (pointer: fine)";
-
-const finePointer = () => typeof matchMedia === "function" && matchMedia(FINE_POINTER).matches;
-
 /**
  * The face of a row that slides aside to show the deeds behind it.
  *
  * iOS Mail's gesture: a horizontal pan reveals the actions, a vertical pan
  * is left to the page (`touch-action: pan-y` on the face). The parent says
- * which row is open, so opening one closes the rest. On a pointing device
- * the face peeks a sliver of colour and a chevron, because a mouse-drag
- * swipe is not something anyone looks for.
+ * which row is open, so opening one closes the rest. A pointing device gets
+ * a hover chevron instead of a peek: the rightmost deed is Delete, and a
+ * sliver of that red reads as a broken row, not as a handle.
  */
 export function SwipeActions(props: {
   open: boolean;
@@ -31,15 +26,6 @@ export function SwipeActions(props: {
   const [offset, setOffset] = createSignal(0, { ownedWrite: true });
   const [dragging, setDragging] = createSignal(false, { ownedWrite: true });
   const [width, setWidth] = createSignal(0, { ownedWrite: true });
-  const [peeking, setPeeking] = createSignal(false, { ownedWrite: true });
-
-  const PEEK = 16;
-
-  const shift = () => {
-    if (dragging()) return offset();
-    if (props.open) return width();
-    return peeking() ? Math.min(PEEK, width() || PEEK) : offset();
-  };
 
   const watchActions = (el: HTMLElement) => {
     const measure = () => setWidth(el.offsetWidth);
@@ -106,17 +92,10 @@ export function SwipeActions(props: {
     tracking = true;
     startX = event.clientX;
     startY = event.clientY;
-    startOffset = shift();
+    startOffset = offset();
     axis = null;
     moved = false;
   };
-
-  const onMouseEnter = () => {
-    if (!finePointer() || props.open) return;
-    setPeeking(true);
-  };
-
-  const onMouseLeave = () => setPeeking(false);
 
   const onPointerMove = (event: PointerEvent) => {
     if (!tracking) return;
@@ -193,8 +172,6 @@ export function SwipeActions(props: {
       class={["app-swipe relative overflow-hidden", props.class ?? ""]}
       data-swipe-open={props.open ? "" : undefined}
       onKeyDown={onKeyDown}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       <div
         ref={watchActions}
@@ -209,7 +186,7 @@ export function SwipeActions(props: {
         class="app-swipe-face relative bg-card"
         data-dragging={dragging() ? "" : undefined}
         style={{
-          translate: `-${shift()}px 0`,
+          translate: `-${offset()}px 0`,
           "pointer-events": props.open ? "auto" : undefined,
         }}
         onPointerDown={onPointerDown}
@@ -229,7 +206,7 @@ export function SwipeActions(props: {
               event.stopPropagation();
               props.onOpen();
             }}
-            class="app-swipe-hint absolute inset-y-0 right-0 z-10 items-center justify-center px-1.5 text-faint-foreground"
+            class="app-swipe-hint absolute inset-y-0 right-0 z-10 items-center justify-center bg-card px-2 text-faint-foreground"
           >
             <ChevronLeftIcon size={14} />
           </button>

@@ -790,7 +790,8 @@
   }
   /*
    * A pointing device gets a hover chevron instead of having to discover a
-   * mouse-drag swipe. Hidden on touch: the gesture itself is the control.
+   * mouse-drag swipe. It sits on the card: peeking the deeds would show a
+   * sliver of Delete, which reads as a broken row. Hidden on touch.
    */
   .app-swipe-hint {
     display: none;
