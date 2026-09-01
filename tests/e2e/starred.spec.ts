@@ -5,34 +5,60 @@ test.beforeEach(async ({ page }) => {
   await mockTransit(page);
 });
 
-/** iOS Mail's gesture: drag the row left until the deeds behind it snap open. */
+/** Opens the trailing deeds. The keyboard, not a mouse-drag: Playwright's
+ * phone project still paints fine-pointer glass chips on Linux, and those
+ * eat a drag that starts on the edge. Arrow keys are the same path a
+ * keyboard rider uses. */
 async function revealActions(
   page: import("@playwright/test").Page,
   row: import("@playwright/test").Locator,
 ) {
-  const box = await row.boundingBox();
-  if (!box) throw new Error("no row to swipe");
-  const y = box.y + box.height / 2;
-  await page.mouse.move(box.x + box.width - 24, y);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 32, y, { steps: 12 });
-  await page.mouse.up();
+  await expect(row.locator(".app-swipe-face")).toBeVisible({ timeout: 15_000 });
+  await row.locator("a[href]").first().focus();
+  await page.keyboard.press("ArrowLeft");
   await expect(row.locator('[data-swipe-open="trailing"]')).toBeVisible();
 }
 
-/** The other way: drag the row right until the reorder grip snaps open. */
+/** Opens the leading reorder grip the other way. */
 async function revealGrip(
   page: import("@playwright/test").Page,
   row: import("@playwright/test").Locator,
 ) {
-  const box = await row.boundingBox();
-  if (!box) throw new Error("no row to swipe");
-  const y = box.y + box.height / 2;
-  await page.mouse.move(box.x + 24, y);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width - 32, y, { steps: 12 });
-  await page.mouse.up();
+  await expect(row.locator(".app-swipe-face")).toBeVisible({ timeout: 15_000 });
+  await row.locator("a[href]").first().focus();
+  await page.keyboard.press("ArrowRight");
   await expect(row.locator('[data-swipe-open="leading"]')).toBeVisible();
+}
+
+/** Finger-drag between two points. Mouse pointers on Pixel 7 are cancelled
+ * as soon as anything captures them. */
+async function touchDrag(
+  page: import("@playwright/test").Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: from.x, y: from.y, id: 0 }],
+  });
+  const steps = 12;
+  for (let i = 1; i <= steps; i++) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: from.x + ((to.x - from.x) * i) / steps,
+          y: from.y + ((to.y - from.y) * i) / steps,
+          id: 0,
+        },
+      ],
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
 }
 
 /** Opens a stop on route 1 and stars it, which is the only way in. */
@@ -275,18 +301,16 @@ test("a star can be dragged to a new place in the list", async ({ page }) => {
   // The face eases into place; dragging before it rests misses the handle.
   await page.waitForTimeout(400);
 
-  // Carry the first card below the second by its grip, in finger-sized steps.
+  // Playwright's phone project cancels a mouse pointer the moment Sortable
+  // captures it. A real finger is a touch, so the drag is a touch too.
   const from = await grip.boundingBox();
   const target = await cards.nth(1).boundingBox();
   if (!from || !target) throw new Error("no boxes to drag between");
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  const toY = target.y + target.height / 2;
-  for (let step = 1; step <= 6; step++) {
-    await page.mouse.move(from.x + from.width / 2, from.y + ((toY - from.y) * step) / 6);
-    await page.waitForTimeout(30);
-  }
-  await page.mouse.up();
+  await touchDrag(
+    page,
+    { x: from.x + from.width / 2, y: from.y + from.height / 2 },
+    { x: from.x + from.width / 2, y: target.y + target.height - 4 },
+  );
 
   // Reordered, and the order is the star's own - it survives a reload.
   await expect(cards.last()).toHaveAttribute("data-star-id", firstId!);

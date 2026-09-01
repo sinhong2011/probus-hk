@@ -140,7 +140,12 @@ export function SwipeActions(props: {
       if (axis !== "x") return;
       moved = true;
       setDragging(true);
-      face?.setPointerCapture(event.pointerId);
+      // Mouse already keeps delivering moves while the button is held.
+      // Capturing a mouse pointer on a touch-emulated page (Playwright's
+      // Pixel 7) cancels the gesture, so the rest of the drag never arrives.
+      if (event.pointerType !== "mouse") {
+        face?.setPointerCapture(event.pointerId);
+      }
     }
     if (axis !== "x") return;
     moved = true;
@@ -257,7 +262,7 @@ export function SwipeActions(props: {
         <div class="app-swipe-body" style={{ "pointer-events": open() ? "none" : undefined }}>
           {props.children}
         </div>
-        <Show when={props.hintLabel}>
+        <Show when={props.hintLabel && !open()}>
           <button
             type="button"
             data-swipe-hint
@@ -267,13 +272,13 @@ export function SwipeActions(props: {
               event.stopPropagation();
               props.onOpen("trailing");
             }}
-            class="app-swipe-hint app-press app-glass absolute top-1/2 right-1.5 mt-[-1rem] flex size-8 items-center justify-center rounded-full text-foreground"
+            class="app-swipe-hint app-press app-glass absolute top-1/2 right-1.5 mt-[-1rem] size-8 items-center justify-center rounded-full text-foreground"
           >
             <ChevronLeftIcon size={15} />
             <span class="sr-only">{props.hintLabel}</span>
           </button>
         </Show>
-        <Show when={props.leadingHintLabel && leadingW() > 0}>
+        <Show when={props.leadingHintLabel && leadingW() > 0 && !open()}>
           <button
             type="button"
             data-swipe-hint
@@ -283,7 +288,7 @@ export function SwipeActions(props: {
               event.stopPropagation();
               props.onOpen("leading");
             }}
-            class="app-swipe-hint app-press app-glass absolute top-1/2 left-1.5 mt-[-1rem] flex size-8 items-center justify-center rounded-full text-foreground"
+            class="app-swipe-hint app-press app-glass absolute top-1/2 left-1.5 mt-[-1rem] size-8 items-center justify-center rounded-full text-foreground"
           >
             <ChevronRightIcon size={15} />
             <span class="sr-only">{props.leadingHintLabel}</span>

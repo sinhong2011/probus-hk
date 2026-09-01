@@ -793,23 +793,23 @@
    * A pointing device must not peek those deeds: the trailing rightmost
    * is Delete, and a sliver of that red reads as a broken row. Hover
    * slides a liquid-glass chip onto each edge; a click opens that side.
-   * Touch never hovers, so none of this paints on a phone.
+   * Phone layout never paints them.
    */
-  .app-swipe-hint {
-    display: none;
+  .app-swipe .app-swipe-hint {
+    display: none !important;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .app-swipe-hint {
-      display: flex;
+  @media (hover: hover) and (pointer: fine) and (min-width: 64rem) {
+    .app-swipe .app-swipe-hint {
+      display: flex !important;
       pointer-events: none;
       opacity: 0;
       scale: 0.94;
       z-index: 10;
     }
-    .app-swipe-hint[data-edge="trailing"] {
+    .app-swipe .app-swipe-hint[data-edge="trailing"] {
       translate: 8px 0;
     }
-    .app-swipe-hint[data-edge="leading"] {
+    .app-swipe .app-swipe-hint[data-edge="leading"] {
       translate: -8px 0;
     }
     .app-swipe:not([data-swipe-open]):hover .app-swipe-face:not([data-dragging]) .app-swipe-hint,
@@ -823,7 +823,7 @@
       padding-inline: 2rem;
     }
   }
-  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (pointer: fine) and (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
     .app-swipe-hint {
       transition:
         opacity var(--duration-reveal) var(--ease-out),
