@@ -180,6 +180,7 @@ function StarredRow(props: {
         onOpen={props.onOpen}
         onClose={props.onClose}
         onEngage={props.onEngage}
+        hintLabel={t("more", props.lang)}
         actions={
           <>
             <SwipeDeed
@@ -197,6 +198,7 @@ function StarredRow(props: {
             </Show>
             <SwipeDeed
               label={props.entry.item.group || t("noGroup", props.lang)}
+              caption={t("groupLabel", props.lang)}
               onPress={closeThen(props.onRegroup)}
             >
               <LayersIcon size={16} />

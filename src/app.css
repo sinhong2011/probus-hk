@@ -789,6 +789,24 @@
     }
   }
   /*
+   * A pointing device gets a hover chevron instead of having to discover a
+   * mouse-drag swipe. Hidden on touch: the gesture itself is the control.
+   */
+  .app-swipe-hint {
+    display: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .app-swipe-hint {
+      display: flex;
+      opacity: 0;
+      transition: opacity 0.15s var(--ease-out);
+    }
+    .app-swipe:hover .app-swipe-hint,
+    .app-swipe-hint:focus-visible {
+      opacity: 1;
+    }
+  }
+  /*
    * Liquid-glass surface for controls floating over imagery - the map's
    * buttons and its status note. Mostly the picture behind it, bent: a heavy
    * blur with a saturation lift so the colours underneath pool instead of

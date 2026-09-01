@@ -116,6 +116,10 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
   // Deeds live behind a swipe, so the list itself stays a list of arrivals.
   const row = page.locator("[data-star-id]").first();
   await revealActions(page, row);
+  await expect(row.getByText("置頂", { exact: true })).toBeVisible();
+  await expect(row.getByText("換站")).toBeVisible();
+  await expect(row.getByText("分組")).toBeVisible();
+  await expect(row.getByText("移除")).toBeVisible();
   await page.getByRole("button", { name: "唔分組" }).click();
 
   await page.getByRole("textbox", { name: "新增分組" }).fill("返工");
@@ -148,6 +152,18 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
     "true",
     { timeout: 15_000 },
   );
+});
+
+test("an open swipe closes on a tap, without following the route", async ({ page }) => {
+  await star(page, 1);
+  await page.goto("/starred");
+  const row = page.locator("[data-star-id]").first();
+  await expect(row.locator('a[href^="/route/"]')).toBeVisible({ timeout: 15_000 });
+
+  await revealActions(page, row);
+  await row.locator("a").click();
+  await expect(row.locator("[data-swipe-open]")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/starred/);
 });
 
 test("a star can be moved to another stop on its route", async ({ page }) => {

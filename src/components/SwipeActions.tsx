@@ -1,12 +1,21 @@
-import { createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import { ChevronLeftIcon } from "./Icons";
+
+/** A mouse or trackpad that can hover: swipe is not the obvious gesture there. */
+const FINE_POINTER = "(hover: hover) and (pointer: fine)";
+
+const finePointer = () =>
+  typeof matchMedia === "function" && matchMedia(FINE_POINTER).matches;
 
 /**
  * The face of a row that slides aside to show the deeds behind it.
  *
  * iOS Mail's gesture: a horizontal pan reveals the actions, a vertical pan
  * is left to the page (`touch-action: pan-y` on the face). The parent says
- * which row is open, so opening one closes the rest.
+ * which row is open, so opening one closes the rest. On a pointing device
+ * the face peeks a sliver of colour and a chevron, because a mouse-drag
+ * swipe is not something anyone looks for.
  */
 export function SwipeActions(props: {
   open: boolean;
@@ -14,6 +23,8 @@ export function SwipeActions(props: {
   onClose: () => void;
   /** Fires as the finger lands, so a sibling that is already open can close. */
   onEngage?: () => void;
+  /** Spoken name of the hover chevron; omit it and the chevron stays off. */
+  hintLabel?: string;
   actions: JSX.Element;
   children: JSX.Element;
   class?: string;
@@ -21,6 +32,15 @@ export function SwipeActions(props: {
   const [offset, setOffset] = createSignal(0, { ownedWrite: true });
   const [dragging, setDragging] = createSignal(false, { ownedWrite: true });
   const [width, setWidth] = createSignal(0, { ownedWrite: true });
+  const [peeking, setPeeking] = createSignal(false, { ownedWrite: true });
+
+  const PEEK = 16;
+
+  const shift = () => {
+    if (dragging()) return offset();
+    if (props.open) return width();
+    return peeking() ? Math.min(PEEK, width() || PEEK) : offset();
+  };
 
   const watchActions = (el: HTMLElement) => {
     const measure = () => setWidth(el.offsetWidth);
@@ -82,14 +102,22 @@ export function SwipeActions(props: {
     if (event.button !== 0) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("[data-drag-handle]")) return;
+    if (target?.closest("[data-swipe-hint]")) return;
     props.onEngage?.();
     tracking = true;
     startX = event.clientX;
     startY = event.clientY;
-    startOffset = offset();
+    startOffset = shift();
     axis = null;
     moved = false;
   };
+
+  const onMouseEnter = () => {
+    if (!finePointer() || props.open) return;
+    setPeeking(true);
+  };
+
+  const onMouseLeave = () => setPeeking(false);
 
   const onPointerMove = (event: PointerEvent) => {
     if (!tracking) return;
@@ -155,9 +183,11 @@ export function SwipeActions(props: {
 
   return (
     <div
-      class={["relative overflow-hidden", props.class ?? ""]}
+      class={["app-swipe relative overflow-hidden", props.class ?? ""]}
       data-swipe-open={props.open ? "" : undefined}
       onKeyDown={onKeyDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div
         ref={watchActions}
@@ -173,7 +203,7 @@ export function SwipeActions(props: {
         }}
         class="app-swipe-face relative bg-card"
         data-dragging={dragging() ? "" : undefined}
-        style={{ translate: `-${offset()}px 0` }}
+        style={{ translate: `-${shift()}px 0` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -181,6 +211,22 @@ export function SwipeActions(props: {
         onClick={onClick}
       >
         {props.children}
+        <Show when={props.hintLabel && !props.open}>
+          <button
+            type="button"
+            data-swipe-hint
+            tabIndex={-1}
+            aria-label={props.hintLabel}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              props.onOpen();
+            }}
+            class="app-swipe-hint absolute inset-y-0 right-0 z-10 items-center justify-center px-1.5 text-faint-foreground"
+          >
+            <ChevronLeftIcon size={14} />
+          </button>
+        </Show>
       </div>
     </div>
   );
@@ -189,6 +235,8 @@ export function SwipeActions(props: {
 /** One deed behind a swipe, the full height of the row. */
 export function SwipeDeed(props: {
   label: string;
+  /** Drawn under the icon; the aria label stays `label` if they differ. */
+  caption?: string;
   onPress: () => void;
   kind?: "primary" | "muted" | "danger";
   pressed?: boolean;
@@ -202,7 +250,7 @@ export function SwipeDeed(props: {
       aria-pressed={props.pressed === undefined ? undefined : props.pressed ? "true" : "false"}
       onClick={props.onPress}
       class={[
-        "flex w-14 shrink-0 flex-col items-center justify-center gap-1",
+        "flex min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 px-1.5",
         {
           "bg-primary text-primary-foreground": kind() === "primary",
           "bg-muted-foreground text-background": kind() === "muted",
@@ -211,6 +259,12 @@ export function SwipeDeed(props: {
       ]}
     >
       {props.children}
+      <span
+        aria-hidden="true"
+        class="max-w-[4.25rem] text-center text-[0.625rem] leading-[1.15] font-bold break-words"
+      >
+        {props.caption ?? props.label}
+      </span>
     </button>
   );
 }
