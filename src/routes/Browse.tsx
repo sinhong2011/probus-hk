@@ -103,10 +103,7 @@ function SortStrip(props: {
               {t(sort.label, props.lang)}
               {/* Held even while off, or lighting a sort grew the chip and
                   the row wrapped under it. */}
-              <span
-                aria-hidden="true"
-                class={["tnum w-3 text-center", { invisible: !on() }]}
-              >
+              <span aria-hidden="true" class={["tnum w-3 text-center", { invisible: !on() }]}>
                 {props.sorted(sort.id) === "desc" ? "↓" : "↑"}
               </span>
             </button>

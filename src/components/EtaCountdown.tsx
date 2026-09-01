@@ -168,11 +168,13 @@ export function EtaCountdown(props: {
    * Holding it empty on a live-only row left a word-width hole between the
    * destination and the minutes.
    */
-  const booked = () =>
-    !props.waitOnly && upcoming().some((entry) => entry.state.scheduled);
+  const booked = () => !props.waitOnly && upcoming().some((entry) => entry.state.scheduled);
 
   return (
-    <Show when={props.etas !== undefined} fallback={<EtaSkeleton size={size()} class={props.class} />}>
+    <Show
+      when={props.etas !== undefined}
+      fallback={<EtaSkeleton size={size()} class={props.class} />}
+    >
       <Show
         when={upcoming().length > 0}
         fallback={
@@ -265,39 +267,39 @@ export function EtaCountdown(props: {
                   }
                 >
                   <div class="contents">
-                  {/* What the operator said about this one - and the thing it
+                    {/* What the operator said about this one - and the thing it
                       says most often that matters is that it is the last. */}
-                  <span class="flex items-center justify-end gap-[3px]">
-                    <Show when={!props.waitOnly}>
-                      <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
-                      {/* Clock first: "12:33" is the thing a watch already
+                    <span class="flex items-center justify-end gap-[3px]">
+                      <Show when={!props.waitOnly}>
+                        <EtaRemark state={state()} lang={props.lang} notices={props.notices} />
+                        {/* Clock first: "12:33" is the thing a watch already
                           knows, and the minutes after it are how long until
                           then. After the wait it read as a footnote. */}
-                      <Show when={hero() && !gone() && clock() && leadAt()}>
-                        <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
-                          {clockTime(leadAt() as Date)}
-                        </span>
+                        <Show when={hero() && !gone() && clock() && leadAt()}>
+                          <span class="tnum text-[0.75rem] font-semibold text-faint-foreground">
+                            {clockTime(leadAt() as Date)}
+                          </span>
+                        </Show>
                       </Show>
-                    </Show>
-                  </span>
-                  <Show when={booked()}>
-                    {/* One cell, no nested span: an empty wrapper still
+                    </span>
+                    <Show when={booked()}>
+                      {/* One cell, no nested span: an empty wrapper still
                         threw a line-box at the parent's leading, so a stack
                         with one timetable guess was taller than three live
                         times. Empty when live; the column width comes from
                         the row that actually says the word. */}
+                      <span
+                        class={[
+                          "hidden min-w-0 items-center justify-end overflow-hidden whitespace-nowrap text-[0.69rem] font-semibold leading-none text-faint-foreground lg:flex",
+                          { "pr-1.5": state().scheduled },
+                        ]}
+                      >
+                        {state().scheduled ? t("scheduled", props.lang) : ""}
+                      </span>
+                    </Show>
                     <span
                       class={[
-                        "hidden min-w-0 items-center justify-end overflow-hidden whitespace-nowrap text-[0.69rem] font-semibold leading-none text-faint-foreground lg:flex",
-                        { "pr-1.5": state().scheduled },
-                      ]}
-                    >
-                      {state().scheduled ? t("scheduled", props.lang) : ""}
-                    </span>
-                  </Show>
-                  <span
-                    class={[
-                      "flex items-center justify-end tnum font-bold tracking-[-0.05em] leading-none motion-safe:transition-[font-size,color] motion-safe:duration-reveal",
+                        "flex items-center justify-end tnum font-bold tracking-[-0.05em] leading-none motion-safe:transition-[font-size,color] motion-safe:duration-reveal",
                         {
                           /*
                            * Struck rather than merely dimmed: shape survives a
@@ -322,7 +324,8 @@ export function EtaCountdown(props: {
                            * wears the list's size and ink, or the first wait
                            * is a different kind of row from the two under it.
                            */
-                          "text-primary": hero() && !gone() && !state().scheduled && !props.waitOnly,
+                          "text-primary":
+                            hero() && !gone() && !state().scheduled && !props.waitOnly,
                           "text-primary/70":
                             hero() && !gone() && (state().scheduled || props.waitOnly),
                           "text-subtle-foreground": !hero() && !gone(),

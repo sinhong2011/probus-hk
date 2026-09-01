@@ -430,82 +430,79 @@ function LaterArrivals(props: {
 
   return (
     <Show when={rows().length > 0}>
-      <div
-        data-later-arrivals
-        class={`flex min-w-0 flex-col gap-0.5 ${props.class ?? ""}`}
-      >
+      <div data-later-arrivals class={`flex min-w-0 flex-col gap-0.5 ${props.class ?? ""}`}>
         {/* Keyed by position: the tick rebuilds these objects every second,
             and a value-keyed list would remount the digits with it. */}
         <For each={rows()} keyed={false}>
           {(row, index) => {
             const lead = props.lead && index === 0;
             return (
-            <span
-              // The digits are hidden from assistive tech (ten per column),
-              // so the spoken value has to live on the line itself.
-              aria-label={[
-                settings.clockTimes() ? clockTime(row().at) : "",
-                `${row().state.kind === "arriving" ? 0 : row().state.minutes} ${t("minute", props.lang)}`,
-                row().state.remark ? pick(row().state.remark as Bilingual, props.lang) : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              // A frame apart, so the pair reads as arriving in order rather
-              // than as one block appearing.
-              style={{ "animation-delay": `${index * 45}ms` }}
-              class="app-pop flex w-full items-baseline justify-between gap-3"
-            >
-              <span class="flex min-w-0 items-baseline gap-[3px]">
-                <EtaRemark state={row().state} lang={props.lang} notices={false} />
-                <Show when={settings.clockTimes()}>
-                  <span class="tnum text-[0.75rem] font-semibold tracking-tight text-faint-foreground">
-                    {clockTime(row().at)}
-                  </span>
-                </Show>
-              </span>
-
               <span
-                ref={(el) => {
-                  if (lead && el) props.land?.(el);
-                }}
-                class={["flex shrink-0 items-baseline gap-[3px]", { invisible: lead }]}
+                // The digits are hidden from assistive tech (ten per column),
+                // so the spoken value has to live on the line itself.
+                aria-label={[
+                  settings.clockTimes() ? clockTime(row().at) : "",
+                  `${row().state.kind === "arriving" ? 0 : row().state.minutes} ${t("minute", props.lang)}`,
+                  row().state.remark ? pick(row().state.remark as Bilingual, props.lang) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                // A frame apart, so the pair reads as arriving in order rather
+                // than as one block appearing.
+                style={{ "animation-delay": `${index * 45}ms` }}
+                class="app-pop flex w-full items-baseline justify-between gap-3"
               >
-                <Show
-                  when={row().state.kind !== "arriving"}
-                  fallback={
-                    <>
-                      <span
-                        class="size-[7px] self-center rounded-full bg-warning motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]"
-                        style={{
-                          "box-shadow":
-                            "0 0 0 3px color-mix(in srgb, var(--warning) 16%, transparent)",
-                        }}
-                      />
-                      <span class="text-[1rem] font-bold leading-none tracking-tight text-warning">
-                        {t("arriving", props.lang)}
-                      </span>
-                    </>
-                  }
-                >
-                  <Show when={row().state.kind !== "arriving"}>
-                    <span
-                      class={[
-                        "hidden whitespace-nowrap text-[0.69rem] font-semibold leading-none text-faint-foreground lg:inline",
-                        { invisible: !row().state.scheduled },
-                      ]}
-                    >
-                      {t("scheduled", props.lang)}
+                <span class="flex min-w-0 items-baseline gap-[3px]">
+                  <EtaRemark state={row().state} lang={props.lang} notices={false} />
+                  <Show when={settings.clockTimes()}>
+                    <span class="tnum text-[0.75rem] font-semibold tracking-tight text-faint-foreground">
+                      {clockTime(row().at)}
                     </span>
                   </Show>
-                  <span class="tnum min-w-[2.5rem] shrink-0 text-right text-[1.13rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
-                    <RollingNumber value={row().state.minutes} />
-                  </span>
-                  <span class="shrink-0 text-[0.75rem] font-semibold text-subtle-foreground">
-                    {t("minute", props.lang)}
-                  </span>
-                </Show>
+                </span>
+
+                <span
+                  ref={(el) => {
+                    if (lead && el) props.land?.(el);
+                  }}
+                  class={["flex shrink-0 items-baseline gap-[3px]", { invisible: lead }]}
+                >
+                  <Show
+                    when={row().state.kind !== "arriving"}
+                    fallback={
+                      <>
+                        <span
+                          class="size-[7px] self-center rounded-full bg-warning motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]"
+                          style={{
+                            "box-shadow":
+                              "0 0 0 3px color-mix(in srgb, var(--warning) 16%, transparent)",
+                          }}
+                        />
+                        <span class="text-[1rem] font-bold leading-none tracking-tight text-warning">
+                          {t("arriving", props.lang)}
+                        </span>
+                      </>
+                    }
+                  >
+                    <Show when={row().state.kind !== "arriving"}>
+                      <span
+                        class={[
+                          "hidden whitespace-nowrap text-[0.69rem] font-semibold leading-none text-faint-foreground lg:inline",
+                          { invisible: !row().state.scheduled },
+                        ]}
+                      >
+                        {t("scheduled", props.lang)}
+                      </span>
+                    </Show>
+                    <span class="tnum min-w-[2.5rem] shrink-0 text-right text-[1.13rem] font-bold leading-none tracking-[-0.03em] text-primary/70">
+                      <RollingNumber value={row().state.minutes} />
+                    </span>
+                    <span class="shrink-0 text-[0.75rem] font-semibold text-subtle-foreground">
+                      {t("minute", props.lang)}
+                    </span>
+                  </Show>
+                </span>
               </span>
-            </span>
             );
           }}
         </For>
@@ -1168,7 +1165,9 @@ function StopRow(props: {
                 {/* Zero metres is a real reading - it is where the phone says
                     you are standing - so the guard is on null, not on truth,
                     and the value is read back rather than handed in. */}
-                <span class="tnum shrink-0 text-primary">{formatDistance(props.metres as number)}</span>
+                <span class="tnum shrink-0 text-primary">
+                  {formatDistance(props.metres as number)}
+                </span>
               </Show>
 
               {/* Clock beside the fare while the row is closed. Open, it

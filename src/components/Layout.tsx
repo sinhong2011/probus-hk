@@ -195,7 +195,9 @@ export function RowCard(props: {
     "grid auto-rows-min content-start",
     "[&>*]:min-w-0 [&>*]:max-w-full",
     "[&>*]:relative [&>*+*]:before:absolute [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']",
-    props.flushRules ? "[&>*+*]:before:inset-x-0" : "[&>*+*]:before:left-3.5 [&>*+*]:before:right-0",
+    props.flushRules
+      ? "[&>*+*]:before:inset-x-0"
+      : "[&>*+*]:before:left-3.5 [&>*+*]:before:right-0",
     props.single
       ? ""
       : [
@@ -218,10 +220,7 @@ export function RowCard(props: {
     return (
       <div class={["flex min-h-0 flex-col overflow-hidden", frame, props.class ?? ""]}>
         <div
-          class={[
-            "app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain",
-            grid,
-          ]}
+          class={["app-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain", grid]}
         >
           {props.children}
         </div>
