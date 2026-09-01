@@ -72,16 +72,6 @@ test.beforeEach(async ({ page }) => {
       }),
     }),
   );
-  // Live HKO would otherwise put the rain offer over the sun one.
-  await page.route("**/data.weather.gov.hk/**", (route) => {
-    const url = route.request().url();
-    if (url.includes("rhrread")) {
-      return route.fulfill({
-        json: { rainfall: { data: [{ place: "油尖旺", max: 0 }] } },
-      });
-    }
-    return route.fulfill({ json: {} });
-  });
 });
 
 async function pickARide(page: import("@playwright/test").Page) {

@@ -193,6 +193,11 @@ export interface MockOptions {
   databaseFails?: boolean;
   /** Make the traffic-news feed fail, to exercise its retry. */
   noticesFail?: boolean;
+  /**
+   * Hong Kong is wet. Off by default: the walk-rain offer is a sheet, and
+   * tonight's real thunderstorm would sit over every other dialog.
+   */
+  weatherWet?: boolean;
 }
 
 export async function mockTransit(page: Page, options: MockOptions = {}) {
@@ -280,4 +285,23 @@ export async function mockTransit(page: Page, options: MockOptions = {}) {
   await page.route("**/basemaps.cartocdn.com/**", (route) => route.abort());
   await page.route("**/fonts.googleapis.com/**", (route) => route.abort());
   await page.route("**/fonts.gstatic.com/**", (route) => route.abort());
+
+  /*
+   * HKO rain. Dry unless a test asks for wet: the walk-rain offer is a
+   * one-time sheet, and a live warning would cover every other tap.
+   */
+  await page.route("**/data.weather.gov.hk/**", (route) => {
+    const url = route.request().url();
+    if (url.includes("rhrread")) {
+      return route.fulfill({
+        json: {
+          rainfall: { data: [{ place: "油尖旺", max: options.weatherWet ? 8 : 0 }] },
+        },
+      });
+    }
+    return route.fulfill({
+      json: options.weatherWet ? { WTS: { code: "WTS" } } : {},
+    });
+  });
+  await page.route("**/api.rainviewer.com/**", (route) => route.abort());
 }
