@@ -6,7 +6,7 @@ import { whenIdle } from "./lib/idle";
 /*
  * `navigator.standalone` exists on iOS Safari and nowhere else, and is true
  * only for a home-screen app - exactly the case where the status bar is drawn
- * over the page and `pt-safe-top` has to reserve room for it. Set before the
+ * over the page and safe-area spacing has to account for it. Set before the
  * first render so no screen paints at the wrong offset.
  */
 if ((navigator as Navigator & { standalone?: boolean }).standalone) {

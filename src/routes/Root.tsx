@@ -26,7 +26,7 @@ import { settings } from "~/stores/settings";
 /** Shown while the ~1.7 MB route database loads on a cold, uncached start. */
 function Splash() {
   return (
-    <div class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background text-foreground">
+    <div class="app-standalone-safe flex min-h-dvh flex-col items-center justify-center gap-4 bg-background text-foreground">
       <div class="motion-safe:animate-[app-pulse_1.6s_ease-in-out_infinite]">
         <AppMark size={62} />
       </div>
@@ -141,7 +141,7 @@ function Crashed(props: { reset: () => void; detail: string }) {
   };
 
   return (
-    <div class="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16 text-center text-foreground">
+    <div class="app-standalone-safe flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16 text-center text-foreground">
       <div class="flex w-full max-w-sm flex-col items-center lg:max-w-md">
         <div class="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive lg:size-16">
           <WarningIcon size={24} />
@@ -274,7 +274,7 @@ function LoadFailed(props: { reset: () => void; detail?: string }) {
   });
 
   return (
-    <div class="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16 text-center text-foreground">
+    <div class="app-standalone-safe flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16 text-center text-foreground">
       <div class="flex w-full max-w-sm flex-col items-center lg:max-w-md">
         {/* The mark keeps breathing while the app is still trying, and stops
             being restless the moment it is actually working on something. */}

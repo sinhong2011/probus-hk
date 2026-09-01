@@ -76,14 +76,14 @@ export function Page(props: {
   return (
     <div
       class={[
-        "pt-safe-top app-scroll flex min-h-dvh flex-col",
+        "app-page app-scroll flex min-h-dvh flex-col",
         { "lg:h-dvh lg:min-h-0 lg:overflow-hidden": Boolean(props.fill) },
         { "h-dvh min-h-0 overflow-hidden": props.fill === "always" },
       ]}
     >
       <div
         class={[
-          `flex w-full grow flex-col gap-6 pt-4 lg:gap-8 ${GUTTER} ${props.class ?? ""}`,
+          `app-page-body flex w-full grow flex-col gap-6 pt-4 lg:gap-8 ${GUTTER} ${props.class ?? ""}`,
           props.flush ? "lg:pt-3" : "lg:pt-8",
           /* A filled page ends where the sidebar ends: the sidebar floats
              `inset-y-3` from the window, and a pane that ran on to the very
