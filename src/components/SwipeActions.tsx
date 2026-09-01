@@ -5,8 +5,7 @@ import { ChevronLeftIcon } from "./Icons";
 /** A mouse or trackpad that can hover: swipe is not the obvious gesture there. */
 const FINE_POINTER = "(hover: hover) and (pointer: fine)";
 
-const finePointer = () =>
-  typeof matchMedia === "function" && matchMedia(FINE_POINTER).matches;
+const finePointer = () => typeof matchMedia === "function" && matchMedia(FINE_POINTER).matches;
 
 /**
  * The face of a row that slides aside to show the deeds behind it.
