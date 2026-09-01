@@ -2137,208 +2137,242 @@ export function RouteMap(props: {
 
   const controlClass = MAP_CONTROL;
 
+  /**
+   * Where the map sits in the page when it is a preview. Opened out, the
+   * overlay has to leave this slot: it is nested under the card's overflow
+   * and rounding, the stop list's touch-scrolling region, and the header's
+   * backdrop filter, each of which iOS Safari makes a containing block for
+   * `position: fixed` - so a `fixed inset-0` overlay was trapped in the
+   * rounded card and the stop list read as a floating inset. Same reason
+   * every other sheet already portals to `document.body`.
+   */
+  const [home, setHome] = createSignal<HTMLDivElement | undefined>(undefined, {
+    ownedWrite: true,
+  });
+
   return (
     <>
       {/* A flex column, so a height class of `flex-1` on the canvas lets it
           fill a card that is itself filling its column - the map's height then
           comes from the window rather than from a number. */}
       <div
-        class={expanded() ? "fixed inset-0 z-50 bg-map" : "relative flex min-h-0 flex-1 flex-col"}
+        ref={setHome}
+        class={
+          expanded()
+            ? `w-full ${props.heightClass ?? "h-[18rem]"}`
+            : "relative flex min-h-0 flex-1 flex-col"
+        }
       >
-        <div
-          ref={(el: HTMLDivElement) => {
-            container = el;
-            watchFrame(el);
-          }}
-          // Kept in the layout while loading so MapLibre can measure it, then
-          // collapsed if it turns out the map will never paint.
-          class={`w-full bg-map ${mapHeight()}`}
-          style={{ height: usable() === false ? "0" : undefined, overflow: "hidden" }}
-          aria-label="route map"
-        />
+        <Show when={home()}>
+          {(slot) => (
+            <Portal mount={expanded() ? document.body : slot()}>
+              <div
+                class={
+                  expanded()
+                    ? "fixed inset-0 z-50 bg-map"
+                    : "relative flex h-full min-h-0 flex-1 flex-col"
+                }
+              >
+                <div
+                  ref={(el: HTMLDivElement) => {
+                    container = el;
+                    watchFrame(el);
+                  }}
+                  // Kept in the layout while loading so MapLibre can measure it, then
+                  // collapsed if it turns out the map will never paint.
+                  class={`w-full bg-map ${mapHeight()}`}
+                  style={{ height: usable() === false ? "0" : undefined, overflow: "hidden" }}
+                  aria-label="route map"
+                />
 
-        {/*
-         * Opened out, the map takes the whole window - and takes the arrivals
-         * off screen with it, which are the reason the rider is on this page.
-         * The sheet brings them back: the stop the map is talking about, and
-         * when the next buses reach it, under a map you can still pan.
-         *
-         * It floats rather than resizes the map, so the route keeps the full
-         * height it was opened out for; the camera moves pad themselves clear
-         * of it instead.
-         */}
-        <Show when={usable() && props.list}>
-          {(list) => (
-            <Drawer
-              open={expanded()}
-              onClose={() => setExpanded(false)}
-              within
-              flush
-              dismissible={false}
-              snapPoints={[`${SHEET_PEEK}px`, SHEET_MID, SHEET_TALL]}
-              snap={listSnap()}
-              onSnapChange={setListSnap}
-              label={t("mapSheet", props.lang)}
-              class="lg:max-w-[36rem]"
-            >
-              {/* Built only while the map is opened out, so no arrivals are
+                {/*
+                 * Opened out, the map takes the whole window - and takes the arrivals
+                 * off screen with it, which are the reason the rider is on this page.
+                 * The sheet brings them back: the stop the map is talking about, and
+                 * when the next buses reach it, under a map you can still pan.
+                 *
+                 * It floats rather than resizes the map, so the route keeps the full
+                 * height it was opened out for; the camera moves pad themselves clear
+                 * of it instead.
+                 */}
+                <Show when={usable() && props.list}>
+                  {(list) => (
+                    <Drawer
+                      open={expanded()}
+                      onClose={() => setExpanded(false)}
+                      within
+                      flush
+                      dismissible={false}
+                      snapPoints={[`${SHEET_PEEK}px`, SHEET_MID, SHEET_TALL]}
+                      snap={listSnap()}
+                      onSnapChange={setListSnap}
+                      label={t("mapSheet", props.lang)}
+                    >
+                      {/* Built only while the map is opened out, so no arrivals are
                   laid out for a sheet nobody can see. As tall as the part of
                   the sheet that shows at whichever rest it is at, so the
                   visible part is the scrolling part. The card already keeps
                   the home indicator clear, the way the planner's flush sheet
                   does. */}
-              <Show when={expanded()}>
-                <div
-                  ref={setSheetList}
-                  class={[
-                    "app-scroll min-h-0 pb-2",
-                    listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
-                  ]}
-                  style={{ height: "var(--snap-point-height)" }}
-                >
-                  {list()()}
-                </div>
-              </Show>
-            </Drawer>
-          )}
-        </Show>
+                      <Show when={expanded()}>
+                        <div
+                          ref={setSheetList}
+                          class={[
+                            "app-scroll min-h-0 pb-2",
+                            listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
+                          ]}
+                          style={{ height: "var(--snap-point-height)" }}
+                        >
+                          {list()()}
+                        </div>
+                      </Show>
+                    </Drawer>
+                  )}
+                </Show>
 
-        {/* Panning a map with no way back is a trap; these are the way back. */}
-        <Show when={usable()}>
-          <div
-            class="absolute right-2.5 top-2.5 flex flex-col gap-2"
-            // Clear of the notch once the map owns the whole window.
-            style={expanded() ? { top: "max(0.625rem, env(safe-area-inset-top))" } : undefined}
-          >
-            <button
-              type="button"
-              aria-label={t(expanded() ? "mapCollapse" : "mapExpand", props.lang)}
-              title={t(expanded() ? "mapCollapse" : "mapExpand", props.lang)}
-              aria-pressed={expanded() ? "true" : "false"}
-              onClick={() => setExpanded((open) => !open)}
-              class={controlClass}
-            >
-              <Show when={expanded()} fallback={<ExpandIcon size={15} />}>
-                <CloseIcon size={15} />
-              </Show>
-            </button>
-            <button
-              type="button"
-              aria-label={t("mapWholeRoute", props.lang)}
-              title={t("mapWholeRoute", props.lang)}
-              onClick={fitRoute}
-              class={controlClass}
-            >
-              <RouteIcon size={15} />
-            </button>
-            {/* A pair, spaced as one: in and out are halves of one control. */}
-            <div class="flex flex-col gap-1">
-              <button
-                type="button"
-                aria-label={t("mapZoomIn", props.lang)}
-                onClick={() => zoomStep(1)}
-                class={controlClass}
-              >
-                <PlusIcon size={15} />
-              </button>
-              <button
-                type="button"
-                aria-label={t("mapZoomOut", props.lang)}
-                onClick={() => zoomStep(-1)}
-                class={controlClass}
-              >
-                <MinusIcon size={15} />
-              </button>
-            </div>
-          </div>
+                {/* Panning a map with no way back is a trap; these are the way back. */}
+                <Show when={usable()}>
+                  <div
+                    class="absolute right-2.5 top-2.5 flex flex-col gap-2"
+                    // Clear of the notch once the map owns the whole window.
+                    style={
+                      expanded() ? { top: "max(0.625rem, env(safe-area-inset-top))" } : undefined
+                    }
+                  >
+                    <button
+                      type="button"
+                      aria-label={t(expanded() ? "mapCollapse" : "mapExpand", props.lang)}
+                      title={t(expanded() ? "mapCollapse" : "mapExpand", props.lang)}
+                      aria-pressed={expanded() ? "true" : "false"}
+                      onClick={() => setExpanded((open) => !open)}
+                      class={controlClass}
+                    >
+                      <Show when={expanded()} fallback={<ExpandIcon size={15} />}>
+                        <CloseIcon size={15} />
+                      </Show>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t("mapWholeRoute", props.lang)}
+                      title={t("mapWholeRoute", props.lang)}
+                      onClick={fitRoute}
+                      class={controlClass}
+                    >
+                      <RouteIcon size={15} />
+                    </button>
+                    {/* A pair, spaced as one: in and out are halves of one control. */}
+                    <div class="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        aria-label={t("mapZoomIn", props.lang)}
+                        onClick={() => zoomStep(1)}
+                        class={controlClass}
+                      >
+                        <PlusIcon size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={t("mapZoomOut", props.lang)}
+                        onClick={() => zoomStep(-1)}
+                        class={controlClass}
+                      >
+                        <MinusIcon size={15} />
+                      </button>
+                    </div>
+                  </div>
 
-          {/* Where am I, opposite where is the bus: the two questions a rider
+                  {/* Where am I, opposite where is the bus: the two questions a rider
               stands at a kerb with, one at each lower corner. Above the sheet
               once the opened-out map has one. */}
-          <Show when={props.me}>
-            <div
-              class="absolute bottom-2.5 right-2.5"
-              style={expanded() ? { bottom: `${sheetHeight() + 10}px` } : undefined}
-            >
-              <button
-                type="button"
-                aria-label={t("mapMyLocation", props.lang)}
-                title={t("mapMyLocation", props.lang)}
-                onClick={recentre}
-                class={controlClass}
-              >
-                <PinIcon size={15} />
-              </button>
-            </div>
-          </Show>
+                  <Show when={props.me}>
+                    <div
+                      class="absolute bottom-2.5 right-2.5"
+                      style={expanded() ? { bottom: `${sheetHeight() + 10}px` } : undefined}
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("mapMyLocation", props.lang)}
+                        title={t("mapMyLocation", props.lang)}
+                        onClick={recentre}
+                        class={controlClass}
+                      >
+                        <PinIcon size={15} />
+                      </button>
+                    </div>
+                  </Show>
 
-          {/* The question the map exists to answer, at the thumb's corner -
+                  {/* The question the map exists to answer, at the thumb's corner -
               and beside it, in a whisper, the honesty label: the buses are
               inferences, not position reports, and when there are none this
               is the explanation, without which a blank map reads as a broken
               one. Both mount into MapLibre's own bottom-left control column
               rather than being placed by hand, so everything in that corner
               shares one stacking system instead of trading magic offsets. */}
-          <Show when={usable() && corner()} keyed>
-            {(mount) => (
-              <Portal mount={mount}>
-                <div
-                  class="maplibregl-ctrl flex items-center gap-1.5"
-                  ref={(el) =>
-                    queueMicrotask(() => {
-                      // Whichever node the portal actually parented to the
-                      // column - itself, or a wrapper - goes first in it.
-                      const node = el.parentElement === mount ? el : el.parentElement;
-                      if (node?.parentElement === mount && node !== mount.firstChild) {
-                        mount.insertBefore(node, mount.firstChild);
-                      }
-                    })
-                  }
-                >
-                  <Show when={drawn() > 0}>
-                    <button
-                      type="button"
-                      aria-label={t("mapFindBus", props.lang)}
-                      title={t("mapFindBus", props.lang)}
-                      onClick={frameBuses}
-                      class={controlClass}
-                    >
-                      <BusIcon size={15} />
-                    </button>
-                  </Show>
-                  {/* The button's own height, so the corner reads as one row
+                  <Show when={usable() && corner()} keyed>
+                    {(mount) => (
+                      <Portal mount={mount}>
+                        <div
+                          class="maplibregl-ctrl flex items-center gap-1.5"
+                          ref={(el) =>
+                            queueMicrotask(() => {
+                              // Whichever node the portal actually parented to the
+                              // column - itself, or a wrapper - goes first in it.
+                              const node = el.parentElement === mount ? el : el.parentElement;
+                              if (node?.parentElement === mount && node !== mount.firstChild) {
+                                mount.insertBefore(node, mount.firstChild);
+                              }
+                            })
+                          }
+                        >
+                          <Show when={drawn() > 0}>
+                            <button
+                              type="button"
+                              aria-label={t("mapFindBus", props.lang)}
+                              title={t("mapFindBus", props.lang)}
+                              onClick={frameBuses}
+                              class={controlClass}
+                            >
+                              <BusIcon size={15} />
+                            </button>
+                          </Show>
+                          {/* The button's own height, so the corner reads as one row
                       of controls rather than a button with a sticker beside
                       it. Gone entirely where the rider has not asked for buses
                       on the map: the label exists to explain an empty map, and
                       a map with nothing to draw on it is not empty, it is what
                       was asked for. */}
-                  <Show when={note() !== null}>
-                    <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
-                      <span
-                        class={[
-                          "size-1 rounded-full lg:size-1.5",
-                          {
-                            // Waiting has to look like waiting, or it looks
-                            // like nothing.
-                            "animate-pulse bg-subtle-foreground": note() === "loading",
-                            "bg-faint-foreground": note() !== "loading" && note() !== "estimated",
-                          },
-                        ]}
-                        style={
-                          note() === "estimated"
-                            ? { "background-color": lineColour(props.route) }
-                            : undefined
-                        }
-                      />
-                      <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
-                        {noteLabel()}
-                      </span>
-                    </div>
+                          <Show when={note() !== null}>
+                            <div class="app-glass pointer-events-none flex h-[1.6rem] items-center gap-1 whitespace-nowrap rounded-full px-2 opacity-75 lg:h-9 lg:px-3">
+                              <span
+                                class={[
+                                  "size-1 rounded-full lg:size-1.5",
+                                  {
+                                    // Waiting has to look like waiting, or it looks
+                                    // like nothing.
+                                    "animate-pulse bg-subtle-foreground": note() === "loading",
+                                    "bg-faint-foreground":
+                                      note() !== "loading" && note() !== "estimated",
+                                  },
+                                ]}
+                                style={
+                                  note() === "estimated"
+                                    ? { "background-color": lineColour(props.route) }
+                                    : undefined
+                                }
+                              />
+                              <span class="text-[0.49rem] font-semibold text-subtle-foreground lg:text-[0.69rem]">
+                                {noteLabel()}
+                              </span>
+                            </div>
+                          </Show>
+                        </div>
+                      </Portal>
+                    )}
                   </Show>
-                </div>
-              </Portal>
-            )}
-          </Show>
+                </Show>
+              </div>
+            </Portal>
+          )}
         </Show>
       </div>
       <Show when={usable() === false}>
