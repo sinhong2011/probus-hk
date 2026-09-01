@@ -335,6 +335,7 @@ const MESSAGES = {
   noGroup: m.no_group,
   starActions: m.star_actions,
   removeStar: m.remove_star,
+  reorder: m.reorder,
   changeStop: m.change_stop,
   pinTop: m.pin_top,
   unpinTop: m.unpin_top,

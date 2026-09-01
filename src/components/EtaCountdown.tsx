@@ -110,8 +110,8 @@ export function EtaCountdown(props: {
    */
   uniform?: boolean;
   /**
-   * Tighter vertical rhythm for a one-line card. The default gap is sized
-   * for a stack that is the right-hand column of a tall row.
+   * Tighter vertical rhythm for a one-line list row. The default gap is
+   * sized for a stack that is the right-hand column of a tall card.
    */
   compact?: boolean;
   class?: string;

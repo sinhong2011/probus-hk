@@ -771,6 +771,69 @@
   .app-tap:active {
     background-color: color-mix(in srgb, var(--foreground) 7%, transparent);
   }
+
+  /*
+   * The sliding face of a swipe-to-reveal row. Vertical pans stay with the
+   * page; a horizontal pan is our gesture, so the browser is told not to
+   * take those. `translate` is set from the pointer while dragging, and
+   * eases to rest once the finger is up - unless the rider asked for
+   * reduced motion, in which case it just jumps.
+   */
+  .app-swipe-face {
+    touch-action: pan-y;
+    user-select: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .app-swipe-face:not([data-dragging]) {
+      transition: translate 0.28s var(--ease-out);
+    }
+  }
+  /*
+   * Swipe left for the trailing deeds, swipe right for the reorder grip.
+   * A pointing device must not peek those deeds: the trailing rightmost
+   * is Delete, and a sliver of that red reads as a broken row. Hover
+   * slides a liquid-glass chip onto each edge; a click opens that side.
+   * Phone layout never paints them.
+   */
+  .app-swipe .app-swipe-hint {
+    display: none !important;
+  }
+  @media (hover: hover) and (pointer: fine) and (min-width: 64rem) {
+    .app-swipe .app-swipe-hint {
+      display: flex !important;
+      pointer-events: none;
+      opacity: 0;
+      scale: 0.94;
+      z-index: 10;
+    }
+    .app-swipe .app-swipe-hint[data-edge="trailing"] {
+      translate: 8px 0;
+    }
+    .app-swipe .app-swipe-hint[data-edge="leading"] {
+      translate: -8px 0;
+    }
+    .app-swipe:not([data-swipe-open]):hover .app-swipe-face:not([data-dragging]) .app-swipe-hint,
+    .app-swipe-hint:focus-visible {
+      pointer-events: auto;
+      opacity: 1;
+      scale: 1;
+      translate: 0;
+    }
+    .app-swipe:not([data-swipe-open]):hover .app-swipe-face:not([data-dragging]) .app-swipe-body {
+      padding-inline: 2rem;
+    }
+  }
+  @media (hover: hover) and (pointer: fine) and (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
+    .app-swipe-hint {
+      transition:
+        opacity var(--duration-reveal) var(--ease-out),
+        translate var(--duration-reveal) var(--ease-out),
+        scale var(--duration-reveal) var(--ease-out);
+    }
+    .app-swipe-body {
+      transition: padding-inline var(--duration-state) var(--ease-out);
+    }
+  }
   /*
    * Liquid-glass surface for controls floating over imagery - the map's
    * buttons and its status note. Mostly the picture behind it, bent: a heavy

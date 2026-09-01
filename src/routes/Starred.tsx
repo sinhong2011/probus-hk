@@ -11,14 +11,13 @@ import {
   untrack,
 } from "solid-js";
 import { EmptyState, ScreenTitle, SectionLabel, SpecialTag, StopCode } from "~/components/Chrome";
-import { Drawer } from "~/components/Drawer";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
+import { SwipeActions, SwipeDeed, type SwipeSide } from "~/components/SwipeActions";
 import {
   AlarmIcon,
-  DotsIcon,
   PinIcon,
   StarIcon,
   ExchangeIcon,
@@ -26,7 +25,6 @@ import {
   LayersIcon,
   TrashIcon,
   ThumbtackIcon,
-  type IconProps,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
 import { Page, RowCard, Section } from "~/components/Layout";
@@ -107,22 +105,26 @@ function leaveLabel(
 }
 
 /**
- * One star as a list row, not a card of its own.
- *
- * A favourite list is the same kind of thing as the routes under a stop:
- * many similar answers, compared in a glance. A card per star paid a
- * rounded frame, a gap, and a whole strip of actions to say what a
- * hairline already would, and on a phone that left four stars on screen.
+ * One star as a list row. The deeds (pin, stop, group, delete) live behind
+ * a swipe left, the way a mail message hides Delete; the reorder grip lives
+ * behind a swipe right. They used to hold a whole strip open under every
+ * favourite, which is what made a list of stars a list of cards, and on a
+ * phone that left four of them on screen.
  */
 function StarredRow(props: {
   entry: Resolved;
   lang: Lang;
   metres: number | null;
-  /** The next buses, from the arrivals table; absent until it has answered. */
   arrival: Arrival | undefined;
-  /** Reordering by hand only makes sense while the list is in hand order. */
   draggable: boolean;
-  onActions: () => void;
+  open: SwipeSide | false;
+  onOpen: (side: SwipeSide) => void;
+  onClose: () => void;
+  onEngage: () => void;
+  onRemove: () => void;
+  onRegroup: () => void;
+  onRestop: () => void;
+  onPin: () => void;
 }) {
   const db = useDb();
   const stopStar = () => isStopStar(props.entry.item);
@@ -135,22 +137,14 @@ function StarredRow(props: {
   });
 
   const etas = () => props.arrival?.etas;
-
   const advice = () => (stopStar() ? null : leaveAdvice(etas() ?? [], props.metres, now()));
 
-  /*
-   * How many arrivals at the top of the stack are already out of reach, so the
-   * countdown can promote the first one that is not. `nth` is the index of the
-   * catchable arrival; `-1` is "none of them", which is every one of them.
-   */
   const unreachable = () => {
     const a = advice();
     if (!a) return 0;
     return a.nth < 0 ? Number.POSITIVE_INFINITY : a.nth;
   };
 
-  /* Why there is nothing coming: still to come, or gone for the night. A
-     star is read at the two ends of the day more than anywhere else. */
   const over = () => {
     now();
     const route = props.entry.route;
@@ -170,149 +164,190 @@ function StarredRow(props: {
   const paint = () =>
     props.entry.item.group ? groupColorVar(groupColor(props.entry.item.group)) : undefined;
 
+  const closeThen = (fn: () => void) => () => {
+    props.onClose();
+    fn();
+  };
+
   return (
     <div
-      class={["app-tap flex min-w-0 items-center gap-2 px-3 py-2.5", { "opacity-60": dim() }]}
       data-star-id={props.entry.item.id}
       data-held={props.entry.item.pinned ? "" : undefined}
       data-pinned={props.entry.item.pinned ? "" : undefined}
     >
-      {/* Group as a rail, not a tag: the name is already on the filter
-          chip, and a pill here stole the destination's width. */}
-      <Show when={paint()}>
-        {(color) => (
-          <span
-            class="absolute inset-y-0 left-0 w-[3px]"
-            style={{ background: color() }}
-            aria-hidden="true"
-          />
-        )}
-      </Show>
-
-      {/* Always on show while the list is in hand order: a grip that only
-          appeared in a mode was a drag nobody found. */}
-      <Show when={props.draggable}>
-        <button
-          type="button"
-          aria-label="reorder"
-          data-drag-handle
-          class="-ml-1 cursor-grab touch-none text-faint-foreground"
-        >
-          <GripIcon size={14} />
-        </button>
-      </Show>
-
-      <Show when={stopStar()}>
-        <span
-          class="flex h-[1.55rem] min-w-[2.8rem] shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
-          aria-hidden="true"
-        >
-          <PinIcon size={14} />
-        </span>
-        <a
-          {...useLinkProps(stopLink(props.entry.item.stopId))}
-          class="flex min-w-0 grow flex-col gap-0.5"
-        >
-          <span class="flex min-w-0 items-center gap-1.5">
-            <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-              {props.entry.stopName}
-            </span>
-            <StopCode name={props.entry.stop?.name} lang={props.lang} />
-          </span>
-          <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-            {[
-              `${routeCount()} ${t("routesCount", props.lang)}`,
-              props.metres !== null
-                ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-        </a>
-      </Show>
-
-      <Show when={!stopStar() && props.entry.route}>
-        {(route) => (
+      <SwipeActions
+        class={dim() ? "opacity-60" : undefined}
+        open={props.open}
+        onOpen={props.onOpen}
+        onClose={props.onClose}
+        onEngage={props.onEngage}
+        hintLabel={t("more", props.lang)}
+        leadingHintLabel={props.draggable ? t("reorder", props.lang) : undefined}
+        leading={
+          <Show when={props.draggable}>
+            <button
+              type="button"
+              aria-label="reorder"
+              data-drag-handle
+              class="flex min-w-14 shrink-0 cursor-grab touch-none flex-col items-center justify-center gap-0.5 bg-muted-foreground px-1.5 text-background"
+            >
+              <GripIcon size={16} />
+              <span
+                aria-hidden="true"
+                class="max-w-[4.25rem] text-center text-[0.625rem] leading-[1.15] font-bold break-words"
+              >
+                {t("reorder", props.lang)}
+              </span>
+            </button>
+          </Show>
+        }
+        actions={
           <>
-            <RoutePlate route={route().route} co={route().co} size="xs" muted={dim()} />
+            <SwipeDeed
+              label={t(props.entry.item.pinned ? "unpinTop" : "pinTop", props.lang)}
+              kind="primary"
+              pressed={Boolean(props.entry.item.pinned)}
+              onPress={closeThen(props.onPin)}
+            >
+              <ThumbtackIcon size={16} />
+            </SwipeDeed>
+            <Show when={!stopStar()}>
+              <SwipeDeed label={t("changeStop", props.lang)} onPress={closeThen(props.onRestop)}>
+                <ExchangeIcon size={16} />
+              </SwipeDeed>
+            </Show>
+            <SwipeDeed
+              label={props.entry.item.group || t("noGroup", props.lang)}
+              caption={t("groupLabel", props.lang)}
+              onPress={closeThen(props.onRegroup)}
+            >
+              <LayersIcon size={16} />
+            </SwipeDeed>
+            <SwipeDeed
+              label={t("removeStar", props.lang)}
+              kind="danger"
+              onPress={closeThen(props.onRemove)}
+            >
+              <TrashIcon size={16} />
+            </SwipeDeed>
+          </>
+        }
+      >
+        <div class="app-tap flex min-w-0 items-center gap-2 px-3 py-2.5">
+          <Show when={paint()}>
+            {(color) => (
+              <span
+                class="absolute inset-y-0 left-0 w-[3px]"
+                style={{ background: color() }}
+                aria-hidden="true"
+              />
+            )}
+          </Show>
 
-            <a {...useLinkProps(routeLink(route().key))} class="flex min-w-0 grow flex-col gap-0.5">
+          <Show when={stopStar()}>
+            <span
+              class="flex h-[1.55rem] min-w-[2.8rem] shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+              aria-hidden="true"
+            >
+              <PinIcon size={14} />
+            </span>
+            <a
+              {...useLinkProps(stopLink(props.entry.item.stopId))}
+              class="flex min-w-0 grow flex-col gap-0.5"
+            >
               <span class="flex min-w-0 items-center gap-1.5">
                 <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                  {t("towards", props.lang)} {pick(route().dest, props.lang)}
+                  {props.entry.stopName}
                 </span>
-                <Show when={isSpecialService(route())}>
-                  <SpecialTag lang={props.lang} />
-                </Show>
+                <StopCode name={props.entry.stop?.name} lang={props.lang} />
               </span>
               <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-                {props.entry.stopName}
-                <Show when={advice()}>
-                  {(a) => {
-                    const text = leaveLabel(a(), props.lang);
-                    return (
-                      <Show when={text}>
-                        {" · "}
-                        <span
-                          class={[
-                            "tnum",
-                            {
-                              "text-faint-foreground": a().nth < 0,
-                              "font-bold text-primary": a().urgent && a().nth >= 0,
-                            },
-                          ]}
-                        >
-                          {text}
-                        </span>
-                      </Show>
-                    );
-                  }}
-                </Show>
-                <Show when={!advice() && props.metres !== null}>
-                  {` · ${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`}
-                </Show>
+                {[
+                  `${routeCount()} ${t("routesCount", props.lang)}`,
+                  props.metres !== null
+                    ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             </a>
-          </>
-        )}
-      </Show>
+          </Show>
 
-      <Show when={alerted()}>
-        <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
-          <AlarmIcon size={14} />
-        </span>
-      </Show>
+          <Show when={!stopStar() && props.entry.route}>
+            {(route) => (
+              <>
+                <RoutePlate route={route().route} co={route().co} size="xs" muted={dim()} />
+                <a
+                  {...useLinkProps(routeLink(route().key))}
+                  class="flex min-w-0 grow flex-col gap-0.5"
+                >
+                  <span class="flex min-w-0 items-center gap-1.5">
+                    <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                      {t("towards", props.lang)} {pick(route().dest, props.lang)}
+                    </span>
+                    <Show when={isSpecialService(route())}>
+                      <SpecialTag lang={props.lang} />
+                    </Show>
+                  </span>
+                  <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                    {props.entry.stopName}
+                    <Show when={advice()}>
+                      {(a) => {
+                        const text = leaveLabel(a(), props.lang);
+                        return (
+                          <Show when={text}>
+                            {" · "}
+                            <span
+                              class={[
+                                "tnum",
+                                {
+                                  "text-faint-foreground": a().nth < 0,
+                                  "font-bold text-primary": a().urgent && a().nth >= 0,
+                                },
+                              ]}
+                            >
+                              {text}
+                            </span>
+                          </Show>
+                        );
+                      }}
+                    </Show>
+                    <Show when={!advice() && props.metres !== null}>
+                      {` · ${t("walkMinutes", props.lang)} ${walkMinutes(props.metres ?? 0)} ${t("minute", props.lang)}`}
+                    </Show>
+                  </span>
+                </a>
+              </>
+            )}
+          </Show>
 
-      <Show when={!stopStar()}>
-        <EtaCountdown
-          etas={etas()}
-          lang={props.lang}
-          size="sm"
-          limit={2}
-          compact
-          scheduledLabel={false}
-          unreachable={unreachable()}
-          over={over()}
-        />
-      </Show>
+          <Show when={alerted()}>
+            <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
+              <AlarmIcon size={14} />
+            </span>
+          </Show>
 
-      {/* State, not a control: the deed lives in the sheet. A pin that is
-          on has to say so on the row, or a starred list of twelve would
-          hide which ones were held at the top. */}
-      <Show when={props.entry.item.pinned}>
-        <span class="shrink-0 text-primary" title={t("pinnedTop", props.lang)}>
-          <ThumbtackIcon size={12} />
-        </span>
-      </Show>
-      <button
-        type="button"
-        aria-label={t("starActions", props.lang)}
-        onClick={props.onActions}
-        class="flex size-7 shrink-0 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
-      >
-        <DotsIcon size={14} />
-      </button>
+          <Show when={!stopStar()}>
+            <EtaCountdown
+              etas={etas()}
+              lang={props.lang}
+              size="sm"
+              limit={2}
+              compact
+              scheduledLabel={false}
+              unreachable={unreachable()}
+              over={over()}
+            />
+          </Show>
+
+          <Show when={props.entry.item.pinned}>
+            <span class="shrink-0 text-primary" title={t("pinnedTop", props.lang)}>
+              <ThumbtackIcon size={12} />
+            </span>
+          </Show>
+        </div>
+      </SwipeActions>
     </div>
   );
 }
@@ -356,9 +391,24 @@ export default function Starred() {
   /** The star whose stop is being changed, while the stop sheet is up. */
   const [restopping, setRestopping] = createSignal<Resolved | null>(null);
   const [stopOpen, setStopOpen] = createSignal(false);
-  /** The star whose actions (pin, stop, group, delete) are in the sheet. */
-  const [acting, setActing] = createSignal<Resolved | null>(null);
-  const [actionOpen, setActionOpen] = createSignal(false);
+  /** Which star has its swipe deeds showing, and on which side; one at a time. */
+  const [openStar, setOpenStar] = createSignal<{ id: string; side: SwipeSide } | null>(null, {
+    ownedWrite: true,
+  });
+
+  createEffect(
+    () => openStar(),
+    (open) => {
+      if (!open) return;
+      const close = (event: PointerEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("[data-star-id]")) return;
+        setOpenStar(null);
+      };
+      document.addEventListener("pointerdown", close);
+      return () => document.removeEventListener("pointerdown", close);
+    },
+  );
 
   /*
    * The arrivals table, read two ways: every row, to hand each card its
@@ -490,6 +540,7 @@ export default function Starred() {
       // Braced on purpose: the setter's return value must not become the
       // effect's cleanup - Solid 2's dev assertion halts the screen over it.
       setHandOrder(null);
+      setOpenStar(null);
     },
   );
   /** The stored order: how the stars were made, or the last adopted ranking. */
@@ -631,6 +682,10 @@ export default function Starred() {
       fallbackClass: "app-lift",
       ghostClass: "app-drag-ghost",
       onStart: (evt) => {
+        // Keep this row's leading grip showing so the handle stays under
+        // the finger; close any other row that was open.
+        const id = (evt.item as HTMLElement).dataset.starId;
+        setOpenStar((cur) => (cur && cur.id === id && cur.side === "leading" ? cur : null));
         const at = pointOf((evt as { originalEvent?: Event }).originalEvent);
         const rect = evt.item.getBoundingClientRect();
         grip = at ? { x: at.x - rect.left, y: at.y - rect.top } : { x: 0, y: 0 };
@@ -710,7 +765,7 @@ export default function Starred() {
   };
 
   /*
-   * A pinned row's place in the list is not the hand-arranged one, so it
+   * A pinned card's place in the list is not the hand-arranged one, so it
    * does not offer a grip that would move it somewhere it is not.
    */
   const rowFor = (entry: Resolved) => (
@@ -720,10 +775,26 @@ export default function Starred() {
       metres={metresTo(entry)}
       arrival={arrivalOf().get(entry.item.id)}
       draggable={manual() && !entry.item.pinned}
-      onActions={() => {
-        setActing(entry);
-        requestAnimationFrame(() => setActionOpen(true));
+      open={openStar()?.id === entry.item.id ? openStar()!.side : false}
+      onOpen={(side) => setOpenStar({ id: entry.item.id, side })}
+      onClose={() => {
+        if (openStar()?.id === entry.item.id) setOpenStar(null);
       }}
+      onEngage={() => {
+        if (openStar()?.id !== entry.item.id) setOpenStar(null);
+      }}
+      onRemove={() => starred.remove(entry.item.id)}
+      onRegroup={() =>
+        askGroup({
+          current: entry.item.group,
+          apply: (group) => starred.setGroup(entry.item.id, group),
+        })
+      }
+      onRestop={() => {
+        setRestopping(entry);
+        requestAnimationFrame(() => setStopOpen(true));
+      }}
+      onPin={() => starred.togglePin(entry.item.id)}
     />
   );
 
@@ -936,41 +1007,6 @@ export default function Starred() {
         )}
       </Show>
 
-      <Show when={acting()} keyed>
-        {(entry) => (
-          <StarActionSheet
-            open={actionOpen()}
-            onClose={() => setActionOpen(false)}
-            entry={entry}
-            lang={lang()}
-            onPin={() => {
-              setActionOpen(false);
-              starred.togglePin(entry.item.id);
-            }}
-            onRestop={
-              entry.route
-                ? () => {
-                    setActionOpen(false);
-                    setRestopping(entry);
-                    requestAnimationFrame(() => setStopOpen(true));
-                  }
-                : undefined
-            }
-            onRegroup={() => {
-              setActionOpen(false);
-              askGroup({
-                current: entry.item.group,
-                apply: (group) => starred.setGroup(entry.item.id, group),
-              });
-            }}
-            onRemove={() => {
-              setActionOpen(false);
-              starred.remove(entry.item.id);
-            }}
-          />
-        )}
-      </Show>
-
       {/* Keyed: a different star is a different sheet, so the child takes
           the entry itself. The accessor form threw a stale-value error the
           moment the portalled list read it, and there is nothing here that
@@ -1037,124 +1073,5 @@ function FilterChip(props: {
     >
       {props.label}
     </button>
-  );
-}
-
-/**
- * The deeds on a star - pin, change the stop, the group, or drop it.
- *
- * They used to hold a whole strip open under every favourite, which is
- * what made a list of stars a list of cards. One sheet, opened from the
- * row, keeps the list itself a list of arrivals.
- */
-function StarActionSheet(props: {
-  open: boolean;
-  onClose: () => void;
-  entry: Resolved;
-  lang: Lang;
-  onPin: () => void;
-  onRestop?: () => void;
-  onRegroup: () => void;
-  onRemove: () => void;
-}) {
-  const title = () =>
-    props.entry.route
-      ? `${t("towards", props.lang)} ${pick(props.entry.route.dest, props.lang)}`
-      : props.entry.stopName;
-
-  const pinned = () => Boolean(props.entry.item.pinned);
-
-  const actions = () => {
-    const rows: {
-      label: string;
-      Icon: (p: IconProps) => import("solid-js").JSX.Element;
-      onPress: () => void;
-      danger?: boolean;
-      on?: boolean;
-    }[] = [
-      {
-        label: t(pinned() ? "unpinTop" : "pinTop", props.lang),
-        Icon: ThumbtackIcon,
-        onPress: props.onPin,
-        on: pinned(),
-      },
-    ];
-    if (props.onRestop) {
-      rows.push({
-        label: t("changeStop", props.lang),
-        Icon: ExchangeIcon,
-        onPress: props.onRestop,
-      });
-    }
-    rows.push({
-      label: props.entry.item.group || t("noGroup", props.lang),
-      Icon: LayersIcon,
-      onPress: props.onRegroup,
-    });
-    rows.push({
-      label: t("removeStar", props.lang),
-      Icon: TrashIcon,
-      onPress: props.onRemove,
-      danger: true,
-    });
-    return rows;
-  };
-
-  return (
-    <Drawer
-      open={props.open}
-      onClose={props.onClose}
-      modal
-      label={t("starActions", props.lang)}
-      class="sm:max-w-[32rem]"
-    >
-      <p class="truncate px-4 pt-1 text-[0.75rem] font-semibold text-subtle-foreground">
-        {title()}
-      </p>
-      <nav aria-label={t("starActions", props.lang)} class="py-1.5">
-        <div class="flex flex-col">
-          <For each={actions()}>
-            {(row, i) => (
-              <>
-                <Show when={i() > 0}>
-                  <div class="ml-3.5 h-px bg-border" />
-                </Show>
-                <button
-                  type="button"
-                  onClick={row.onPress}
-                  aria-pressed={row.on ? "true" : undefined}
-                  class="app-tap flex w-full items-center gap-3 px-4 py-3 text-left"
-                >
-                  <span
-                    class={[
-                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                      {
-                        "bg-destructive/10 text-destructive": row.danger,
-                        "bg-primary-muted text-primary": row.on && !row.danger,
-                        "bg-secondary text-muted-foreground": !row.danger && !row.on,
-                      },
-                    ]}
-                  >
-                    <row.Icon size={17} />
-                  </span>
-                  <span
-                    class={[
-                      "min-w-0 grow truncate text-[0.94rem] font-bold",
-                      {
-                        "text-destructive": row.danger,
-                        "text-primary": row.on && !row.danger,
-                        "text-foreground": !row.danger && !row.on,
-                      },
-                    ]}
-                  >
-                    {row.label}
-                  </span>
-                </button>
-              </>
-            )}
-          </For>
-        </div>
-      </nav>
-    </Drawer>
   );
 }

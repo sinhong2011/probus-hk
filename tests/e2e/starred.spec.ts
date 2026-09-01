@@ -5,6 +5,31 @@ test.beforeEach(async ({ page }) => {
   await mockTransit(page);
 });
 
+/** Opens the trailing deeds. The keyboard, not a mouse-drag: Playwright's
+ * phone project still paints fine-pointer glass chips on Linux, and those
+ * eat a drag that starts on the edge. Arrow keys are the same path a
+ * keyboard rider uses. */
+async function revealActions(
+  page: import("@playwright/test").Page,
+  row: import("@playwright/test").Locator,
+) {
+  await expect(row.locator(".app-swipe-face")).toBeVisible({ timeout: 15_000 });
+  await row.locator("a[href]").first().focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(row.locator('[data-swipe-open="trailing"]')).toBeVisible();
+}
+
+/** Opens the leading reorder grip the other way. */
+async function revealGrip(
+  page: import("@playwright/test").Page,
+  row: import("@playwright/test").Locator,
+) {
+  await expect(row.locator(".app-swipe-face")).toBeVisible({ timeout: 15_000 });
+  await row.locator("a[href]").first().focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(row.locator('[data-swipe-open="leading"]')).toBeVisible();
+}
+
 /** Opens a stop on route 1 and stars it, which is the only way in. */
 async function star(page: import("@playwright/test").Page, nth: number, group?: string) {
   await page.goto("/route/1%2B1%2BCHUK%20YUEN%20ESTATE%2BSTAR%20FERRY");
@@ -98,9 +123,13 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
   await page.goto("/starred");
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 15_000 });
 
-  // Group, restop and delete live behind the row's manage button so the
-  // list itself stays a list of arrivals, not a list of toolbars.
-  await page.getByRole("button", { name: "管理" }).first().click();
+  // Deeds live behind a swipe, so the list itself stays a list of arrivals.
+  const row = page.locator("[data-star-id]").first();
+  await revealActions(page, row);
+  await expect(row.getByRole("button", { name: "置頂", exact: true })).toContainText("置頂");
+  await expect(row.getByRole("button", { name: "換站" })).toContainText("換站");
+  await expect(row.getByRole("button", { name: "唔分組" })).toContainText("分組");
+  await expect(row.getByRole("button", { name: "移除" })).toContainText("移除");
   await page.getByRole("button", { name: "唔分組" }).click();
 
   await page.getByRole("textbox", { name: "新增分組" }).fill("返工");
@@ -135,13 +164,25 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
   );
 });
 
+test("an open swipe closes on a tap, without following the route", async ({ page }) => {
+  await star(page, 1);
+  await page.goto("/starred");
+  const row = page.locator("[data-star-id]").first();
+  await expect(row.locator('a[href^="/route/"]')).toBeVisible({ timeout: 15_000 });
+
+  await revealActions(page, row);
+  await row.locator(".app-swipe-face").click();
+  await expect(row.locator("[data-swipe-open]")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/starred/);
+});
+
 test("a star can be moved to another stop on its route", async ({ page }) => {
   await star(page, 1);
   await page.goto("/starred");
   const card = page.locator('a[href^="/route/"]');
   await expect(card).toContainText("天虹小學", { timeout: 15_000 });
 
-  await page.getByRole("button", { name: "管理" }).click();
+  await revealActions(page, page.locator("[data-star-id]").first());
   await page.getByRole("button", { name: "換站" }).click();
 
   // The sheet knows which stop it is at now, and one tap moves it.
@@ -167,8 +208,8 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   const cards = page.locator('a[href^="/route/"]');
   await expect(cards.first()).toContainText("天虹小學", { timeout: 15_000 });
 
-  // Pin the second one from its sheet, in list order.
-  await page.locator("[data-star-id]").nth(1).getByRole("button", { name: "管理" }).click();
+  // Pin the second one from behind a swipe, in list order.
+  await revealActions(page, page.locator("[data-star-id]").nth(1));
   await page.getByRole("button", { name: "置頂", exact: true }).click();
 
   // To the head of the list, wearing the thumbtack.
@@ -180,7 +221,7 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   await expect(cards.first()).toContainText("馬仔坑遊樂場", { timeout: 15_000 });
 
   // And it comes off the same way it went on.
-  await page.locator("[data-pinned]").getByRole("button", { name: "管理" }).click();
+  await revealActions(page, page.locator("[data-pinned]"));
   await page.getByRole("button", { name: "取消置頂" }).click();
   await expect(page.locator("[data-pinned]")).toHaveCount(0);
   await expect(cards.first()).toContainText("天虹小學");
@@ -212,33 +253,16 @@ test("an arrival reminder can be armed from a stop and called off from the list"
   await expect(page.getByText("到站通知", { exact: false })).toHaveCount(0);
 });
 
-test("a star can be dragged to a new place in the list", async ({ page }) => {
+test("the reorder grip stays behind a swipe right", async ({ page }) => {
   await star(page, 1);
   await star(page, 2);
 
   await page.goto("/starred");
   const cards = page.locator("[data-star-id]");
   await expect(cards).toHaveCount(2, { timeout: 15_000 });
-  const firstId = await cards.first().getAttribute("data-star-id");
 
-  // Carry the first card below the second by its grip, in finger-sized steps.
-  const grip = page.getByRole("button", { name: "reorder" }).first();
-  const from = await grip.boundingBox();
-  const target = await cards.nth(1).boundingBox();
-  if (!from || !target) throw new Error("no boxes to drag between");
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  const toY = target.y + target.height / 2;
-  for (let step = 1; step <= 6; step++) {
-    await page.mouse.move(from.x + from.width / 2, from.y + ((toY - from.y) * step) / 6);
-    await page.waitForTimeout(30);
-  }
-  await page.mouse.up();
-
-  // Reordered, and the order is the star's own - it survives a reload.
-  await expect(cards.last()).toHaveAttribute("data-star-id", firstId!);
-  await page.reload();
-  await expect(page.locator("[data-star-id]").last()).toHaveAttribute("data-star-id", firstId!, {
-    timeout: 15_000,
-  });
+  // The grip is behind a swipe right, so the row itself stays a list of arrivals.
+  await expect(page.getByRole("button", { name: "reorder" })).toHaveCount(0);
+  await revealGrip(page, cards.first());
+  await expect(page.getByRole("button", { name: "reorder" }).first()).toBeVisible();
 });
