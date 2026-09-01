@@ -254,3 +254,142 @@ test("an opened-out map keeps the arrivals in reach", async ({ page }) => {
     await expect(overlay.getByText("分鐘").first()).toBeVisible();
   }
 });
+
+/**
+ * The opened-out map's sheet is a panel of that overlay, not a card floating
+ * in it: an inset card reads as having left the drawer, with the map showing
+ * through the gap around it.
+ */
+test("an opened-out map's stop list sits flush in its sheet", async ({ page }) => {
+  await mockTransit(page);
+  await mockBasemap(page);
+  await page.goto(`/route/${KMB_1}`);
+
+  const expand = page.getByRole("button", { name: "放大地圖" });
+  const degraded = page.getByText("呢部機顯示唔到地圖");
+  await expect
+    .poll(async () => (await expand.count()) > 0 || (await degraded.count()) > 0, {
+      timeout: 25_000,
+    })
+    .toBe(true);
+
+  if (await expand.count()) {
+    await expand.click();
+
+    const overlay = page.locator("div.z-50.bg-map");
+    await expect(overlay.getByRole("button", { name: "關閉地圖" })).toBeVisible();
+    const sheet = overlay.locator("[data-drawer-content]");
+    await expect(sheet).toBeVisible();
+    await expect(overlay.getByText("油麻地永星里").first()).toBeVisible({ timeout: 15_000 });
+
+    const overlayBox = await overlay.boundingBox();
+    const sheetBox = await sheet.boundingBox();
+    const card = sheet.locator(":scope > div").first();
+    const cardBox = await card.boundingBox();
+    expect(overlayBox).toBeTruthy();
+    expect(sheetBox).toBeTruthy();
+    expect(cardBox).toBeTruthy();
+    if (!overlayBox || !sheetBox || !cardBox) return;
+
+    // The card is the sheet's visible face; it has to share the overlay's
+    // sides, not float a gutter in from them.
+    expect(Math.abs(overlayBox.x - cardBox.x)).toBeLessThan(2);
+    expect(Math.abs(overlayBox.width - cardBox.width)).toBeLessThan(2);
+
+    // The sheet rests low and is translated for the rest of its height, so
+    // its layout box hangs off the overlay; the part that shows still has
+    // to meet the overlay's foot.
+    const visibleBottom = Math.min(cardBox.y + cardBox.height, overlayBox.y + overlayBox.height);
+    expect(Math.abs(overlayBox.y + overlayBox.height - visibleBottom)).toBeLessThan(2);
+
+    const padding = await sheet.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { left: style.paddingLeft, right: style.paddingRight, bottom: style.paddingBottom };
+    });
+    expect(padding).toEqual({ left: "0px", right: "0px", bottom: "0px" });
+  }
+});
+
+/**
+ * Folded, the sheet is the stop the map is about and nothing of the next
+ * one: a rest that showed two rows made the map a strip above a list.
+ */
+test("an opened-out map's sheet folds to the stop the map is about", async ({ page }) => {
+  await mockTransit(page);
+  await mockBasemap(page);
+  await page.goto(`/route/${KMB_1}`);
+
+  const expand = page.getByRole("button", { name: "放大地圖" });
+  const degraded = page.getByText("呢部機顯示唔到地圖");
+  await expect
+    .poll(async () => (await expand.count()) > 0 || (await degraded.count()) > 0, {
+      timeout: 25_000,
+    })
+    .toBe(true);
+
+  if (await expand.count()) {
+    await expand.click();
+
+    const overlay = page.locator("div.z-50.bg-map");
+    await expect(overlay.getByRole("button", { name: "關閉地圖" })).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "19. 油麻地永星里" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(overlay.getByRole("button", { name: "20. 油麻地長樂街" })).not.toBeInViewport();
+
+    const overlayBox = await overlay.boundingBox();
+    const sheetBox = await overlay.locator("[data-drawer-content]").boundingBox();
+    expect(overlayBox).toBeTruthy();
+    expect(sheetBox).toBeTruthy();
+    if (!overlayBox || !sheetBox) return;
+    const visible =
+      Math.min(sheetBox.y + sheetBox.height, overlayBox.y + overlayBox.height) -
+      Math.max(sheetBox.y, overlayBox.y);
+    // Handle, top padding, and the stop's name - not a quarter of the map.
+    expect(visible).toBeLessThan(50);
+  }
+});
+
+/**
+ * A tap on the handle steps from the fold to the reading rest - the stop
+ * open, with its arrivals - before the full list.
+ */
+test("an opened-out map's sheet steps up to a reading rest", async ({ page }) => {
+  await mockTransit(page);
+  await mockBasemap(page);
+  await page.goto(`/route/${KMB_1}`);
+
+  const expand = page.getByRole("button", { name: "放大地圖" });
+  const degraded = page.getByText("呢部機顯示唔到地圖");
+  await expect
+    .poll(async () => (await expand.count()) > 0 || (await degraded.count()) > 0, {
+      timeout: 25_000,
+    })
+    .toBe(true);
+
+  if (await expand.count()) {
+    await expand.click();
+
+    const overlay = page.locator("div.z-50.bg-map");
+    await expect(overlay.getByRole("button", { name: "關閉地圖" })).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "19. 油麻地永星里" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await overlay.locator("[data-drawer-handle]").click();
+    await expect
+      .poll(
+        async () => {
+          const overlayBox = await overlay.boundingBox();
+          const sheetBox = await overlay.locator("[data-drawer-content]").boundingBox();
+          if (!overlayBox || !sheetBox) return 0;
+          return (
+            Math.min(sheetBox.y + sheetBox.height, overlayBox.y + overlayBox.height) -
+            Math.max(sheetBox.y, overlayBox.y)
+          );
+        },
+        { timeout: 5_000 },
+      )
+      .toBeGreaterThan(150);
+  }
+});

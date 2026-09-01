@@ -46,10 +46,17 @@ import { useWalkRain } from "~/data/useWalkRain";
 import { settings } from "~/stores/settings";
 
 /**
- * Where the sheet over an opened-out map rests, as shares of the panel: low
- * enough that the route is what the window is for, and pulled up, most of it.
+ * Where the sheet over an opened-out map rests. Three: folded to a name,
+ * the stop open with its arrivals, and most of the panel. Pixels for the
+ * fold because a stop row is the same height on any screen; a share of a
+ * tall window would show three.
+ *
+ * 38 is the handle and the card's top padding - a fold that names the stop
+ * without opening a row of it.
  */
-const SHEET_LOW = 0.26;
+const SHEET_PEEK = 38;
+/** The stop, open, with its arrivals - enough map left to pan. */
+const SHEET_MID = 0.52;
 const SHEET_TALL = 0.9;
 
 const SRC_LINE = "app-route";
@@ -1462,10 +1469,10 @@ export function RouteMap(props: {
    * standing in them at once.
    */
   createEffect(
-    () => ({ mount: corner(), up: expanded() }),
-    ({ mount, up }) => {
+    () => ({ mount: corner(), up: expanded(), height: sheetHeight() }),
+    ({ mount, up, height }) => {
       if (!mount) return;
-      mount.style.bottom = up ? `${sheetHeight()}px` : "";
+      mount.style.bottom = up ? `${height}px` : "";
       const tops = mount.parentElement?.querySelector<HTMLElement>(".maplibregl-ctrl-top-left");
       if (tops) tops.style.top = up ? "max(0px, calc(env(safe-area-inset-top) - 10px))" : "";
     },
@@ -1524,18 +1531,21 @@ export function RouteMap(props: {
 
   /**
    * The sheet over an opened-out map is the stop list, brought to the stop
-   * the map is about. It rests low and can be pulled up; below its top rest
-   * it does not scroll, because a finger moving up on content that can scroll
-   * is scrolling it and the sheet would never rise - held low it is a window
-   * onto its first rows and the whole sheet is what the finger moves. It
-   * never goes away: pushed down it comes back, and only the button that
-   * opened the map out puts it back.
+   * the map is about. It rests folded, then at that stop, then pulled up;
+   * below its top rest it does not scroll, because a finger moving up on
+   * content that can scroll is scrolling it and the sheet would never rise -
+   * held low it is a window onto that row and the whole sheet is what the
+   * finger moves. It never goes away: pushed down it comes back, and only
+   * the button that opened the map out puts it back.
    */
   const [listSnap, setListSnap] = createSignal(0);
-  const listScrolls = () => listSnap() >= 1;
+  const listScrolls = () => listSnap() >= 2;
 
-  /** How much of the opened-out map the sheet covers at rest, in pixels. */
-  const sheetHeight = () => Math.round(container.clientHeight * SHEET_LOW);
+  /** How much of the opened-out map the sheet covers at the current rest. */
+  const sheetHeight = () => {
+    if (listSnap() <= 0) return SHEET_PEEK;
+    return Math.round(container.clientHeight * (listSnap() >= 2 ? SHEET_TALL : SHEET_MID));
+  };
 
   /** Room for the sheet at the bottom, when there is a sheet. */
   const framePadding = (edge: number) =>
@@ -2163,8 +2173,9 @@ export function RouteMap(props: {
               open={expanded()}
               onClose={() => setExpanded(false)}
               within
+              flush
               dismissible={false}
-              snapPoints={[SHEET_LOW, SHEET_TALL]}
+              snapPoints={[`${SHEET_PEEK}px`, SHEET_MID, SHEET_TALL]}
               snap={listSnap()}
               onSnapChange={setListSnap}
               label={t("mapSheet", props.lang)}
@@ -2173,12 +2184,14 @@ export function RouteMap(props: {
               {/* Built only while the map is opened out, so no arrivals are
                   laid out for a sheet nobody can see. As tall as the part of
                   the sheet that shows at whichever rest it is at, so the
-                  visible part is the scrolling part. */}
+                  visible part is the scrolling part. The card already keeps
+                  the home indicator clear, the way the planner's flush sheet
+                  does. */}
               <Show when={expanded()}>
                 <div
                   ref={setSheetList}
                   class={[
-                    "app-scroll min-h-0 pb-safe-bottom",
+                    "app-scroll min-h-0 pb-2",
                     listScrolls() ? "touch-pan-y overflow-y-auto" : "overflow-hidden",
                   ]}
                   style={{ height: "var(--snap-point-height)" }}
