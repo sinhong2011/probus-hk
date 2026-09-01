@@ -98,8 +98,10 @@ test("a star can be put in a group, and the group filters the list", async ({ pa
   await page.goto("/starred");
   await expect(page.locator('a[href^="/route/"]').first()).toBeVisible({ timeout: 15_000 });
 
-  // The group rides on the card itself - no edit mode to enter first.
-  await page.getByRole("button", { name: "唔分組" }).first().click();
+  // Group, restop and delete live behind the row's manage button so the
+  // list itself stays a list of arrivals, not a list of toolbars.
+  await page.getByRole("button", { name: "管理" }).first().click();
+  await page.getByRole("button", { name: "唔分組" }).click();
 
   await page.getByRole("textbox", { name: "新增分組" }).fill("返工");
   await page.getByRole("button", { name: "儲存" }).click();
@@ -139,6 +141,7 @@ test("a star can be moved to another stop on its route", async ({ page }) => {
   const card = page.locator('a[href^="/route/"]');
   await expect(card).toContainText("天虹小學", { timeout: 15_000 });
 
+  await page.getByRole("button", { name: "管理" }).click();
   await page.getByRole("button", { name: "換站" }).click();
 
   // The sheet knows which stop it is at now, and one tap moves it.
@@ -164,8 +167,9 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   const cards = page.locator('a[href^="/route/"]');
   await expect(cards.first()).toContainText("天虹小學", { timeout: 15_000 });
 
-  // Pin the second one: the actions sit on the card itself, in card order.
-  await page.getByRole("button", { name: "置頂", exact: true }).nth(1).click();
+  // Pin the second one from its sheet, in list order.
+  await page.locator("[data-star-id]").nth(1).getByRole("button", { name: "管理" }).click();
+  await page.getByRole("button", { name: "置頂", exact: true }).click();
 
   // To the head of the list, wearing the thumbtack.
   await expect(page.locator("[data-pinned]")).toHaveCount(1);
@@ -176,6 +180,7 @@ test("a pinned star is held at the top of the list", async ({ page }) => {
   await expect(cards.first()).toContainText("馬仔坑遊樂場", { timeout: 15_000 });
 
   // And it comes off the same way it went on.
+  await page.locator("[data-pinned]").getByRole("button", { name: "管理" }).click();
   await page.getByRole("button", { name: "取消置頂" }).click();
   await expect(page.locator("[data-pinned]")).toHaveCount(0);
   await expect(cards.first()).toContainText("天虹小學");

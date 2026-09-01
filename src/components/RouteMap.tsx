@@ -40,6 +40,9 @@ import {
   prefersDark,
   upsertSource,
 } from "~/lib/mapKit";
+import { syncRainRadar } from "~/lib/mapRain";
+import { rideSunPaint, scoreRide } from "~/data/tripSun";
+import { useWalkRain } from "~/data/useWalkRain";
 import { settings } from "~/stores/settings";
 
 /**
@@ -54,6 +57,7 @@ const SRC_TRAFFIC = "app-traffic";
 const SRC_STOPS = "app-stops";
 const SRC_ME = "app-me";
 const SRC_WALK = "app-walk";
+const SRC_SUN = "app-sun-ride";
 const SRC_BUS = "app-buses";
 const SRC_BAND = "app-bus-band";
 const LYR_HIT = "app-stop-hit";
@@ -749,6 +753,17 @@ export function RouteMap(props: {
    * it - rather than said in a row under the frame.
    */
   walkTarget?: LatLng | null;
+  /**
+   * The chosen boarding and alighting stops, so the stretch between them can
+   * be coloured by which window is the dark one. Null until both ends exist
+   * or the setting is off.
+   */
+  sunRide?: {
+    board: number;
+    alight: number;
+    departAt: Date;
+    arriveAt: Date;
+  } | null;
   lang: Lang;
   /** Shown in place of the map when it cannot render. */
   unavailableLabel: string;
@@ -860,6 +875,11 @@ export function RouteMap(props: {
    * stop list this is, draws them raw, and so do we.
    */
   const markerPositions = createMemo(stopPositions);
+
+  const rain = useWalkRain(() => ({
+    at: props.me ?? props.walkTarget ?? null,
+    hasWalk: Boolean(props.me && props.walkTarget),
+  }));
 
   /*
    * The map is built after the page has arrived, not while it is arriving.
@@ -1234,6 +1254,89 @@ export function RouteMap(props: {
         maxZoom: nearestIndex === undefined ? 15 : 16,
       });
       opened = nearestIndex === undefined ? "route" : "nearest";
+    },
+  );
+
+  /*
+   * The chosen ride, overpainted: shade where the recommended window is the
+   * dark one, sun where that same window is the bright one. The operator
+   * colour stays underneath. Mixed and night stretches stay unpainted.
+   */
+  createEffect(
+    () => ({
+      instance: map(),
+      lines: shape() ?? [stopPositions()],
+      positions: markerPositions(),
+      ride: props.sunRide ?? null,
+      mtr: props.route.co[0] === "mtr",
+    }),
+    ({ instance, lines, positions, ride, mtr }) => {
+      if (!instance) return;
+      const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
+      if (!instance.getSource(SRC_SUN)) instance.addSource(SRC_SUN, { type: "geojson", data: empty });
+      if (!instance.getLayer("app-sun-ride") && instance.getLayer("app-route-line")) {
+        instance.addLayer(
+          {
+            id: "app-sun-ride",
+            type: "line",
+            source: SRC_SUN,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": ["match", ["get", "tone"], "shade", "#3ec9b0", "sun", "#e07a3d", "#8b929c"],
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 7],
+              "line-opacity": 0.9,
+            },
+          },
+          instance.getLayer("app-route-arrows") ? "app-route-arrows" : undefined,
+        );
+      }
+      if (!ride || mtr || !instance.getLayer("app-sun-ride")) {
+        upsertSource(instance, SRC_SUN, empty);
+        return;
+      }
+      const published = measureLine(stitchLines(lines));
+      const placed = measureStops(published, positions);
+      const line = placed?.line ?? published;
+      const from = placed?.measures[ride.board] ?? 0;
+      const to = placed?.measures[ride.alight] ?? line.length;
+      if (to - from < 30) {
+        upsertSource(instance, SRC_SUN, empty);
+        return;
+      }
+      const advice = scoreRide({
+        line,
+        from,
+        to,
+        departAt: ride.departAt,
+        arriveAt: ride.arriveAt,
+      });
+      let features: FeatureCollection["features"] = [];
+      if (advice.kind === "overhead") {
+        const coordinates = sliceLine(line, from, to);
+        if (coordinates.length >= 2) {
+          features = [
+            {
+              type: "Feature",
+              properties: { tone: "overhead" },
+              geometry: { type: "LineString", coordinates },
+            },
+          ];
+        }
+      } else if (advice.kind === "side") {
+        features = rideSunPaint({
+          line,
+          from,
+          to,
+          departAt: ride.departAt,
+          arriveAt: ride.arriveAt,
+          window: advice.window,
+        }).map((stroke) => ({
+          type: "Feature" as const,
+          properties: { tone: stroke.tone },
+          geometry: { type: "LineString" as const, coordinates: stroke.coordinates },
+        }));
+      }
+      upsertSource(instance, SRC_SUN, { type: "FeatureCollection", features });
     },
   );
 
@@ -1769,8 +1872,14 @@ export function RouteMap(props: {
   // The user's own position is a separate source so it updates without
   // touching the route geometry.
   createEffect(
-    () => ({ instance: map(), me: props.me, target: props.walkTarget, lang: props.lang }),
-    ({ instance, me, target, lang }) => {
+    () => ({
+      instance: map(),
+      me: props.me,
+      target: props.walkTarget,
+      lang: props.lang,
+      wet: rain()?.chip != null,
+    }),
+    ({ instance, me, target, lang, wet }) => {
       if (!instance) return;
 
       // The walk to the nearest stop: a dotted path and how long it takes,
@@ -1817,7 +1926,7 @@ export function RouteMap(props: {
             filter: ["==", ["geometry-type"], "LineString"],
             layout: { "line-cap": "round" },
             paint: {
-              "line-color": ACCENT,
+              "line-color": wet ? "#5b9fd4" : ACCENT,
               "line-width": 3,
               "line-opacity": 0.85,
               // Zero-length dashes with round caps read as a dotted walkway,
@@ -1847,6 +1956,8 @@ export function RouteMap(props: {
           },
           beforeMe,
         );
+      } else {
+        instance.setPaintProperty("app-walk-line", "line-color", wet ? "#5b9fd4" : ACCENT);
       }
 
       upsertSource(instance, SRC_ME, {
@@ -1881,6 +1992,21 @@ export function RouteMap(props: {
           },
         });
       }
+    },
+  );
+
+  createEffect(
+    () => ({ instance: map(), tiles: rain()?.tiles ?? null, drawn: shape() }),
+    ({ instance, tiles }) => {
+      if (!instance) return;
+      const before = instance.getLayer("app-route-casing")
+        ? "app-route-casing"
+        : instance.getLayer("app-walk-line")
+          ? "app-walk-line"
+          : instance.getLayer("app-me-halo")
+            ? "app-me-halo"
+            : undefined;
+      syncRainRadar(instance, tiles, before);
     },
   );
 

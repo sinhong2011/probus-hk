@@ -24,6 +24,10 @@ import {
   WalkIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
+import { TripSunChips, TripSunOffer } from "~/components/TripSunOffer";
+import { WalkRainChip, WalkRainOffer } from "~/components/WalkRain";
+import { countdown } from "~/lib/format";
+import { useTripSun } from "~/data/useTripSun";
 import { routeLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { useDb } from "~/data/context";
@@ -54,6 +58,7 @@ function endpointLabel(end: Endpoint | null, lang: Lang): string | null {
 function JourneyCard(props: {
   journey: Journey;
   lang: Lang;
+  dest: LatLng | null;
   /** Whether this is the journey the map has lit. */
   selected?: boolean;
   /** A tap anywhere on the card makes it that journey. */
@@ -78,6 +83,20 @@ function JourneyCard(props: {
     const at = etas()?.[0]?.at.getTime();
     if (at === undefined) return null;
     return Math.max(0, Math.floor((at - now()) / 60_000));
+  });
+
+  const sun = useTripSun(() => {
+    const leg = first();
+    if (!leg) return null;
+    const next = etas()?.find((eta) => countdown(eta, now()).kind !== "gone");
+    return {
+      route: leg.route,
+      boardSeq: leg.boardSeq,
+      alightSeq: leg.alightSeq,
+      departAt: next?.at ?? null,
+      rideMinutes: leg.minutes,
+      walkTo: props.dest,
+    };
   });
 
   /*
@@ -157,7 +176,14 @@ function JourneyCard(props: {
               </Chip>
             )}
           </Show>
+          <Show when={sun()}>{(copy) => <TripSunChips copy={copy()} lang={props.lang} />}</Show>
+          <WalkRainChip at={first()?.boardStop.location ?? props.dest} lang={props.lang} />
         </div>
+        <Show when={sun()?.chip}>
+          <p class="px-3.5 pb-2 text-[0.7rem] font-medium text-faint-foreground">
+            {t("sunHonesty", props.lang)}
+          </p>
+        </Show>
 
         <Hairline />
 
@@ -943,12 +969,20 @@ export default function Plan() {
                   {t("routes", lang())}
                 </SectionLabel>
 
+                <TripSunOffer lang={lang()} hasRide={journeys().length > 0} />
+                <WalkRainOffer
+                  lang={lang()}
+                  at={coordsOf(from())}
+                  hasWalk={journeys().length > 0}
+                />
+
                 <div class="flex flex-col gap-2.5">
                   <For each={journeys()}>
                     {(journey) => (
                       <JourneyCard
                         journey={journey}
                         lang={lang()}
+                        dest={coordsOf(to())}
                         selected={journey.id === selectedId()}
                         onSelect={() => setChosen(journey.id)}
                       />

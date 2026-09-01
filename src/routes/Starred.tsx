@@ -11,12 +11,14 @@ import {
   untrack,
 } from "solid-js";
 import { EmptyState, ScreenTitle, SectionLabel, SpecialTag, StopCode } from "~/components/Chrome";
+import { Drawer } from "~/components/Drawer";
 import { EtaCountdown } from "~/components/EtaCountdown";
 import { GroupSheet } from "~/components/GroupSheet";
 import { SortSheet, SortTrigger, type SortChoice } from "~/components/SortSheet";
 import { StopSheet } from "~/components/StopSheet";
 import {
   AlarmIcon,
+  DotsIcon,
   PinIcon,
   StarIcon,
   ExchangeIcon,
@@ -24,10 +26,10 @@ import {
   LayersIcon,
   TrashIcon,
   ThumbtackIcon,
-  WalkIcon,
+  type IconProps,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
-import { CardGrid, Page, RowCard, Section } from "~/components/Layout";
+import { Page, RowCard, Section } from "~/components/Layout";
 import { routeLink, stopLink } from "~/lib/links";
 import { useDb } from "~/data/context";
 import { isSpecialService, routeAt, routesAtCluster } from "~/data/db";
@@ -37,7 +39,7 @@ import { arrivals, type Arrival } from "~/data/arrivals";
 import { createLiveQuery } from "~/lib/tanstack/db";
 import { countdown } from "~/lib/format";
 import { distanceM, walkMinutes } from "~/lib/geo";
-import { groupColor, groupColorVar, groupTagStyle } from "~/lib/groupColors";
+import { groupColor, groupColorVar } from "~/lib/groupColors";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { alerts } from "~/stores/alerts";
 import { frequent } from "~/stores/frequent";
@@ -94,7 +96,25 @@ function leaveAdvice(etas: Eta[], metres: number | null, at: number) {
   return upcoming.length > 0 ? { leaveIn: null, walk, urgent: false, nth: -1 } : null;
 }
 
-function StarredCard(props: {
+function leaveLabel(
+  advice: { leaveIn: number | null; urgent: boolean; nth: number },
+  lang: Lang,
+): string {
+  if (advice.nth < 0) return t("tooLate", lang);
+  if (advice.leaveIn === 0) return t("leaveNow", lang);
+  if (advice.leaveIn !== null) return `${advice.leaveIn} ${t("leaveIn", lang)}`;
+  return "";
+}
+
+/**
+ * One star as a list row, not a card of its own.
+ *
+ * A favourite list is the same kind of thing as the routes under a stop:
+ * many similar answers, compared in a glance. A card per star paid a
+ * rounded frame, a gap, and a whole strip of actions to say what a
+ * hairline already would, and on a phone that left four stars on screen.
+ */
+function StarredRow(props: {
   entry: Resolved;
   lang: Lang;
   metres: number | null;
@@ -102,12 +122,7 @@ function StarredCard(props: {
   arrival: Arrival | undefined;
   /** Reordering by hand only makes sense while the list is in hand order. */
   draggable: boolean;
-  onRemove: () => void;
-  onRegroup: () => void;
-  /** Move the star to another stop on the same route. */
-  onRestop: () => void;
-  /** Hold the star at the top of the screen, or let it go. */
-  onPin: () => void;
+  onActions: () => void;
 }) {
   const db = useDb();
   const stopStar = () => isStopStar(props.entry.item);
@@ -119,7 +134,6 @@ function StarredCard(props: {
     return routesAtCluster(db(), [...ids]).length;
   });
 
-  // From the arrivals table, which the screen fetches for every card at once.
   const etas = () => props.arrival?.etas;
 
   const advice = () => (stopStar() ? null : leaveAdvice(etas() ?? [], props.metres, now()));
@@ -153,217 +167,152 @@ function StarredCard(props: {
     );
   };
 
+  const paint = () =>
+    props.entry.item.group ? groupColorVar(groupColor(props.entry.item.group)) : undefined;
+
   return (
     <div
-      class={[
-        /* One height for every star: three stacked arrivals, a stop with
-           no countdown, and a neighbour with two used to size the row, and
-           the shorter card stretched a hole through its middle. */
-        "app-press flex h-32 shrink-0 flex-col overflow-hidden rounded-xl bg-card shadow-card motion-safe:app-rise",
-        { "opacity-60": dim() },
-      ]}
+      class={["app-tap flex min-w-0 items-center gap-2 px-3 py-2.5", { "opacity-60": dim() }]}
       data-star-id={props.entry.item.id}
       data-held={props.entry.item.pinned ? "" : undefined}
+      data-pinned={props.entry.item.pinned ? "" : undefined}
     >
-      <div class="flex min-h-0 flex-1 items-center gap-2.5 px-3.5 py-2.5">
-        {/* Always on show while the list is in hand order: a grip that only
-            appeared in a mode was a drag nobody found. */}
-        <Show when={props.draggable}>
-          <button
-            type="button"
-            aria-label="reorder"
-            data-drag-handle
-            class="-ml-1 cursor-grab touch-none text-faint-foreground"
-          >
-            <GripIcon size={14} />
-          </button>
-        </Show>
-
-        <Show when={stopStar()}>
+      {/* Group as a rail, not a tag: the name is already on the filter
+          chip, and a pill here stole the destination's width. */}
+      <Show when={paint()}>
+        {(color) => (
           <span
-            class="flex h-[1.9375rem] min-w-[3rem] shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+            class="absolute inset-y-0 left-0 w-[3px]"
+            style={{ background: color() }}
             aria-hidden="true"
-          >
-            <PinIcon size={14} />
-          </span>
-          <a
-            {...useLinkProps(stopLink(props.entry.item.stopId))}
-            class="flex min-w-0 grow flex-col gap-0.5"
-          >
-            <span class="flex min-w-0 items-center gap-1.5">
-              <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                {props.entry.stopName}
-              </span>
-              <StopCode name={props.entry.stop?.name} lang={props.lang} />
-            </span>
-            <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-              {[
-                `${routeCount()} ${t("routesCount", props.lang)}`,
-                props.metres !== null
-                  ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-          </a>
-        </Show>
-
-        <Show when={!stopStar() && props.entry.route}>
-          {(route) => (
-            <>
-              <RoutePlate route={route().route} co={route().co} size="sm" muted={dim()} />
-
-              <a
-                {...useLinkProps(routeLink(route().key))}
-                class="flex min-w-0 grow flex-col gap-0.5"
-              >
-                <span class="flex min-w-0 items-center gap-1.5">
-                  <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                    {t("towards", props.lang)} {pick(route().dest, props.lang)}
-                  </span>
-                  <Show when={isSpecialService(route())}>
-                    <SpecialTag lang={props.lang} />
-                  </Show>
-                </span>
-                <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
-                  {[
-                    props.entry.stopName,
-                    props.metres !== null
-                      ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              </a>
-            </>
-          )}
-        </Show>
-
-        <Show when={alerted()}>
-          <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
-            <AlarmIcon size={14} />
-          </span>
-        </Show>
-
-        <Show when={!stopStar()}>
-          <EtaCountdown
-            etas={etas()}
-            lang={props.lang}
-            size="sm"
-            limit={3}
-            scheduledLabel={false}
-            unreachable={unreachable()}
-            over={over()}
           />
-        </Show>
-      </div>
+        )}
+      </Show>
 
-      {/*
-       * One strip under the card: the line that turns arrival times into a
-       * decision on the left, and everything that can be done to the star
-       * on the right. The actions used to hide behind an Edit mode, which
-       * made every change a three-tap errand and left the card with no next
-       * step on show; icon-sized and quiet, they can afford to just be there.
-       *
-       * Urgency is carried by the ink alone: a filled strip, a 7% wash and
-       * finally a rule down the left edge each made the row a second plate
-       * competing with the route's. Indigo on the icon and the minutes says
-       * the same thing, and only where the eye already reads.
-       */}
-      <div class="flex shrink-0 items-center gap-1.5 border-t border-border py-1 pl-3.5 pr-2">
-        {/* The group opens the strip: which drawer the star is filed in,
-            said once, at the corner the eye enters the row from. */}
-        <Show when={props.entry.item.group}>
-          {(name) => (
-            <span
-              class="min-w-0 shrink truncate rounded-full px-2 py-0.5 text-[0.7rem] font-bold"
-              style={groupTagStyle(name())}
-            >
-              {name()}
+      {/* Always on show while the list is in hand order: a grip that only
+          appeared in a mode was a drag nobody found. */}
+      <Show when={props.draggable}>
+        <button
+          type="button"
+          aria-label="reorder"
+          data-drag-handle
+          class="-ml-1 cursor-grab touch-none text-faint-foreground"
+        >
+          <GripIcon size={14} />
+        </button>
+      </Show>
+
+      <Show when={stopStar()}>
+        <span
+          class="flex h-[1.55rem] min-w-[2.8rem] shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+          aria-hidden="true"
+        >
+          <PinIcon size={14} />
+        </span>
+        <a
+          {...useLinkProps(stopLink(props.entry.item.stopId))}
+          class="flex min-w-0 grow flex-col gap-0.5"
+        >
+          <span class="flex min-w-0 items-center gap-1.5">
+            <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+              {props.entry.stopName}
             </span>
-          )}
-        </Show>
+            <StopCode name={props.entry.stop?.name} lang={props.lang} />
+          </span>
+          <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+            {[
+              `${routeCount()} ${t("routesCount", props.lang)}`,
+              props.metres !== null
+                ? `${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </a>
+      </Show>
 
-        <Show when={advice()}>
-          {(a) => (
-            <>
-              <span class={a().urgent ? "text-primary" : "text-subtle-foreground"}>
-                <WalkIcon size={12} />
+      <Show when={!stopStar() && props.entry.route}>
+        {(route) => (
+          <>
+            <RoutePlate route={route().route} co={route().co} size="xs" muted={dim()} />
+
+            <a {...useLinkProps(routeLink(route().key))} class="flex min-w-0 grow flex-col gap-0.5">
+              <span class="flex min-w-0 items-center gap-1.5">
+                <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                  {t("towards", props.lang)} {pick(route().dest, props.lang)}
+                </span>
+                <Show when={isSpecialService(route())}>
+                  <SpecialTag lang={props.lang} />
+                </Show>
               </span>
-              {/* Only the dead end needs words. "Catch the next one" was the
-                  struck-out arrival above saying itself a second time. */}
-              <Show when={a().nth < 0}>
-                <span class="text-[0.81rem] font-semibold text-faint-foreground">
-                  {t("tooLate", props.lang)}
-                </span>
-              </Show>
+              <span class="truncate text-[0.75rem] font-medium text-subtle-foreground">
+                {props.entry.stopName}
+                <Show when={advice()}>
+                  {(a) => {
+                    const text = leaveLabel(a(), props.lang);
+                    return (
+                      <Show when={text}>
+                        {" · "}
+                        <span
+                          class={[
+                            "tnum",
+                            {
+                              "text-faint-foreground": a().nth < 0,
+                              "font-bold text-primary": a().urgent && a().nth >= 0,
+                            },
+                          ]}
+                        >
+                          {text}
+                        </span>
+                      </Show>
+                    );
+                  }}
+                </Show>
+                <Show when={!advice() && props.metres !== null}>
+                  {` · ${t("walkMinutes", props.lang)} ${walkMinutes(props.metres)} ${t("minute", props.lang)}`}
+                </Show>
+              </span>
+            </a>
+          </>
+        )}
+      </Show>
 
-              <Show when={a().leaveIn !== null}>
-                <span
-                  class={[
-                    "tnum whitespace-nowrap text-[0.81rem] font-bold",
-                    { "text-primary": a().urgent, "text-subtle-foreground": !a().urgent },
-                  ]}
-                >
-                  <Show when={a().leaveIn! > 0} fallback={t("leaveNow", props.lang)}>
-                    {a().leaveIn} {t("leaveIn", props.lang)}
-                  </Show>
-                </span>
-              </Show>
-            </>
-          )}
-        </Show>
+      <Show when={alerted()}>
+        <span class="shrink-0 text-primary" title={t("alertOn", props.lang)}>
+          <AlarmIcon size={14} />
+        </span>
+      </Show>
 
-        <div class="ml-auto flex items-center">
-          {/* Lit when it is on: the button wears the state as well as the
-              action, so a pinned card says so wherever it is on the screen. */}
-          <button
-            type="button"
-            aria-pressed={props.entry.item.pinned ? "true" : "false"}
-            aria-label={t(props.entry.item.pinned ? "unpinTop" : "pinTop", props.lang)}
-            data-pinned={props.entry.item.pinned ? "" : undefined}
-            onClick={props.onPin}
-            class={[
-              "app-bare flex size-7 items-center justify-center rounded-full transition-colors duration-150 hover:bg-secondary",
-              props.entry.item.pinned
-                ? "text-primary"
-                : "text-faint-foreground hover:text-foreground",
-            ]}
-          >
-            <ThumbtackIcon size={12} />
-          </button>
-          <Show when={!stopStar()}>
-            <button
-              type="button"
-              aria-label={t("changeStop", props.lang)}
-              onClick={props.onRestop}
-              class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
-            >
-              <ExchangeIcon size={12} />
-            </button>
-          </Show>
-          {/* Icon only: the name it would repeat is already printed under the
-              plate, and the label survives as the button's accessible name. */}
-          <button
-            type="button"
-            aria-label={props.entry.item.group || t("noGroup", props.lang)}
-            onClick={props.onRegroup}
-            class="flex size-7 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
-          >
-            <LayersIcon size={12} />
-          </button>
-          <button
-            type="button"
-            aria-label="remove"
-            onClick={props.onRemove}
-            class="flex size-7 items-center justify-center rounded-full text-destructive/70 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-          >
-            <TrashIcon size={12} />
-          </button>
-        </div>
-      </div>
+      <Show when={!stopStar()}>
+        <EtaCountdown
+          etas={etas()}
+          lang={props.lang}
+          size="sm"
+          limit={2}
+          compact
+          scheduledLabel={false}
+          unreachable={unreachable()}
+          over={over()}
+        />
+      </Show>
+
+      {/* State, not a control: the deed lives in the sheet. A pin that is
+          on has to say so on the row, or a starred list of twelve would
+          hide which ones were held at the top. */}
+      <Show when={props.entry.item.pinned}>
+        <span class="shrink-0 text-primary" title={t("pinnedTop", props.lang)}>
+          <ThumbtackIcon size={12} />
+        </span>
+      </Show>
+      <button
+        type="button"
+        aria-label={t("starActions", props.lang)}
+        onClick={props.onActions}
+        class="flex size-7 shrink-0 items-center justify-center rounded-full text-faint-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
+      >
+        <DotsIcon size={14} />
+      </button>
     </div>
   );
 }
@@ -407,6 +356,9 @@ export default function Starred() {
   /** The star whose stop is being changed, while the stop sheet is up. */
   const [restopping, setRestopping] = createSignal<Resolved | null>(null);
   const [stopOpen, setStopOpen] = createSignal(false);
+  /** The star whose actions (pin, stop, group, delete) are in the sheet. */
+  const [acting, setActing] = createSignal<Resolved | null>(null);
+  const [actionOpen, setActionOpen] = createSignal(false);
 
   /*
    * The arrivals table, read two ways: every row, to hand each card its
@@ -758,28 +710,20 @@ export default function Starred() {
   };
 
   /*
-   * A pinned card's place in the list is not the hand-arranged one, so it
+   * A pinned row's place in the list is not the hand-arranged one, so it
    * does not offer a grip that would move it somewhere it is not.
    */
-  const cardFor = (entry: Resolved) => (
-    <StarredCard
+  const rowFor = (entry: Resolved) => (
+    <StarredRow
       entry={entry}
       lang={lang()}
       metres={metresTo(entry)}
       arrival={arrivalOf().get(entry.item.id)}
       draggable={manual() && !entry.item.pinned}
-      onRemove={() => starred.remove(entry.item.id)}
-      onRegroup={() =>
-        askGroup({
-          current: entry.item.group,
-          apply: (group) => starred.setGroup(entry.item.id, group),
-        })
-      }
-      onRestop={() => {
-        setRestopping(entry);
-        requestAnimationFrame(() => setStopOpen(true));
+      onActions={() => {
+        setActing(entry);
+        requestAnimationFrame(() => setActionOpen(true));
       }}
-      onPin={() => starred.togglePin(entry.item.id)}
     />
   );
 
@@ -945,17 +889,17 @@ export default function Starred() {
             fallback={<EmptyState title={t("nothingInFilter", lang())} />}
           >
             <Show when={listed().length > 0}>
-              <CardGrid dense ref={sortableGrid}>
-                <For each={listed()}>{(entry) => cardFor(entry)}</For>
-              </CardGrid>
+              <RowCard ref={sortableGrid}>
+                <For each={listed()}>{(entry) => rowFor(entry)}</For>
+              </RowCard>
             </Show>
 
             <Show when={resting().length > 0}>
               <Section>
                 <SectionLabel>{t("notRunning", lang())}</SectionLabel>
-                <CardGrid dense ref={sortableGrid}>
-                  <For each={resting()}>{(entry) => cardFor(entry)}</For>
-                </CardGrid>
+                <RowCard ref={sortableGrid}>
+                  <For each={resting()}>{(entry) => rowFor(entry)}</For>
+                </RowCard>
               </Section>
             </Show>
           </Show>
@@ -988,6 +932,41 @@ export default function Starred() {
             confirmLabel={ask().confirm}
             onChoose={(group) => ask().apply(group)}
             lang={lang()}
+          />
+        )}
+      </Show>
+
+      <Show when={acting()} keyed>
+        {(entry) => (
+          <StarActionSheet
+            open={actionOpen()}
+            onClose={() => setActionOpen(false)}
+            entry={entry}
+            lang={lang()}
+            onPin={() => {
+              setActionOpen(false);
+              starred.togglePin(entry.item.id);
+            }}
+            onRestop={
+              entry.route
+                ? () => {
+                    setActionOpen(false);
+                    setRestopping(entry);
+                    requestAnimationFrame(() => setStopOpen(true));
+                  }
+                : undefined
+            }
+            onRegroup={() => {
+              setActionOpen(false);
+              askGroup({
+                current: entry.item.group,
+                apply: (group) => starred.setGroup(entry.item.id, group),
+              });
+            }}
+            onRemove={() => {
+              setActionOpen(false);
+              starred.remove(entry.item.id);
+            }}
           />
         )}
       </Show>
@@ -1058,5 +1037,124 @@ function FilterChip(props: {
     >
       {props.label}
     </button>
+  );
+}
+
+/**
+ * The deeds on a star - pin, change the stop, the group, or drop it.
+ *
+ * They used to hold a whole strip open under every favourite, which is
+ * what made a list of stars a list of cards. One sheet, opened from the
+ * row, keeps the list itself a list of arrivals.
+ */
+function StarActionSheet(props: {
+  open: boolean;
+  onClose: () => void;
+  entry: Resolved;
+  lang: Lang;
+  onPin: () => void;
+  onRestop?: () => void;
+  onRegroup: () => void;
+  onRemove: () => void;
+}) {
+  const title = () =>
+    props.entry.route
+      ? `${t("towards", props.lang)} ${pick(props.entry.route.dest, props.lang)}`
+      : props.entry.stopName;
+
+  const pinned = () => Boolean(props.entry.item.pinned);
+
+  const actions = () => {
+    const rows: {
+      label: string;
+      Icon: (p: IconProps) => import("solid-js").JSX.Element;
+      onPress: () => void;
+      danger?: boolean;
+      on?: boolean;
+    }[] = [
+      {
+        label: t(pinned() ? "unpinTop" : "pinTop", props.lang),
+        Icon: ThumbtackIcon,
+        onPress: props.onPin,
+        on: pinned(),
+      },
+    ];
+    if (props.onRestop) {
+      rows.push({
+        label: t("changeStop", props.lang),
+        Icon: ExchangeIcon,
+        onPress: props.onRestop,
+      });
+    }
+    rows.push({
+      label: props.entry.item.group || t("noGroup", props.lang),
+      Icon: LayersIcon,
+      onPress: props.onRegroup,
+    });
+    rows.push({
+      label: t("removeStar", props.lang),
+      Icon: TrashIcon,
+      onPress: props.onRemove,
+      danger: true,
+    });
+    return rows;
+  };
+
+  return (
+    <Drawer
+      open={props.open}
+      onClose={props.onClose}
+      modal
+      label={t("starActions", props.lang)}
+      class="sm:max-w-[32rem]"
+    >
+      <p class="truncate px-4 pt-1 text-[0.75rem] font-semibold text-subtle-foreground">
+        {title()}
+      </p>
+      <nav aria-label={t("starActions", props.lang)} class="py-1.5">
+        <div class="flex flex-col">
+          <For each={actions()}>
+            {(row, i) => (
+              <>
+                <Show when={i() > 0}>
+                  <div class="ml-3.5 h-px bg-border" />
+                </Show>
+                <button
+                  type="button"
+                  onClick={row.onPress}
+                  aria-pressed={row.on ? "true" : undefined}
+                  class="app-tap flex w-full items-center gap-3 px-4 py-3 text-left"
+                >
+                  <span
+                    class={[
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                      {
+                        "bg-destructive/10 text-destructive": row.danger,
+                        "bg-primary-muted text-primary": row.on && !row.danger,
+                        "bg-secondary text-muted-foreground": !row.danger && !row.on,
+                      },
+                    ]}
+                  >
+                    <row.Icon size={17} />
+                  </span>
+                  <span
+                    class={[
+                      "min-w-0 grow truncate text-[0.94rem] font-bold",
+                      {
+                        "text-destructive": row.danger,
+                        "text-primary": row.on && !row.danger,
+                        "text-foreground": !row.danger && !row.on,
+                      },
+                    ]}
+                  >
+                    {row.label}
+                  </span>
+                </button>
+              </>
+            )}
+          </For>
+        </div>
+      </nav>
+    </Drawer>
   );
 }

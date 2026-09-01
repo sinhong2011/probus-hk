@@ -29,6 +29,7 @@ import IconMap from "~icons/lineicons/map";
 import IconMapMarker from "~icons/lineicons/map-marker";
 import IconMegaphone from "~icons/lineicons/megaphone-1";
 import IconMenu from "~icons/lineicons/menu";
+import IconMeatballs from "~icons/lineicons/menu-meatballs-1";
 import IconMonitor from "~icons/lineicons/monitor";
 import IconNight from "~icons/lineicons/night";
 import IconMinus from "~icons/lineicons/minus";
@@ -134,6 +135,8 @@ export const StarFillIcon = wrap(IconStarFill as IconComponent);
 export const SettingsIcon = wrap(IconCog as IconComponent);
 /** The rest of the navigation, behind one tab on a phone. */
 export const MoreIcon = wrap(IconMenu as IconComponent);
+/** Three dots: more actions on one row, not the page's More tab. */
+export const DotsIcon = wrap(IconMeatballs as IconComponent);
 export const ChevronLeftIcon = wrap(IconChevronLeft as IconComponent);
 export const ChevronRightIcon = wrap(IconChevronRight as IconComponent);
 export const RefreshIcon = wrap(IconReload as IconComponent);
@@ -329,6 +332,28 @@ export function ExternalIcon(props: IconProps): JSX.Element {
 export const SystemIcon = wrap(IconMonitor as IconComponent);
 export const SunIcon = wrap(IconSun as IconComponent);
 export const MoonIcon = wrap(IconNight as IconComponent);
+
+/**
+ * A rain drop. Lineicons has weather glyphs in the paid set; this one is
+ * drawn here so a wet-walk chip can wear a drop at twelve pixels.
+ */
+export function DropIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <path d="M12 3.2c.4.6 1.2 1.8 2.1 3.4 1.7 2.9 3.4 6.2 3.4 8.2 0 3-2.5 5.4-5.5 5.4S6.5 17.8 6.5 14.8c0-2 1.7-5.3 3.4-8.2.9-1.6 1.7-2.8 2.1-3.4Z" />
+    </svg>
+  );
+}
 
 /**
  * A search range: the circle around you, with you at the middle of it.

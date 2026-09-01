@@ -20,6 +20,8 @@ import {
   prefersDark,
   upsertSource,
 } from "~/lib/mapKit";
+import { syncRainRadar } from "~/lib/mapRain";
+import { useWalkRain } from "~/data/useWalkRain";
 import { settings } from "~/stores/settings";
 
 /**
@@ -383,6 +385,11 @@ export function ExploreMap(props: {
   const db = useDb();
   let frame!: HTMLDivElement;
 
+  const rain = useWalkRain(() => ({
+    at: props.me ?? props.ends?.from ?? null,
+    hasWalk: (props.journeys?.length ?? 0) > 0,
+  }));
+
   const [map, setMap] = createSignal<MlMap | null>(null);
   /** See RouteMap: WebGL is not everywhere, and a black rectangle says nothing. */
   const [usable, setUsable] = createSignal<boolean | null>(null);
@@ -444,6 +451,15 @@ export function ExploreMap(props: {
          */
         if (stage && stage.host.parentElement === frame) stage.host.remove();
       };
+    },
+  );
+
+  createEffect(
+    () => ({ instance: map(), tiles: rain()?.tiles ?? null }),
+    ({ instance, tiles }) => {
+      if (!instance) return;
+      const before = instance.getLayer("xp-leg-casing") ? "xp-leg-casing" : undefined;
+      syncRainRadar(instance, tiles, before);
     },
   );
 

@@ -47,7 +47,7 @@ import { stopIdsFor, useEta } from "~/data/useEta";
 import { live } from "~/data/live";
 import { routesMentioned } from "~/data/notices";
 import { useNotices } from "~/data/useNotices";
-import { distanceM, formatDistance, formatRange, walkMinutes } from "~/lib/geo";
+import { distanceM, formatDistance, formatRange, walkMinutes, type LatLng } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { liveUpdatedAt } from "~/data/live";
 import { frequent } from "~/stores/frequent";
@@ -55,6 +55,7 @@ import { geo, useGeolocation } from "~/stores/geolocation";
 import { starred } from "~/stores/starred";
 import { settings, type NearbyMode } from "~/stores/settings";
 import { sheets } from "~/stores/sheets";
+import { WalkRainChip, WalkRainOffer } from "~/components/WalkRain";
 
 /**
  * How many stops to render before the list stops being useful.
@@ -245,7 +246,7 @@ function clockTime(at: number): string {
  * the route, the stop of it within a short walk, and how long until it comes -
  * and opens the route at that stop when tapped.
  */
-function NextTrip(props: { trip: Guess; lang: Lang }) {
+function NextTrip(props: { trip: Guess; lang: Lang; at: LatLng }) {
   const db = useDb();
   const etas = useEta(() => ({
     route: props.trip.route,
@@ -275,6 +276,7 @@ function NextTrip(props: { trip: Guess; lang: Lang }) {
             {stripStopCode(pick(props.trip.stop.name, props.lang))} · {t("walk", props.lang)}{" "}
             {walkMinutes(props.trip.metres)} {t("minute", props.lang)}
           </span>
+          <WalkRainChip at={props.at} lang={props.lang} />
         </div>
 
         <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} over={over()} />
@@ -576,6 +578,8 @@ export default function Nearby() {
         }
       />
 
+      <WalkRainOffer lang={lang()} at={position()} hasWalk={position() !== null} />
+
       <Show when={guess()}>
         {(trip) => (
           <Section>
@@ -588,7 +592,7 @@ export default function Nearby() {
             >
               {t("headingOut", lang())}
             </SectionLabel>
-            <NextTrip trip={trip()} lang={lang()} />
+            <NextTrip trip={trip()} lang={lang()} at={position()!} />
           </Section>
         )}
       </Show>

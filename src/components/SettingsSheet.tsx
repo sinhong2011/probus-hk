@@ -108,6 +108,8 @@ const CREDITS = [
     href: "https://www.openstreetmap.org/copyright",
     host: "CARTO · OpenStreetMap",
   },
+  { key: "creditWeather", href: "https://www.hko.gov.hk/", host: "data.weather.gov.hk" },
+  { key: "creditRadar", href: "https://www.rainviewer.com/", host: "RainViewer" },
   { key: "creditIcons", href: "https://lineicons.com/", host: "Lineicons" },
 ] as const;
 
@@ -342,6 +344,38 @@ export default function SettingsSheet() {
                   label={t("showVehiclesAway", lang())}
                   checked={settings.vehiclesAway()}
                   onChange={(v) => settings.setVehiclesAway(v)}
+                />
+              </Row>
+            </Card>
+          </Section>
+
+          <Section class="gap-3">
+            <SectionLabel>{t("tripSun", lang())}</SectionLabel>
+            <p class="-mt-1 px-1 text-[0.75rem] font-medium text-subtle-foreground">
+              {t("tripSunHint", lang())}
+            </p>
+            <Card raised>
+              <Row title={t("tripSun", lang())}>
+                <Toggle
+                  label={t("tripSun", lang())}
+                  checked={settings.tripSun()}
+                  onChange={(v) => settings.setTripSun(v)}
+                />
+              </Row>
+            </Card>
+          </Section>
+
+          <Section class="gap-3">
+            <SectionLabel>{t("walkRain", lang())}</SectionLabel>
+            <p class="-mt-1 px-1 text-[0.75rem] font-medium text-subtle-foreground">
+              {t("walkRainHint", lang())}
+            </p>
+            <Card raised>
+              <Row title={t("walkRain", lang())}>
+                <Toggle
+                  label={t("walkRain", lang())}
+                  checked={settings.walkRain()}
+                  onChange={(v) => settings.setWalkRain(v)}
                 />
               </Row>
             </Card>
