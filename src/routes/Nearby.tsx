@@ -708,7 +708,6 @@ export default function Nearby() {
                           seq={row.at.seq}
                           lang={lang()}
                           etas={row.etas}
-                          plateSize="sm"
                           countdownSize="sm"
                           /* Which kerb, and how far: in a merged list that is
                              the fact the grouping used to carry. */
