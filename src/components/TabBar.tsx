@@ -158,10 +158,13 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
   return (
     <nav
       aria-label={t("navigation", props.lang)}
+      aria-hidden={sheetUp() ? "true" : undefined}
       class={[
         "pb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden",
         "transition-transform duration-state ease-[var(--ease-spring)]",
-        { "translate-y-full": sheetUp() },
+        {
+          "pointer-events-none translate-y-full invisible": sheetUp(),
+        },
       ]}
       style={{
         background: "color-mix(in srgb, var(--background) 94%, transparent)",
