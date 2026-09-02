@@ -9,7 +9,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "@playwright/test";
-import { mockTransit } from "../tests/e2e/support/mock";
+import { mockBasemap, mockRunningBuses, mockTransit } from "../tests/e2e/support/mock";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "docs", "screenshots");
@@ -22,6 +22,83 @@ const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
 } as const;
 
+const ROUTE_SHAPE = JSON.stringify({
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [114.19264, 22.34541],
+          [114.185, 22.32],
+          [114.175, 22.31],
+          [114.16911, 22.2943],
+        ],
+      },
+      properties: {},
+    },
+  ],
+});
+
+async function mockMaps(page: Page) {
+  await mockBasemap(page);
+  await page.route("**/hkbus.github.io/route-waypoints/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: ROUTE_SHAPE,
+    }),
+  );
+}
+
+async function seedVehiclesOnMap(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:db:settings",
+      JSON.stringify({
+        "s:settings": {
+          versionKey: "screenshot-map",
+          data: { id: "settings", vehiclesOnMap: true, vehiclesOnList: true },
+        },
+      }),
+    );
+  });
+}
+
+async function waitForMapLibre(page: Page) {
+  const degraded = page.getByText("呢部機顯示唔到地圖");
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if ((await page.locator(".maplibregl-canvas").count()) > 0) {
+      await page.waitForTimeout(1_000);
+      return;
+    }
+    if ((await degraded.count()) > 0) {
+      throw new Error("maplibre map unavailable on this machine");
+    }
+    await page.waitForTimeout(250);
+  }
+  throw new Error("maplibre map did not paint in time");
+}
+
+async function waitForRailMap(page: Page) {
+  const svg = page.locator("svg[role=application]");
+  await svg.waitFor({ timeout: 20_000 });
+  let last = "";
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    const now = (await svg.getAttribute("viewBox")) ?? "";
+    if (now === last && now !== "") {
+      await page.waitForTimeout(400);
+      return;
+    }
+    last = now;
+    await page.waitForTimeout(200);
+  }
+}
+
 interface Shot {
   id: string;
   path: string;
@@ -29,6 +106,10 @@ interface Shot {
   ready: string;
   /** Appended to filenames, e.g. `nearby-dark-mobile.png`. */
   suffix?: string;
+  maps?: boolean;
+  mapWait?: "maplibre" | "rail";
+  /** Screenshot only the map surface instead of the full viewport. */
+  clipToMap?: boolean;
   before?: (page: Page) => Promise<void>;
   prepare?: (page: Page) => Promise<void>;
   setup?: (page: Page) => Promise<void>;
@@ -125,6 +206,63 @@ const SHOTS: Shot[] = [
     ready: "text=往 尖沙咀碼頭",
   },
   {
+    id: "route-map",
+    path: `/route/${KMB_1}`,
+    title: "Route map",
+    ready: "text=往 尖沙咀碼頭",
+    maps: true,
+    mapWait: "maplibre",
+    async prepare(page) {
+      await seedVehiclesOnMap(page);
+      await mockRunningBuses(page);
+    },
+  },
+  {
+    id: "route-map",
+    suffix: "full",
+    path: `/route/${KMB_1}?map=true`,
+    title: "Route map expanded",
+    ready: 'button:has-text("關閉地圖")',
+    maps: true,
+    mapWait: "maplibre",
+    async prepare(page) {
+      await seedVehiclesOnMap(page);
+      await mockRunningBuses(page);
+    },
+  },
+  {
+    id: "plan-map",
+    path: "/plan",
+    title: "Journey map",
+    ready: "text=全程大約",
+    maps: true,
+    mapWait: "maplibre",
+    clipToMap: true,
+    async before(page) {
+      await page.clock.install({ time: WEDNESDAY_MORNING });
+    },
+    async setup(page) {
+      const destination = page.getByLabel("目的地");
+      await destination.click();
+      await destination.fill("尖沙咀");
+      await page.locator('button:has-text("尖沙咀")').first().click();
+    },
+  },
+  {
+    id: "rail-map",
+    path: "/rail/map",
+    title: "Rail network map",
+    ready: 'g[aria-label^="油麻地"]',
+    mapWait: "rail",
+    async setup(page) {
+      const station = page.locator('g[aria-label^="油麻地"] circle').first();
+      const box = await station.boundingBox();
+      if (!box) return;
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await page.getByRole("heading", { name: "油麻地" }).first().waitFor({ timeout: 10_000 });
+    },
+  },
+  {
     id: "plan",
     path: "/plan",
     title: "Journey planner",
@@ -159,6 +297,8 @@ async function waitForScreen(page: Page, shot: Shot) {
   await page.goto(`${BASE}${shot.path}`);
   if (shot.setup) await shot.setup(page);
   await page.locator(shot.ready).first().waitFor({ timeout: 20_000 });
+  if (shot.mapWait === "maplibre") await waitForMapLibre(page);
+  else if (shot.mapWait === "rail") await waitForRailMap(page);
   await page.waitForTimeout(500);
 }
 
@@ -167,7 +307,11 @@ async function capture(page: Page, shot: Shot, variant: keyof typeof VIEWPORTS) 
   await page.setViewportSize(viewport);
   await waitForScreen(page, shot);
   const file = shotFile(shot, variant);
-  await page.screenshot({ path: file, fullPage: false });
+  if (shot.clipToMap && variant === "mobile") {
+    await page.locator(".maplibregl-map").first().screenshot({ path: file });
+  } else {
+    await page.screenshot({ path: file, fullPage: false });
+  }
   return file;
 }
 
@@ -355,6 +499,7 @@ async function main() {
     for (const shot of SHOTS) {
       const page = await context.newPage();
       await mockTransit(page);
+      if (shot.maps) await mockMaps(page);
       const mobilePath = await capture(page, shot, "mobile");
       const desktopPath = await capture(page, shot, "desktop");
       encoded[shotKey(shot)] = {
