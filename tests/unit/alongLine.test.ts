@@ -42,7 +42,10 @@ describe("stitchLines", () => {
   });
 
   it("joins many in-order segments without blowing the stack", () => {
-    const segment = Array.from({ length: 5000 }, (_, i) => [114.17 + i * 0.00001, 22.3] as Position);
+    const segment = Array.from(
+      { length: 5000 },
+      (_, i) => [114.17 + i * 0.00001, 22.3] as Position,
+    );
     const segments = Array.from({ length: 40 }, (_, index) =>
       segment.map(([lng, lat]) => [lng + index * 0.05, lat] as Position),
     );

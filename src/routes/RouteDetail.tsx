@@ -1136,13 +1136,7 @@ function StopRow(props: {
               stops, but what a ride costs is half of what a rider is deciding
               between two stops with, and making them open a row to see it put
               the price behind a tap while the time sat in the open. */}
-          <Show
-            when={
-              fare() !== null ||
-              props.metres !== null ||
-              (!props.open && leadAt())
-            }
-          >
+          <Show when={fare() !== null || props.metres !== null || (!props.open && leadAt())}>
             {/* Set off from the name rather than tucked under it: the tags
                 give the line a shape of its own, and at the list's own
                 line-spacing it read as a second line of the stop's name. */}
