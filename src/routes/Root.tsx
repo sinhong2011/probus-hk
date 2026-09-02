@@ -458,8 +458,10 @@ export function Root() {
             across it.
           */}
           <div
-            /* What a modal drawer scales back behind itself: the whole app,
-               tab bar included, the way a phone treats its own sheets. */
+            /* What a modal drawer scales back behind itself: the page the
+               sheet floats over, the way a phone treats its own sheets. The tab
+               bar sits outside this wrapper so a fixed bar is not trapped in
+               the scaled containing block while it withdraws under a sheet. */
             data-drawer-wrapper
             class={[
               "min-h-dvh bg-background text-foreground transition-[padding] duration-state ease-[var(--ease-spring)]",
@@ -471,9 +473,6 @@ export function Root() {
             <PageShell>
               <Outlet />
             </PageShell>
-            {/* Always present: it is how you get back out of a route or stop
-                you drilled into. */}
-            <TabBar lang={settings.lang()} />
             {/*
              * Reminders live above the screens rather than on one of them: an
              * alert armed on a route has to keep watching after the rider has
@@ -482,6 +481,10 @@ export function Root() {
             <AlertWatcher lang={settings.lang()} />
             <Toaster lang={settings.lang()} />
           </div>
+          {/* Always present: it is how you get back out of a route or stop
+              you drilled into. Outside the drawer wrapper so the phone bar can
+              slide off the viewport when a sheet replaces it. */}
+          <TabBar lang={settings.lang()} />
         </Loading>
       </DbProvider>
     </Errored>
