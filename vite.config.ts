@@ -179,7 +179,7 @@ export default defineConfig({
         ),
       },
     ],
-    include: ["tests/unit/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
   },
 });

@@ -42,12 +42,17 @@ export function RollingNumber(props: {
    * memos settle before effects do.
    */
   let previous: number | undefined;
+  let previousColumns: number | undefined;
   let rising = false;
+  let snap = false;
   const digits = createMemo(() => {
     const value = Math.max(0, Math.trunc(props.value));
+    const parts = String(value).split("");
     rising = previous !== undefined && value > previous;
+    snap = previousColumns !== undefined && previousColumns !== parts.length;
     previous = value;
-    return String(value).split("");
+    previousColumns = parts.length;
+    return parts;
   });
 
   return (
@@ -70,6 +75,7 @@ export function RollingNumber(props: {
               value={Number(digit())}
               place={digits().length - 1 - index}
               rising={() => rising}
+              snap={() => snap}
               delay={props.delay ?? 0}
             />
           )}
@@ -113,6 +119,15 @@ function rollTiming() {
   return motion;
 }
 
+/** A cancelled roll with `fill: both` can leave the leaving cell painted. */
+function resetRoll(leaving: HTMLSpanElement, arriving: HTMLSpanElement) {
+  leaving.textContent = "";
+  leaving.style.opacity = "0";
+  leaving.style.transform = "";
+  arriving.style.opacity = "";
+  arriving.style.transform = "";
+}
+
 /**
  * One column of the roll: the digit leaving, and the digit arriving under it.
  *
@@ -132,6 +147,11 @@ function Digit(props: {
   place: number;
   /** Read at roll time, untracked: whether the whole number just went up. */
   rising: () => boolean;
+  /**
+   * The digit count changed, so columns were reused for new places. A roll
+   * across that boundary left a painted zero in front of "10" and "11".
+   */
+  snap: () => boolean;
   delay: number;
 }) {
   let leaving!: HTMLSpanElement;
@@ -153,7 +173,17 @@ function Digit(props: {
 
       // The global reduced-motion rule only reaches CSS animations. This one
       // has to opt out itself.
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        resetRoll(leaving, arriving);
+        return;
+      }
+
+      // A new column count reassigns place by index; animate through that and
+      // the old digit can stay painted as a leading zero.
+      if (props.snap()) {
+        resetRoll(leaving, arriving);
+        return;
+      }
 
       const { duration, easing } = rollTiming();
       // A correction rolls the other way; see `rising` on the parent.
@@ -189,7 +219,10 @@ function Digit(props: {
 
       // A minute that ticks again mid-roll cancels the one in flight rather
       // than queueing behind it, which would run the column late for ever.
-      return () => playing.forEach((animation) => animation.cancel());
+      return () => {
+        playing.forEach((animation) => animation.cancel());
+        resetRoll(leaving, arriving);
+      };
     },
   );
 
