@@ -153,7 +153,7 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
   /* While one of the app's own sheets is up the bar withdraws below the edge:
      the sheet replaces it as the thing the thumb is using, and a dimmed bar
      peeking around a scrim only says "you cannot press this". */
-  const sheetUp = () => sheets.moreOpen() || sheets.settingsOpen();
+  const sheetUp = () => sheets.phoneBarHidden();
 
   return (
     <nav

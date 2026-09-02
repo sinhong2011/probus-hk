@@ -2,6 +2,7 @@ import { For } from "solid-js";
 import { Modal } from "./Modal";
 import { CheckIcon, SortIcon } from "./Icons";
 import { t, type Lang } from "~/lib/i18n";
+import { sheets } from "~/stores/sheets";
 
 export interface SortChoice<T extends string> {
   value: T;
@@ -37,7 +38,10 @@ export function SortTrigger(props: { label: string; onClick: () => void }) {
       type="button"
       aria-haspopup="dialog"
       aria-label={props.label}
-      onClick={props.onClick}
+      onClick={() => {
+        sheets.pushModal();
+        props.onClick();
+      }}
       class="app-press flex h-[1.6rem] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary px-2.5 text-[0.75rem] font-bold leading-none text-subtle-foreground"
     >
       <SortIcon size={12} />
@@ -54,10 +58,15 @@ export function SortSheet<T extends string>(props: {
   onChoose: (value: T) => void;
   lang: Lang;
 }) {
+  const close = () => {
+    sheets.popModal();
+    props.onClose();
+  };
+
   return (
     <Modal
       open={props.open}
-      onClose={props.onClose}
+      onClose={close}
       title={t("sortBy", props.lang)}
       lang={props.lang}
     >
@@ -72,7 +81,7 @@ export function SortSheet<T extends string>(props: {
                 aria-checked={on() ? "true" : "false"}
                 onClick={() => {
                   props.onChoose(option.value);
-                  props.onClose();
+                  close();
                 }}
                 class={[
                   // Full rows, and a thumb-sized one: this is a sheet the hand

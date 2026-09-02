@@ -48,3 +48,32 @@ test("mobile more drawer hides the bottom tab bar", async ({ page }) => {
     .toBe(false);
   await expect(phoneBar).not.toHaveAttribute("aria-hidden", "true");
 });
+
+test("starred sort sheet hides the bottom tab bar", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "probus:saved",
+      JSON.stringify([
+        {
+          id: "1+1+CHUK YUEN ESTATE+STAR FERRY@9ED7E93749ABAE67",
+          routeKey: "1+1+CHUK YUEN ESTATE+STAR FERRY",
+          co: "kmb",
+          stopId: "9ED7E93749ABAE67",
+          seq: 2,
+          group: "返工",
+        },
+      ]),
+    );
+  });
+
+  await page.goto("/starred");
+  await expect(page.getByRole("button", { name: "排序" })).toBeVisible({ timeout: 10_000 });
+
+  const phoneBar = page.locator("nav.lg\\:hidden").first();
+  await page.getByRole("button", { name: "排序" }).click();
+  await expect(page.getByRole("dialog", { name: "排序" })).toBeVisible();
+
+  await expect
+    .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
+    .toBe(true);
+});

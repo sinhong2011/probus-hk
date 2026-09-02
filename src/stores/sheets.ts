@@ -37,10 +37,28 @@ const [rangeWanted, setRangeWanted] = createSignal(false, { ownedWrite: true });
  */
 const [rangeNested, setRangeNested] = createSignal(false, { ownedWrite: true });
 
+/*
+ * How many modal drawers are up anywhere in the app. The phone tab bar hides
+ * while this is non-zero - sort on starred, range on nearby, more, settings,
+ * and every other modal sheet, nested ones included.
+ */
+const [modalDepth, setModalDepth] = createSignal(0);
+
 export const sheets = {
   settingsOpen,
   settingsWanted,
   moreOpen,
+  modalDepth,
+
+  pushModal() {
+    setModalDepth((depth) => depth + 1);
+  },
+  popModal() {
+    setModalDepth((depth) => Math.max(0, depth - 1));
+  },
+  /** Whether a modal sheet has replaced the phone tab bar. */
+  phoneBarHidden: () =>
+    modalDepth() > 0 || moreOpen() || settingsOpen() || rangeOpen(),
 
   openSettings() {
     // One sheet at a time: settings called from the "more" menu replaces it.
