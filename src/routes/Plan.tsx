@@ -24,10 +24,7 @@ import {
   WalkIcon,
 } from "~/components/Icons";
 import { RoutePlate } from "~/components/RoutePlate";
-import { TripSunChips, TripSunClock, TripSunOffer } from "~/components/TripSunOffer";
-import { WalkRainChip, WalkRainOffer } from "~/components/WalkRain";
 import { countdown } from "~/lib/format";
-import { useTripSun } from "~/data/useTripSun";
 import { routeLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { useDb } from "~/data/context";
@@ -63,11 +60,6 @@ function JourneyCard(props: {
   selected?: boolean;
   /** A tap anywhere on the card makes it that journey. */
   onSelect?: () => void;
-  /**
-   * Clock 行程日照 is scored at. Null means the next live bus — the
-   * default, until a rider picks a morning from tonight.
-   */
-  sunAt?: Date | null;
 }) {
   const db = useDb();
   const j = () => props.journey;
@@ -88,20 +80,6 @@ function JourneyCard(props: {
     const at = etas()?.[0]?.at.getTime();
     if (at === undefined) return null;
     return Math.max(0, Math.floor((at - now()) / 60_000));
-  });
-
-  const sun = useTripSun(() => {
-    const leg = first();
-    if (!leg) return null;
-    const next = etas()?.find((eta) => countdown(eta, now()).kind !== "gone");
-    return {
-      route: leg.route,
-      boardSeq: leg.boardSeq,
-      alightSeq: leg.alightSeq,
-      departAt: props.sunAt ?? next?.at ?? null,
-      rideMinutes: leg.minutes,
-      walkTo: props.dest,
-    };
   });
 
   /*
@@ -181,14 +159,7 @@ function JourneyCard(props: {
               </Chip>
             )}
           </Show>
-          <Show when={sun()}>{(copy) => <TripSunChips copy={copy()} lang={props.lang} />}</Show>
-          <WalkRainChip at={first()?.boardStop.location ?? props.dest} lang={props.lang} />
         </div>
-        <Show when={sun()?.chip}>
-          <p class="px-3.5 pb-2 text-[0.7rem] font-medium text-faint-foreground">
-            {t("sunHonesty", props.lang)}
-          </p>
-        </Show>
 
         <Hairline />
 
@@ -321,11 +292,6 @@ export default function Plan() {
    * choice that stops existing when the ends change falls back to the first.
    */
   const [chosen, setChosen] = createSignal<string | null>(null);
-  /**
-   * Clock 行程日照 is scored at across every card and the map. Null is the
-   * next live bus; a Date is a Hong Kong wall-clock the rider picked.
-   */
-  const [sunAt, setSunAt] = createSignal<Date | null>(null);
   const selectedId = createMemo(() => {
     const list = journeys();
     const wanted = chosen();
@@ -730,7 +696,6 @@ export default function Plan() {
             journeys={picking() ? [] : journeys()}
             selectedId={selectedId()}
             ends={ends()}
-            sunAt={sunAt()}
             onSelectJourney={setChosen}
             onSelectPin={(id) => {
               const stop = db().stopList[id];
@@ -980,14 +945,6 @@ export default function Plan() {
                   {t("routes", lang())}
                 </SectionLabel>
 
-                <TripSunOffer lang={lang()} hasRide={journeys().length > 0} />
-                <TripSunClock lang={lang()} value={sunAt()} onChange={setSunAt} />
-                <WalkRainOffer
-                  lang={lang()}
-                  at={coordsOf(from())}
-                  hasWalk={journeys().length > 0}
-                />
-
                 <div class="flex flex-col gap-2.5">
                   <For each={journeys()}>
                     {(journey) => (
@@ -997,7 +954,6 @@ export default function Plan() {
                         dest={coordsOf(to())}
                         selected={journey.id === selectedId()}
                         onSelect={() => setChosen(journey.id)}
-                        sunAt={sunAt()}
                       />
                     )}
                   </For>

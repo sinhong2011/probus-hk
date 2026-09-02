@@ -35,8 +35,6 @@ import {
   ShareIcon,
   TrainIcon,
 } from "~/components/Icons";
-import { TripSunChips, TripSunOffer } from "~/components/TripSunOffer";
-import { WalkRainOffer } from "~/components/WalkRain";
 import { RoutePlate } from "~/components/RoutePlate";
 import { NotFound } from "~/routes/NotFound";
 import { routeLink } from "~/lib/links";
@@ -49,7 +47,6 @@ import { railFare } from "~/data/railFares";
 import { lastRunGone, rideMinutes, routeTimetable, serviceSpan } from "~/data/schedule";
 import type { Bilingual, Eta, KeyedRoute, RouteDb, StopEntry } from "~/data/types";
 import { stopIdsFor, useEta } from "~/data/useEta";
-import { useTripSun } from "~/data/useTripSun";
 import { useVehicles } from "~/data/useVehicles";
 import { progressOf } from "~/data/vehicles";
 import {
@@ -247,23 +244,6 @@ function RideBand(props: {
     return new Date(next.at.getTime() + ride.minutes * 60_000);
   });
 
-  const nextDepart = createMemo(() => {
-    const at = now();
-    return etas()?.find((eta) => countdown(eta, at).kind !== "gone")?.at ?? null;
-  });
-
-  const sun = useTripSun(() =>
-    props.active
-      ? {
-          route: props.route,
-          boardSeq: props.boardSeq,
-          alightSeq: props.alightSeq,
-          departAt: nextDepart(),
-          rideMinutes: props.ride?.minutes ?? null,
-        }
-      : null,
-  );
-
   const armed = () =>
     props.alightStopId !== null && alerts.has("destination", props.route.key, props.alightStopId);
 
@@ -369,9 +349,6 @@ function RideBand(props: {
                     </Chip>
                   )}
                 </Show>
-                <Show when={sun()}>
-                  {(copy) => <TripSunChips copy={copy()} lang={props.lang} />}
-                </Show>
 
                 {/* The reminder this screen exists to make easy: you know where you
                   are getting off, so the app can watch for it. */}
@@ -393,18 +370,6 @@ function RideBand(props: {
                   {t("alertDestination", props.lang)}
                 </button>
               </div>
-              <Show when={sun()?.detail}>
-                {(detail) => (
-                  <p class="px-3.5 pb-2.5 text-[0.75rem] font-medium leading-snug text-subtle-foreground">
-                    {detail()}
-                  </p>
-                )}
-              </Show>
-              <Show when={sun()?.chip}>
-                <p class="px-3.5 pb-2.5 text-[0.7rem] font-medium text-faint-foreground">
-                  {t("sunHonesty", props.lang)}
-                </p>
-              </Show>
             </>
           )}
         </Show>
@@ -2160,23 +2125,6 @@ export default function RouteDetail() {
     };
   });
 
-  const sunRide = createMemo(() => {
-    const trip = ride();
-    const on = boardSeq();
-    const off = alightSeq();
-    const r = route();
-    if (!settings.tripSun() || !trip || on === null || off === null || r?.co[0] === "mtr") {
-      return null;
-    }
-    const departAt = new Date(now());
-    return {
-      board: on - 1,
-      alight: off - 1,
-      departAt,
-      arriveAt: new Date(departAt.getTime() + trip.minutes * 60_000),
-    };
-  });
-
   /*
    * Open the stop you are standing at and scroll to it, so the page answers the
    * question you came with before you touch anything. Only while the page is
@@ -2558,7 +2506,6 @@ export default function RouteDetail() {
                   walkTarget={
                     nearestIndex() >= 0 ? (stops()[nearestIndex()]?.stop.location ?? null) : null
                   }
-                  sunRide={sunRide()}
                   /* Shorter on a phone: the map is a preview with an expand button, and
                      the stop list under it is what the rider is here to read - at 17rem
                      the map took two stops' worth of a small screen to say what it says
@@ -2631,13 +2578,6 @@ export default function RouteDetail() {
           <Alert id="route.tap-for-eta" lang={lang()} class="shrink-0">
             {t("tapForEta", lang())}
           </Alert>
-
-          <TripSunOffer lang={lang()} hasRide={boardSeq() !== null && alightSeq() !== null} />
-          <WalkRainOffer
-            lang={lang()}
-            at={position()}
-            hasWalk={Boolean(position() && nearestIndex() >= 0)}
-          />
 
           {/* The card is the frame; the rows move inside it, at every width. */}
           {/* The card is the frame; the rows move inside it, at every width. */}

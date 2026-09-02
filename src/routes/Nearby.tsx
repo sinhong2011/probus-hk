@@ -55,8 +55,6 @@ import { geo, useGeolocation } from "~/stores/geolocation";
 import { starred } from "~/stores/starred";
 import { settings, type NearbyMode } from "~/stores/settings";
 import { sheets } from "~/stores/sheets";
-import { WalkRainChip, WalkRainOffer } from "~/components/WalkRain";
-
 /**
  * How many stops to render before the list stops being useful.
  *
@@ -276,7 +274,6 @@ function NextTrip(props: { trip: Guess; lang: Lang; at: LatLng }) {
             {stripStopCode(pick(props.trip.stop.name, props.lang))} · {t("walk", props.lang)}{" "}
             {walkMinutes(props.trip.metres)} {t("minute", props.lang)}
           </span>
-          <WalkRainChip at={props.at} lang={props.lang} />
         </div>
 
         <EtaCountdown etas={etas()} lang={props.lang} size="lg" limit={1} over={over()} />
@@ -577,8 +574,6 @@ export default function Nearby() {
           </>
         }
       />
-
-      <WalkRainOffer lang={lang()} at={position()} hasWalk={position() !== null} />
 
       <Show when={guess()}>
         {(trip) => (
