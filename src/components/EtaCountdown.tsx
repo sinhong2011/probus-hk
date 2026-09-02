@@ -206,7 +206,7 @@ export function EtaCountdown(props: {
         <div
           class={[
             "grid shrink-0 items-center justify-items-end gap-x-[3px]",
-            props.compact ? "gap-y-0.5" : "gap-y-1.5",
+            props.compact ? "gap-y-[1.7px]" : "gap-y-[5.1px]",
             booked()
               ? "grid-cols-[auto_minmax(2.5rem,auto)_auto] lg:grid-cols-[auto_auto_minmax(2.5rem,auto)_auto]"
               : "grid-cols-[auto_minmax(2.5rem,auto)_auto]",

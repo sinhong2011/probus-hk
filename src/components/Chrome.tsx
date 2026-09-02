@@ -138,7 +138,7 @@ export function SpecialTag(props: { lang: Lang }) {
 }
 
 export function Hairline() {
-  return <div class="ml-3.5 h-px bg-border" />;
+  return <div class="h-px w-full bg-border" />;
 }
 
 export function Chip(props: {
