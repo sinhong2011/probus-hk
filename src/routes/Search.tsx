@@ -111,9 +111,9 @@ const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const SHOWN_CATEGORIES = CATEGORIES.slice(0, 6);
 
 /**
- * One route on the list, in the shape a rider reads it: the number and who
- * runs it, then where it is going in bold - "42 往 青衣" is how a route is
- * named out loud - and where it starts underneath, smaller, with the fare.
+ * One route on the list, in the shape a rider reads it: the number on its
+ * plate, then where it is going in bold - "42 往 青衣" is how a route is
+ * named out loud - and who runs it, where it starts, and the fare underneath.
  */
 function RouteItem(props: {
   route: KeyedRoute;
@@ -130,12 +130,7 @@ function RouteItem(props: {
           props.onRemove ? "pr-1" : "pr-3.5",
         ]}
       >
-        <div class="flex w-[4.5rem] shrink-0 flex-col items-start gap-[3px]">
-          <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
-          <span class="max-w-full truncate text-[0.69rem] font-semibold text-subtle-foreground">
-            {operatorShort(props.route.co, props.lang)}
-          </span>
-        </div>
+        <RoutePlate route={props.route.route} co={props.route.co} size="sm" />
         <div class="flex min-w-0 grow flex-col gap-0.5">
           <span class="flex min-w-0 items-center gap-1.5">
             <span class="truncate text-[0.94rem] font-bold tracking-[-0.01em] text-foreground">
@@ -148,10 +143,10 @@ function RouteItem(props: {
               <SpecialTag lang={props.lang} />
             </Show>
           </span>
-          {/* Where it starts, and what it costs. Nothing boxes the amounts any
-              more, so the dot between them does the work the two tags used to:
-              without it the pair ran together as one figure. */}
+          {/* Operator beside the origin keeps the plate column one line tall. */}
           <span class="flex min-w-0 items-center gap-1 text-[0.75rem] font-medium text-subtle-foreground">
+            <span class="shrink-0">{operatorShort(props.route.co, props.lang)}</span>
+            <span class="shrink-0 text-faint-foreground">·</span>
             <span class="truncate">{pick(props.route.orig, props.lang)}</span>
             <Show when={formatFare(props.route.fares?.[0])}>
               {(fare) => (
