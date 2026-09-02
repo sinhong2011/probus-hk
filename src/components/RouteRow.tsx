@@ -80,7 +80,7 @@ export function RouteLine(props: LineProps) {
       {...useLinkProps({ ...routeLink(props.route.key), onClick: props.onClick })}
       class={[
         "app-tap flex w-full min-w-0 max-w-full items-center transition-colors duration-state hover:bg-raised",
-        props.compact ? "gap-2 px-3 py-4" : "gap-2.5 px-3.5 py-4.5",
+        props.compact ? "gap-2 px-3 py-[5px]" : "gap-2.5 px-3.5 py-[5px]",
         props.class ?? "",
       ]}
     >
