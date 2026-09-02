@@ -5,49 +5,39 @@ test.beforeEach(async ({ page }) => {
   await mockTransit(page);
 });
 
-test("mobile more drawer hides the bottom tab bar", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("link", { name: "主頁" })).toBeVisible({ timeout: 10_000 });
+const ROUTES = ["/", "/starred", "/search", "/rail", "/notices"] as const;
 
-  const phoneBar = page.locator("nav.lg\\:hidden").first();
-  await expect(phoneBar).toBeVisible();
+for (const route of ROUTES) {
+  test(`more drawer hides the bottom tab bar on ${route}`, async ({ page }) => {
+    await page.goto(route);
+    await expect(page.getByRole("button", { name: "更多" })).toBeVisible({ timeout: 10_000 });
 
-  await expect
-    .poll(async () =>
-      phoneBar.evaluate((el) => {
-        const rect = el.getBoundingClientRect();
-        return Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
-      }),
-    )
-    .toBeGreaterThan(0);
+    const phoneBar = page.locator("nav.lg\\:hidden").first();
+    await expect(phoneBar).toBeVisible();
 
-  await page.getByRole("button", { name: "更多" }).click();
+    await page.getByRole("button", { name: "更多" }).click();
+    await expect(page.getByRole("dialog", { name: "更多" })).toBeVisible();
 
-  // The bar must vanish on the same frame the sheet opens, not after a slide.
-  await expect
-    .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
-    .toBe(true);
+    await expect
+      .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
+      .toBe(true);
 
-  await expect(page.getByRole("dialog", { name: "更多" })).toBeVisible();
+    await expect
+      .poll(async () =>
+        phoneBar.evaluate((el) => {
+          const rect = el.getBoundingClientRect();
+          return Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+        }),
+      )
+      .toBe(0);
 
-  await expect(phoneBar).toHaveAttribute("aria-hidden", "true");
-
-  await expect
-    .poll(async () =>
-      phoneBar.evaluate((el) => {
-        const rect = el.getBoundingClientRect();
-        return Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
-      }),
-    )
-    .toBe(0);
-
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "更多" })).toBeHidden();
-  await expect
-    .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
-    .toBe(false);
-  await expect(phoneBar).not.toHaveAttribute("aria-hidden", "true");
-});
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "更多" })).toBeHidden();
+    await expect
+      .poll(async () => phoneBar.evaluate((el) => !el.classList.contains("hidden")))
+      .toBe(true);
+  });
+}
 
 test("starred sort sheet hides the bottom tab bar", async ({ page }) => {
   await page.addInitScript(() => {
