@@ -27,8 +27,69 @@ interface Shot {
   path: string;
   title: string;
   ready: string;
+  /** Appended to filenames, e.g. `nearby-dark-mobile.png`. */
+  suffix?: string;
   before?: (page: Page) => Promise<void>;
+  prepare?: (page: Page) => Promise<void>;
   setup?: (page: Page) => Promise<void>;
+}
+
+function shotFile(shot: Shot, variant: keyof typeof VIEWPORTS) {
+  const name = shot.suffix ? `${shot.id}-${shot.suffix}` : shot.id;
+  return join(OUT, `${name}-${variant}.png`);
+}
+
+const STARRED_FIXTURE = [
+  {
+    id: "1+1+CHUK YUEN ESTATE+STAR FERRY@9ED7E93749ABAE67",
+    routeKey: "1+1+CHUK YUEN ESTATE+STAR FERRY",
+    co: "kmb",
+    stopId: "9ED7E93749ABAE67",
+    seq: 2,
+    group: "返工",
+    pinned: true,
+  },
+  {
+    id: "102+1+MEI FOO+SHAU KEI WAN@001436",
+    routeKey: "102+1+MEI FOO+SHAU KEI WAN",
+    co: "ctb",
+    stopId: "001436",
+    seq: 2,
+    group: "",
+  },
+  {
+    id: "TWL+1+Central+Tsuen Wan@ADM",
+    routeKey: "TWL+1+Central+Tsuen Wan",
+    co: "mtr",
+    stopId: "ADM",
+    seq: 6,
+    group: "返工",
+  },
+];
+
+async function seedStorage(page: Page, entries: Record<string, string>) {
+  await page.addInitScript((data) => {
+    localStorage.clear();
+    for (const [key, value] of Object.entries(data)) localStorage.setItem(key, value);
+  }, entries);
+}
+
+async function seedTheme(page: Page, theme: "light" | "dark") {
+  if (theme === "light") return;
+  await seedStorage(page, {
+    "probus:db:settings": JSON.stringify({
+      "s:settings": {
+        versionKey: "screenshot-dark",
+        data: { id: "settings", theme: "dark" },
+      },
+    }),
+  });
+}
+
+async function seedStarred(page: Page) {
+  await seedStorage(page, {
+    "probus:saved": JSON.stringify(STARRED_FIXTURE),
+  });
 }
 
 const SHOTS: Shot[] = [
@@ -37,6 +98,25 @@ const SHOTS: Shot[] = [
     path: "/",
     title: "Nearby arrivals",
     ready: 'a[href^="/stop/"]',
+  },
+  {
+    id: "nearby",
+    suffix: "dark",
+    path: "/",
+    title: "Dark mode",
+    ready: 'a[href^="/stop/"]',
+    async prepare(page) {
+      await seedTheme(page, "dark");
+    },
+  },
+  {
+    id: "starred",
+    path: "/starred",
+    title: "Starred",
+    ready: "[data-star-id]",
+    async prepare(page) {
+      await seedStarred(page);
+    },
   },
   {
     id: "route",
@@ -75,6 +155,7 @@ const SHOTS: Shot[] = [
 
 async function waitForScreen(page: Page, shot: Shot) {
   if (shot.before) await shot.before(page);
+  if (shot.prepare) await shot.prepare(page);
   await page.goto(`${BASE}${shot.path}`);
   if (shot.setup) await shot.setup(page);
   await page.locator(shot.ready).first().waitFor({ timeout: 20_000 });
@@ -85,14 +166,18 @@ async function capture(page: Page, shot: Shot, variant: keyof typeof VIEWPORTS) 
   const viewport = VIEWPORTS[variant];
   await page.setViewportSize(viewport);
   await waitForScreen(page, shot);
-  const file = join(OUT, `${shot.id}-${variant}.png`);
+  const file = shotFile(shot, variant);
   await page.screenshot({ path: file, fullPage: false });
   return file;
 }
 
+function shotKey(shot: Shot) {
+  return shot.suffix ? `${shot.id}-${shot.suffix}` : shot.id;
+}
+
 function showcaseHtml(files: Record<string, { mobile: string; desktop: string }>) {
   const cards = SHOTS.map((shot) => {
-    const pair = files[shot.id];
+    const pair = files[shotKey(shot)];
     return `
       <article class="card">
         <h2>${shot.title}</h2>
@@ -264,19 +349,20 @@ async function main() {
       permissions: ["geolocation"],
       serviceWorkers: "block",
     });
-    const page = await context.newPage();
-    await mockTransit(page);
 
     const encoded: Record<string, { mobile: string; desktop: string }> = {};
 
     for (const shot of SHOTS) {
+      const page = await context.newPage();
+      await mockTransit(page);
       const mobilePath = await capture(page, shot, "mobile");
       const desktopPath = await capture(page, shot, "desktop");
-      encoded[shot.id] = {
+      encoded[shotKey(shot)] = {
         mobile: (await readFile(mobilePath)).toString("base64"),
         desktop: (await readFile(desktopPath)).toString("base64"),
       };
-      console.log(`captured ${shot.id}`);
+      console.log(`captured ${shotKey(shot)}`);
+      await page.close();
     }
 
     const showcasePage = await context.newPage();
@@ -405,6 +491,7 @@ async function main() {
         <span class="badge">No tracking</span>
         <span class="badge">PWA</span>
         <span class="badge">Bilingual</span>
+        <span class="badge">Dark mode</span>
       </div>
     </div>
     <div class="devices">

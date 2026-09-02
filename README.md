@@ -34,6 +34,20 @@ Phone-first layout with a full desktop shell — the same app, two ways to ride 
       <td colspan="2"><strong>Nearby</strong> — live ETAs for every stop around you, grouped by station or route.</td>
     </tr>
     <tr>
+      <td><img src="docs/screenshots/starred-desktop.png" alt="Starred routes on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/starred-mobile.png" alt="Starred routes on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Starred</strong> — saved stops and routes in groups, with pins, sorting and swipe actions.</td>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/nearby-dark-desktop.png" alt="Dark mode on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/nearby-dark-mobile.png" alt="Dark mode on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Dark mode</strong> — system, light or dark theme on every screen.</td>
+    </tr>
+    <tr>
       <td><img src="docs/screenshots/route-desktop.png" alt="Route detail on desktop" width="640" /></td>
       <td><img src="docs/screenshots/route-mobile.png" alt="Route detail on mobile" width="280" /></td>
     </tr>
