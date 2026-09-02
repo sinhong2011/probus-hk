@@ -320,6 +320,8 @@ const MESSAGES = {
   lastTrain: m.last_train,
   lineMap: m.line_map,
   appName: m.app_name,
+  metaTitleSuffix: m.meta_title_suffix,
+  metaDescription: m.meta_description,
   about: m.about,
   appTagline: m.app_tagline,
   versionLabel: m.version_label,

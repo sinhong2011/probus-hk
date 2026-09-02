@@ -8,6 +8,7 @@ import { createWide } from "~/lib/wide";
 import { routesMentioned, type Notice } from "~/data/notices";
 import { useNotices } from "~/data/useNotices";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { minute } from "~/stores/clock";
 import { settings } from "~/stores/settings";
 
@@ -39,6 +40,8 @@ export default function Notices() {
   const lang = settings.lang;
   const { notices, reload } = useNotices();
   const wide = createWide();
+
+  usePageHead(() => appTitle(t("notices", lang()), lang()));
 
   /** The newest timestamp in the batch: how current the whole screen is. */
   const publishedAt = createMemo(() => {

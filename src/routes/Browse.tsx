@@ -20,6 +20,7 @@ import {
 import type { KeyedRoute } from "~/data/types";
 import { fareLabel } from "~/lib/format";
 import { pick, t, type Lang, type MessageKey } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { browseLink, routeLink } from "~/lib/links";
 import { operatorLabel } from "~/lib/operators";
 import { settings } from "~/stores/settings";
@@ -132,6 +133,12 @@ export default function Browse() {
   const routes = createMemo(() => {
     const chosen = category();
     return chosen ? routesInCategory(db(), chosen) : [];
+  });
+
+  usePageHead(() => {
+    const chosen = category();
+    if (!chosen) return appTitle(t("categories", lang()), lang());
+    return appTitle(pick(chosen.name, lang()), lang());
   });
 
   return (

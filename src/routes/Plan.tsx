@@ -34,6 +34,7 @@ import { serviceSpan } from "~/data/schedule";
 import { stopIdsFor, useEta } from "~/data/useEta";
 import type { StopEntry } from "~/data/types";
 import { formatDistance, walkMinutes, type LatLng } from "~/lib/geo";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { now } from "~/stores/clock";
 import { useGeolocation } from "~/stores/geolocation";
@@ -268,6 +269,16 @@ export default function Plan() {
     if (!a || !b) return [];
     // The nearby range now reaches kilometres; a walk to a stop does not.
     return planJourneys(db(), a, b, { walkRadiusM: Math.min(settings.radiusM(), 800) });
+  });
+
+  usePageHead(() => {
+    const fromLabel = endpointLabel(from(), lang());
+    const toLabel = endpointLabel(to(), lang());
+    if (fromLabel && toLabel) {
+      const trip = `${fromLabel} → ${toLabel}`;
+      return appTitle(`${trip} · ${t("plan", lang())}`, lang());
+    }
+    return appTitle(t("plan", lang()), lang());
   });
 
   const choose = (id: string, stop: StopEntry) => {

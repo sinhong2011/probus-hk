@@ -21,6 +21,7 @@ import { LIGHT_RAIL, MAP_STATIONS } from "~/data/railMap";
 import { serviceSpan } from "~/data/schedule";
 import { distanceM } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { routeLink, stopLink } from "~/lib/links";
 import { createWide } from "~/lib/wide";
 import { OPERATORS, plateStyle } from "~/lib/operators";
@@ -191,6 +192,22 @@ export default function RailMap() {
 
   const pickStation = (id: string | null) => openOnMap(id ? { kind: "station", id } : null);
   const pickLine = (code: string | null) => openOnMap(code ? { kind: "line", code } : null);
+
+  usePageHead(() => {
+    const s = sheet();
+    if (s?.kind === "station") {
+      const stop = db().stopList[s.id];
+      const name = stripStopCode(pick(stop?.name, lang())) || s.id;
+      return appTitle(name, lang());
+    }
+    if (s?.kind === "line") {
+      return appTitle(pick(lineName(s.code), lang()), lang());
+    }
+    if (s?.kind === "lines") {
+      return appTitle(t("wholeNetwork", lang()), lang());
+    }
+    return appTitle(t("networkMap", lang()), lang());
+  });
 
   return (
     /* `always`, not `fill`: plain `fill` holds the page to the window only on

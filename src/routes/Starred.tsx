@@ -39,6 +39,7 @@ import { countdown } from "~/lib/format";
 import { distanceM, walkMinutes } from "~/lib/geo";
 import { groupColor, groupColorVar } from "~/lib/groupColors";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { alerts } from "~/stores/alerts";
 import { frequent } from "~/stores/frequent";
 import { useGeolocation } from "~/stores/geolocation";
@@ -380,6 +381,9 @@ export default function Starred() {
       search: group === null ? {} : { group },
       replace: true,
     });
+
+  usePageHead(() => appTitle(t("starred", lang()), lang()));
+
   /*
    * One sheet, two questions: where an existing star should move to, and
    * where a new one should land. Both end in a group, so both are asked the
