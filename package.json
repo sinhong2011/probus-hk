@@ -19,7 +19,8 @@
     "fares": "bun scripts/build-rail-fares.ts",
     "railmap": "bun scripts/build-rail-map.ts",
     "raillabels": "bun scripts/check-rail-labels.ts",
-    "og": "bun scripts/build-og-image.ts"
+    "og": "bun scripts/build-og-image.ts",
+    "icons": "bun scripts/build-icons.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
