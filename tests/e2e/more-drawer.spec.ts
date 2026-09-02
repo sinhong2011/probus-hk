@@ -22,9 +22,14 @@ test("mobile more drawer hides the bottom tab bar", async ({ page }) => {
     .toBeGreaterThan(0);
 
   await page.getByRole("button", { name: "更多" }).click();
+
+  // The bar must vanish on the same frame the sheet opens, not after a slide.
+  await expect
+    .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
+    .toBe(true);
+
   await expect(page.getByRole("dialog", { name: "更多" })).toBeVisible();
 
-  await expect(phoneBar).toHaveClass(/translate-y-full/);
   await expect(phoneBar).toHaveAttribute("aria-hidden", "true");
 
   await expect
@@ -38,6 +43,8 @@ test("mobile more drawer hides the bottom tab bar", async ({ page }) => {
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "更多" })).toBeHidden();
-  await expect(phoneBar).not.toHaveClass(/translate-y-full/);
+  await expect
+    .poll(async () => phoneBar.evaluate((el) => el.classList.contains("hidden")))
+    .toBe(false);
   await expect(phoneBar).not.toHaveAttribute("aria-hidden", "true");
 });

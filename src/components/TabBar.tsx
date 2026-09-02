@@ -161,10 +161,9 @@ function PhoneBar(props: { lang: Lang; isActive: (href: string) => boolean }) {
       aria-hidden={sheetUp() ? "true" : undefined}
       class={[
         "pb-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border px-1 pt-2.5 lg:hidden",
-        "transition-transform duration-state ease-[var(--ease-spring)]",
-        {
-          "pointer-events-none translate-y-full invisible": sheetUp(),
-        },
+        // Gone the moment a sheet replaces it - not slid away over a few frames
+        // while the drawer is already up, which read as the bar still being there.
+        sheetUp() ? "hidden" : "transition-transform duration-state ease-[var(--ease-spring)]",
       ]}
       style={{
         background: "color-mix(in srgb, var(--background) 94%, transparent)",
