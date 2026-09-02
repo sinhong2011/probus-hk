@@ -5,6 +5,76 @@ ferries. No account, no tracking, no server of its own — the browser talks to
 the operators' open data directly, and the whole route database is cached for
 offline use.
 
+<picture>
+  <source media="(min-width: 900px)" srcset="docs/screenshots/hero.png" />
+  <img
+    src="docs/screenshots/nearby-mobile.png"
+    alt="ProBus HK showing nearby bus and MTR arrivals on desktop and mobile"
+    width="390"
+  />
+</picture>
+
+## Screenshots
+
+Phone-first layout with a full desktop shell — the same app, two ways to ride it.
+
+<table>
+  <thead>
+    <tr>
+      <th>Desktop</th>
+      <th>Mobile</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="docs/screenshots/nearby-desktop.png" alt="Nearby arrivals on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/nearby-mobile.png" alt="Nearby arrivals on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Nearby</strong> — live ETAs for every stop around you, grouped by station or route.</td>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/route-desktop.png" alt="Route detail on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/route-mobile.png" alt="Route detail on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Route detail</strong> — every stop on the line, with countdowns, maps and timetables.</td>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/plan-desktop.png" alt="Journey planner on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/plan-mobile.png" alt="Journey planner on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Journey planner</strong> — door-to-door routes across bus, rail and ferry with walk legs.</td>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/rail-desktop.png" alt="MTR lines on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/rail-mobile.png" alt="MTR lines on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Rail</strong> — MTR and light rail organised as lines, with platform numbers.</td>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/search-desktop.png" alt="Search on desktop" width="640" /></td>
+      <td><img src="docs/screenshots/search-mobile.png" alt="Search on mobile" width="280" /></td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>Search</strong> — routes, stops and destinations with a dial keypad and quick categories.</td>
+    </tr>
+  </tbody>
+</table>
+
+<details>
+  <summary>Full showcase image</summary>
+  <img src="docs/screenshots/showcase.png" alt="ProBus HK product showcase across desktop and mobile" width="100%" />
+</details>
+
+Regenerate screenshots after UI changes:
+
+```sh
+bun run screenshots
+```
+
 ## Deploy
 
 [![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sinhong2011/probus-hk)

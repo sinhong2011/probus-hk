@@ -18,7 +18,8 @@
     "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "fares": "bun scripts/build-rail-fares.ts",
     "railmap": "bun scripts/build-rail-map.ts",
-    "raillabels": "bun scripts/check-rail-labels.ts"
+    "raillabels": "bun scripts/check-rail-labels.ts",
+    "screenshots": "bun run build && bun scripts/capture-screenshots.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
