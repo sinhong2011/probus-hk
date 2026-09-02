@@ -59,12 +59,7 @@ resizeFrom512(192, "icon-192.png");
 resizeFrom512(180, "apple-touch-icon.png");
 copyFileSync(`${OUT}/icon-512.png`, `${OUT}/maskable-512.png`);
 
-run([
-  `${OUT}/icon-512.png`,
-  "-define",
-  "icon:auto-resize=48,32,16",
-  `${ROOT}/public/favicon.ico`,
-]);
+run([`${OUT}/icon-512.png`, "-define", "icon:auto-resize=48,32,16", `${ROOT}/public/favicon.ico`]);
 
 const icon512 = readFileSync(`${OUT}/icon-512.png`);
 const embedded = icon512.toString("base64");
