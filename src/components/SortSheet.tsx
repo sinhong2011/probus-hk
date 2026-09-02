@@ -64,12 +64,7 @@ export function SortSheet<T extends string>(props: {
   };
 
   return (
-    <Modal
-      open={props.open}
-      onClose={close}
-      title={t("sortBy", props.lang)}
-      lang={props.lang}
-    >
+    <Modal open={props.open} onClose={close} title={t("sortBy", props.lang)} lang={props.lang}>
       <div role="radiogroup" aria-label={t("sortBy", props.lang)} class="flex flex-col gap-1">
         <For each={props.options}>
           {(option) => {

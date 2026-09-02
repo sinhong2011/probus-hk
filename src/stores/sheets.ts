@@ -57,8 +57,7 @@ export const sheets = {
     setModalDepth((depth) => Math.max(0, depth - 1));
   },
   /** Whether a modal sheet has replaced the phone tab bar. */
-  phoneBarHidden: () =>
-    modalDepth() > 0 || moreOpen() || settingsOpen() || rangeOpen(),
+  phoneBarHidden: () => modalDepth() > 0 || moreOpen() || settingsOpen() || rangeOpen(),
 
   openSettings() {
     // One sheet at a time: settings called from the "more" menu replaces it.
