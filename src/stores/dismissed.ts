@@ -29,6 +29,22 @@ export const dismissed = {
   dismiss: (id: string) => {
     if (!store.collection.has(id)) store.collection.insert({ id });
   },
+
+  ids(): string[] {
+    return store.current().map((row) => row.id);
+  },
+
+  replaceAll(ids: string[]) {
+    const current = store.current().map((row) => row.id);
+    if (current.length > 0) store.collection.delete(current);
+    if (ids.length > 0) store.collection.insert(ids.map((id) => ({ id })));
+  },
+
+  mergeAll(ids: string[]) {
+    for (const id of ids) {
+      if (!store.collection.has(id)) store.collection.insert({ id });
+    }
+  },
 };
 
 /** Once at start-up, from an owner that lives as long as the app. */

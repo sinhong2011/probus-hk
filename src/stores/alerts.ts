@@ -68,6 +68,21 @@ export const alerts = {
     const ids = store.current().map((a) => a.id);
     if (ids.length > 0) store.collection.delete(ids);
   },
+
+  replaceAll(items: AlertItem[]) {
+    alerts.clear();
+    if (items.length > 0) store.collection.insert(items);
+  },
+
+  mergeAll(items: AlertItem[]) {
+    for (const item of items) {
+      if (store.collection.has(item.id)) {
+        store.collection.update(item.id, (draft) => Object.assign(draft, item));
+      } else {
+        store.collection.insert(item);
+      }
+    }
+  },
 };
 
 export function installAlertEffects() {

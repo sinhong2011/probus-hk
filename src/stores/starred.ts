@@ -43,6 +43,136 @@ export function starredId(routeKey: string, stopId: string): string {
   return routeKey === "" ? `stop:${stopId}` : `${routeKey}@${stopId}`;
 }
 
+export const STARRED_EXPORT_VERSION = 1;
+
+export interface StarredExport {
+  version: typeof STARRED_EXPORT_VERSION;
+  exportedAt: string;
+  items: StarredItem[];
+}
+
+export type StarredImportMode = "merge" | "replace";
+
+export interface StarredImportResult {
+  added: number;
+  skipped: number;
+  invalid: number;
+}
+
+const COMPANIES = new Set<Company>([
+  "kmb",
+  "ctb",
+  "nlb",
+  "gmb",
+  "mtr",
+  "lightRail",
+  "lrtfeeder",
+  "sunferry",
+  "hkkf",
+  "fortuneferry",
+]);
+
+function isCompany(value: unknown): value is Company {
+  return typeof value === "string" && COMPANIES.has(value as Company);
+}
+
+function normalizeItem(raw: unknown, fallbackOrder: number): StarredItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Partial<StarredItem>;
+  if (typeof item.stopId !== "string" || !item.stopId) return null;
+  if (typeof item.seq !== "number" || !Number.isFinite(item.seq)) return null;
+  if (!isCompany(item.co)) return null;
+
+  const routeKey = typeof item.routeKey === "string" ? item.routeKey : "";
+  const group = typeof item.group === "string" ? item.group : "";
+  const id = typeof item.id === "string" && item.id ? item.id : starredId(routeKey, item.stopId);
+  const order =
+    typeof item.order === "number" && Number.isFinite(item.order) ? item.order : fallbackOrder;
+  const pinned = item.pinned === true ? true : undefined;
+
+  return {
+    id,
+    routeKey,
+    co: item.co,
+    stopId: item.stopId,
+    seq: item.seq,
+    group,
+    ...(pinned ? { pinned } : {}),
+    order,
+  };
+}
+
+function parsePayload(raw: unknown): { items: StarredItem[]; invalid: number } | null {
+  const list = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as StarredExport).items)
+      ? (raw as StarredExport).items
+      : null;
+  if (!list) return null;
+
+  const items: StarredItem[] = [];
+  for (let index = 0; index < list.length; index++) {
+    const item = normalizeItem(list[index], index);
+    if (item) items.push(item);
+  }
+  return { items, invalid: list.length - items.length };
+}
+
+function exportStarred(): StarredExport {
+  const items = current().map(({ id, routeKey, co, stopId, seq, group, pinned, order }) => {
+    const item: StarredItem = { id, routeKey, co, stopId, seq, group, order };
+    if (pinned) item.pinned = true;
+    return item;
+  });
+  return {
+    version: STARRED_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    items,
+  };
+}
+
+function downloadStarredExport() {
+  const payload = exportStarred();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `probus-starred-${payload.exportedAt.slice(0, 10)}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function importStarred(raw: unknown, mode: StarredImportMode = "merge"): StarredImportResult {
+  const parsed = parsePayload(raw);
+  if (!parsed) throw new Error("invalid starred export");
+
+  const result: StarredImportResult = { added: 0, skipped: 0, invalid: parsed.invalid };
+  const incoming = parsed.items.slice().sort((a, b) => a.order - b.order);
+
+  if (mode === "replace") {
+    for (const item of current()) stars.delete(item.id);
+    incoming.forEach((item, order) => {
+      stars.insert({ ...item, order });
+      result.added++;
+    });
+    return result;
+  }
+
+  const existing = new Set(current().map((item) => item.id));
+  let order = nextOrder();
+  for (const item of incoming) {
+    if (existing.has(item.id)) {
+      result.skipped++;
+      continue;
+    }
+    stars.insert({ ...item, order });
+    existing.add(item.id);
+    order++;
+    result.added++;
+  }
+  return result;
+}
+
 /** A star of the kerb, not of one line that calls there. */
 export function isStopStar(item: Pick<StarredItem, "routeKey">): boolean {
   return item.routeKey === "";
@@ -192,6 +322,10 @@ export const starred = {
       .map(([group, list]) => ({ group, items: list }))
       .sort((a, b) => (a.group === "" ? 1 : b.group === "" ? -1 : 0));
   },
+
+  export: exportStarred,
+  downloadExport: downloadStarredExport,
+  import: importStarred,
 };
 
 /**

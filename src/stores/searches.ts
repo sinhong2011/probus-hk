@@ -3,7 +3,7 @@ import { persistedCollection } from "./collection";
 /** A history that reaches back further than this is a filing cabinet. */
 const MAX_KEPT = 12;
 
-interface Search {
+export interface Search {
   /** The words themselves, as typed - this is what the row shows. */
   query: string;
   last: number;
@@ -84,6 +84,24 @@ export const searches = {
   clear() {
     const keys = store.current().map((entry) => entry.query);
     if (keys.length > 0) store.collection.delete(keys);
+  },
+
+  replaceAll(entries: Search[]) {
+    searches.clear();
+    if (entries.length > 0) store.collection.insert(entries);
+  },
+
+  mergeAll(entries: Search[]) {
+    for (const entry of entries) {
+      const existing = store.collection.get(entry.query);
+      if (existing) {
+        store.collection.update(entry.query, (draft) => {
+          draft.last = Math.max(draft.last, entry.last);
+        });
+      } else {
+        store.collection.insert(entry);
+      }
+    }
   },
 };
 

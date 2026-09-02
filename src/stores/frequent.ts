@@ -4,7 +4,7 @@ import { persistedCollection } from "./collection";
 const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000;
 const MAX_TRACKED = 60;
 
-interface Visit {
+export interface Visit {
   key: string;
   count: number;
   last: number;
@@ -90,6 +90,25 @@ export const frequent = {
   clear() {
     const keys = store.current().map((v) => v.key);
     if (keys.length > 0) store.collection.delete(keys);
+  },
+
+  replaceAll(visits: Visit[]) {
+    frequent.clear();
+    if (visits.length > 0) store.collection.insert(visits);
+  },
+
+  mergeAll(visits: Visit[]) {
+    for (const visit of visits) {
+      const existing = store.collection.get(visit.key);
+      if (existing) {
+        store.collection.update(visit.key, (draft) => {
+          draft.count = Math.max(draft.count, visit.count);
+          draft.last = Math.max(draft.last, visit.last);
+        });
+      } else {
+        store.collection.insert(visit);
+      }
+    }
   },
 };
 

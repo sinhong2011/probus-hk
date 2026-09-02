@@ -8,7 +8,7 @@ export type NearbyMode = "stop" | "routes";
 /** How the starred list is ordered. `manual` is the hand-dragged order. */
 export type StarredOrder = "manual" | "eta" | "distance" | "route";
 
-interface Persisted {
+export interface Persisted {
   lang: Lang;
   theme: ThemeChoice;
   radiusM: number;
@@ -154,6 +154,30 @@ const [groupColors, writeGroupColors] = field("groupColors");
 /** Pins one group's tag colour; the map is copied because the row is a draft. */
 function setGroupColor(name: string, color: string) {
   writeGroupColors({ ...groupColors(), [name]: color });
+}
+
+export type SettingsSnapshot = Partial<Persisted>;
+
+export function snapshotSettings(): SettingsSnapshot {
+  const row = store.rows()[0];
+  if (!row) return {};
+  const { id: _id, ...rest } = row;
+  return rest;
+}
+
+export function applySettings(snapshot: SettingsSnapshot, mode: "merge" | "replace") {
+  const next =
+    mode === "replace"
+      ? ({ ...DEFAULTS, ...snapshot } satisfies Persisted)
+      : ({ ...DEFAULTS, ...snapshotSettings(), ...snapshot } satisfies Persisted);
+  const row: Row = { id: ROW, ...next };
+  if (store.collection.has(ROW)) {
+    store.collection.update(ROW, (draft) => {
+      Object.assign(draft, row);
+    });
+  } else {
+    store.collection.insert(row);
+  }
 }
 
 export const settings = {

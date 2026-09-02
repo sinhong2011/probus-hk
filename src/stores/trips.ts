@@ -49,6 +49,22 @@ export const trips = {
   remove(id: string) {
     if (store.collection.has(id)) store.collection.delete(id);
   },
+
+  replaceAll(items: SavedTrip[]) {
+    const ids = store.current().map((trip) => trip.id);
+    if (ids.length > 0) store.collection.delete(ids);
+    if (items.length > 0) store.collection.insert(items);
+  },
+
+  mergeAll(items: SavedTrip[]) {
+    for (const item of items) {
+      if (store.collection.has(item.id)) {
+        store.collection.update(item.id, (draft) => Object.assign(draft, item));
+      } else {
+        store.collection.insert(item);
+      }
+    }
+  },
 };
 
 export function installTripEffects() {
