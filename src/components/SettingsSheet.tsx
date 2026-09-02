@@ -8,17 +8,20 @@ import { Drawer, DrawerHeader } from "~/components/Drawer";
 import { Section } from "~/components/Layout";
 import {
   ChevronRightIcon,
+  ClipboardIcon,
   DownloadCloudIcon,
   ExternalIcon,
   GithubIcon,
   RefreshIcon,
   ShareIcon,
+  SettingsIcon,
   TrashIcon,
 } from "~/components/Icons";
 import { useDb, useDbMeta } from "~/data/context";
 import { clearRouteDb, describeDb, refreshRouteDb } from "~/data/db";
 import { clearEtaCache } from "~/data/eta";
 import { APP_VERSION, BUILD_SHA, REPO_URL } from "~/lib/build";
+import { downloadBackup, importBackup } from "~/lib/backup";
 import { formatRange } from "~/lib/geo";
 import { t } from "~/lib/i18n";
 import { notifyPermission, requestNotifyPermission, type NotifyPermission } from "~/lib/notify";
@@ -32,6 +35,8 @@ import {
 } from "~/stores/settings";
 import { alerts } from "~/stores/alerts";
 import { sheets } from "~/stores/sheets";
+import { starred } from "~/stores/starred";
+import { trips } from "~/stores/trips";
 import { toast } from "~/stores/toast";
 
 /*
@@ -155,6 +160,87 @@ export default function SettingsSheet() {
       ?.writeText(url)
       .then(() => toast.show(t("linkCopied", lang()), url))
       .catch(() => undefined);
+  };
+
+  let importBackupInput: HTMLInputElement | undefined;
+  const [armedImportReplace, setArmedImportReplace] = createSignal(false, { ownedWrite: true });
+  let disarmImport: number | undefined;
+
+  const armImportReplace = () => {
+    setArmedImportReplace(true);
+    window.clearTimeout(disarmImport);
+    disarmImport = window.setTimeout(() => setArmedImportReplace(false), 10_000);
+  };
+
+  const backupSummary = createMemo(() => {
+    const count = starred.items().length;
+    const stars =
+      lang() === "zh" ? `${count} 個收藏` : `${count} ${count === 1 ? "star" : "stars"}`;
+    const tripCount = trips.items().length;
+    const tripsLabel =
+      lang() === "zh"
+        ? `${tripCount} 個行程`
+        : `${tripCount} ${tripCount === 1 ? "trip" : "trips"}`;
+    const alertCount = alerts.items().length;
+    const alertsLabel =
+      lang() === "zh"
+        ? `${alertCount} 個提示`
+        : `${alertCount} ${alertCount === 1 ? "alert" : "alerts"}`;
+    return `${stars} · ${tripsLabel} · ${alertsLabel}`;
+  });
+
+  const exportAppData = () => {
+    downloadBackup();
+    toast.show(t("starredExported", lang()), backupSummary());
+  };
+
+  const importSummary = (result: ReturnType<typeof importBackup>) => {
+    const parts = [
+      `${result.starred.added} ${t("starredImportAdded", lang())}`,
+      `${result.starred.skipped} ${t("starredImportSkipped", lang())}`,
+    ];
+    if (result.starred.invalid > 0) {
+      parts.push(`${result.starred.invalid} ${t("starredImportInvalid", lang())}`);
+    }
+    return parts.join(" · ");
+  };
+
+  const importAppData = (event: Event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const mode = armedImportReplace() ? "replace" : "merge";
+    void file
+      .text()
+      .then((text) => {
+        window.clearTimeout(disarmImport);
+        setArmedImportReplace(false);
+        const result = importBackup(JSON.parse(text), mode);
+        toast.show(
+          mode === "replace" ? t("starredImportReplaced", lang()) : t("starredImported", lang()),
+          importSummary(result),
+        );
+      })
+      .catch(() => toast.show(t("starredImportFailed", lang())))
+      .finally(() => {
+        input.value = "";
+      });
+  };
+
+  const openImport = () => {
+    if (armedImportReplace()) {
+      window.clearTimeout(disarmImport);
+      setArmedImportReplace(false);
+    }
+    importBackupInput?.click();
+  };
+
+  const openImportReplace = () => {
+    if (armedImportReplace()) {
+      importBackupInput?.click();
+      return;
+    }
+    armImportReplace();
   };
 
   const update = async () => {
@@ -431,6 +517,76 @@ export default function SettingsSheet() {
                   </button>
                 </div>
               </Show>
+            </Card>
+          </Section>
+
+          <Section class="gap-3">
+            <SectionLabel>{t("starredData", lang())}</SectionLabel>
+            <p class="-mt-1 px-1 text-[0.75rem] font-medium text-subtle-foreground">
+              {t("starredDataHint", lang())}
+            </p>
+            <Card raised class="p-3.5">
+              <div class="flex flex-col gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-muted text-primary">
+                    <SettingsIcon size={18} />
+                  </div>
+                  <div class="flex min-w-0 grow flex-col gap-1">
+                    <span class="text-[0.88rem] font-bold text-foreground">
+                      {t("starredData", lang())}
+                    </span>
+                    <span class="tnum text-[0.81rem] font-medium text-muted-foreground">
+                      {backupSummary()}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={exportAppData}
+                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-card text-[0.88rem] font-bold text-muted-foreground"
+                  >
+                    <DownloadCloudIcon size={15} />
+                    {t("starredExport", lang())}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openImport}
+                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-card text-[0.88rem] font-bold text-muted-foreground"
+                  >
+                    <ClipboardIcon size={15} />
+                    {t("starredImport", lang())}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={
+                      armedImportReplace()
+                        ? t("starredImportReplaceConfirm", lang())
+                        : t("starredImportReplace", lang())
+                    }
+                    onClick={openImportReplace}
+                    class={[
+                      "flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg text-destructive transition-[width,background-color] duration-state",
+                      armedImportReplace()
+                        ? "bg-destructive/12 px-3.5 text-[0.88rem] font-bold"
+                        : "size-10 bg-card",
+                    ]}
+                  >
+                    <TrashIcon size={16} />
+                    <Show when={armedImportReplace()}>
+                      {t("starredImportReplaceConfirm", lang())}
+                    </Show>
+                  </button>
+                  <input
+                    ref={importBackupInput}
+                    type="file"
+                    accept="application/json,.json"
+                    class="hidden"
+                    onChange={importAppData}
+                  />
+                </div>
+              </div>
             </Card>
           </Section>
 
