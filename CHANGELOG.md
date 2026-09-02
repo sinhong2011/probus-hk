@@ -4,6 +4,23 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.5.0](https://github.com/sinhong2011/probus-hk/compare/v0.4.2...v0.5.0) (2026-09-02)
+
+
+### Features
+
+* add per-route SEO titles and Open Graph sharing metadata ([#31](https://github.com/sinhong2011/probus-hk/issues/31)) ([97fdda8](https://github.com/sinhong2011/probus-hk/commit/97fdda82a2eafdaf7f78153667c8e7025b852a71))
+* add settings and starred data backup export and import ([#33](https://github.com/sinhong2011/probus-hk/issues/33)) ([21b25a6](https://github.com/sinhong2011/probus-hk/commit/21b25a6fbc51f4d7bb32833ead24c12153c25be8))
+* compact nearby route rows with full-width dividers ([#28](https://github.com/sinhong2011/probus-hk/issues/28)) ([db6107f](https://github.com/sinhong2011/probus-hk/commit/db6107f80d9ff0d4c5e3b85e1c0baae1035ae364))
+* replace app logo and regenerate icon assets ([#32](https://github.com/sinhong2011/probus-hk/issues/32)) ([f0c2fa8](https://github.com/sinhong2011/probus-hk/commit/f0c2fa8df46ceefac014ad28f46af783b3d9d43f))
+* remove trip sun and walk rain features ([#30](https://github.com/sinhong2011/probus-hk/issues/30)) ([176a094](https://github.com/sinhong2011/probus-hk/commit/176a0944db72391f76722da81484da0b60d11f8f))
+* use dragon mascot on plan map pin and share row ([#34](https://github.com/sinhong2011/probus-hk/issues/34)) ([38bfba4](https://github.com/sinhong2011/probus-hk/commit/38bfba4c81596ce64ca43851e355693846b481d6))
+
+
+### Bug Fixes
+
+* fix ghost leading zero in RollingNumber countdown ([#29](https://github.com/sinhong2011/probus-hk/issues/29)) ([3d0482d](https://github.com/sinhong2011/probus-hk/commit/3d0482d1d6f6fc5c427e0765c283a91d73c3a89c))
+
 ## [0.4.2](https://github.com/sinhong2011/probus-hk/compare/v0.4.1...v0.4.2) (2026-09-01)
 
 
