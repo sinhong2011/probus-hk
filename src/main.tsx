@@ -21,12 +21,46 @@ render(() => <App />, root);
 /**
  * Registered after load so the worker never competes with the first paint or
  * the route database download, which is what the user is actually waiting for.
+ *
+ * When a new worker ships, `skipWaiting` in the worker activates it at once;
+ * reloading here is what puts the new shell on screen. Without it an installed
+ * PWA can keep running the precached bundle that was current when it was last
+ * opened, which is how a fix on main can look missing in production.
  */
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!reloading) return;
+    reloading = false;
+    window.location.reload();
+  });
+
+  const checkForWorker = () => {
+    void navigator.serviceWorker.getRegistration().then((registration) => registration?.update());
+  };
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // An unavailable worker only costs offline support; the app still runs.
-    });
+    void navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          // First install: no controller yet, so do not reload the page the
+          // rider is already looking at.
+          if (!worker || !navigator.serviceWorker.controller) return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "activated") reloading = true;
+          });
+        });
+        return registration.update();
+      })
+      .catch(() => {
+        // An unavailable worker only costs offline support; the app still runs.
+      });
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForWorker();
   });
 }
 
