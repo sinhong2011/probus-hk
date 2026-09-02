@@ -243,7 +243,7 @@ export function ScreenTitle(props: {
       class={[
         "flex flex-col gap-3",
         {
-          "lg:sticky lg:top-0 lg:z-20 lg:-mx-8 lg:-mt-8 lg:border-b lg:border-border lg:px-8 lg:pb-4 lg:pt-8":
+          "lg:sticky lg:top-0 lg:z-20 lg:-mx-2.5 lg:-mt-8 lg:border-b lg:border-border lg:px-2.5 lg:pb-4 lg:pt-8":
             pinned(),
         },
       ]}

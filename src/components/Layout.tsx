@@ -17,7 +17,7 @@ import type { JSX } from "@solidjs/web";
  */
 
 /** The one gutter, in one place so nothing drifts. */
-const GUTTER = "px-3.5 lg:px-8";
+const GUTTER = "px-3.5 lg:px-2.5";
 
 export function Page(props: {
   children: JSX.Element;
@@ -141,7 +141,7 @@ export function Section(props: { children: JSX.Element; class?: string; tight?: 
  * header, or a control docked to the bottom of a phone screen.
  */
 export function Bleed(props: { children: JSX.Element; class?: string }) {
-  return <div class={`-mx-3.5 lg:-mx-8 ${props.class ?? ""}`}>{props.children}</div>;
+  return <div class={`-mx-3.5 lg:-mx-2.5 ${props.class ?? ""}`}>{props.children}</div>;
 }
 
 /**
@@ -348,17 +348,17 @@ export function SplitPage(props: {
              them as a query comes and goes, and unequal gaps nudged its
              field and tabs twelve pixels on the first keystroke. */
           props.mainFills
-            ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-10"
-            : "grid gap-3 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-10",
+            ? "grid min-h-0 grow gap-3 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-3"
+            : "grid gap-3 lg:min-h-0 lg:grow lg:grid-rows-[minmax(0,1fr)] lg:gap-3",
           /*
            * The list's cap is what actually hands the map its width: the map
            * takes whatever the list leaves. At 46rem the list swallowed a
            * 1440px window whole and the map sat at its 22rem floor - the
-           * opposite of what this mode is for. 36rem still fits a row's name
-           * and its numbers side by side; everything past that is map.
+           * opposite of what this mode is for. 28rem still fits a stop's name
+           * beside its numbers; everything past that is map.
            */
           props.wideAside
-            ? "lg:grid-cols-[minmax(26.4rem,1fr)_minmax(0,36rem)]"
+            ? "lg:grid-cols-[minmax(26.4rem,1fr)_minmax(0,28rem)]"
             : "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]",
         ]}
       >

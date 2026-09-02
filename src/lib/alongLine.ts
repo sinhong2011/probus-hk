@@ -85,6 +85,17 @@ export function measureLine(points: Position[]): MeasuredLine {
 /** Pieces that end and start this close to each other are already joined. */
 const JOINED_METRES = 25;
 
+function appendPoints(path: Position[], points: Position[], skipFirst = false) {
+  const from = skipFirst ? 1 : 0;
+  for (let i = from; i < points.length; i += 1) path.push(points[i] as Position);
+}
+
+function prependPoints(path: Position[], points: Position[], skipLast = false): Position[] {
+  const end = skipLast ? points.length - 1 : points.length;
+  if (end <= 0) return path;
+  return points.slice(0, end).concat(path);
+}
+
 export function stitchLines(lines: Position[][]): Position[] {
   const usable = lines.filter((line) => line.length >= 2);
   if (usable.length === 0) return lines.flat();
@@ -105,8 +116,8 @@ export function stitchLines(lines: Position[][]): Position[] {
     );
   });
   if (joined) {
-    const path = [...(usable[0] as Position[])];
-    for (const line of usable.slice(1)) path.push(...line.slice(1));
+    const path = (usable[0] as Position[]).slice();
+    for (const line of usable.slice(1)) appendPoints(path, line, true);
     return path;
   }
 
@@ -114,7 +125,7 @@ export function stitchLines(lines: Position[][]): Position[] {
   // the route, and a wrong first choice propagates through the whole chain.
   const remaining = [...usable];
   remaining.sort((a, b) => b.length - a.length);
-  const path = [...(remaining.shift() as Position[])];
+  let path = (remaining.shift() as Position[]).slice();
 
   while (remaining.length > 0) {
     const head = path[0] as Position;
@@ -141,14 +152,14 @@ export function stitchLines(lines: Position[][]): Position[] {
     });
 
     const next = remaining.splice(best.index, 1)[0] as Position[];
-    const oriented = best.flip ? [...next].reverse() : next;
+    const oriented = best.flip ? next.slice().reverse() : next;
     // Drop a duplicated joint so the path has no zero-length segment.
     const joined = best.distance < 1;
 
     if (best.atHead) {
-      path.unshift(...(joined ? oriented.slice(0, -1) : oriented));
+      path = prependPoints(path, oriented, joined);
     } else {
-      path.push(...(joined ? oriented.slice(1) : oriented));
+      appendPoints(path, oriented, joined);
     }
   }
 
