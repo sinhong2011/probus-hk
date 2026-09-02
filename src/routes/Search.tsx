@@ -124,12 +124,7 @@ function RouteItem(props: {
   onRemove?: () => void;
 }) {
   return (
-    <div
-      class={[
-        "flex w-full items-center",
-        props.seam ? "border-t border-border" : "",
-      ]}
-    >
+    <div class={["flex w-full items-center", props.seam ? "border-t border-border" : ""]}>
       <a
         {...useLinkProps(routeLink(props.route.key))}
         class={[
