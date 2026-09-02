@@ -724,6 +724,15 @@ export default function SettingsSheet() {
                     {t("shareAppHint", lang())}
                   </span>
                 </span>
+                <img
+                  src="/icons/dragon.png"
+                  alt=""
+                  width={40}
+                  height={40}
+                  aria-hidden="true"
+                  draggable={false}
+                  class="size-10 shrink-0 object-contain"
+                />
               </button>
             </Card>
             {/* Where everything the app knows about this rider is kept. It sits
