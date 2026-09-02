@@ -41,6 +41,7 @@ import {
 } from "~/data/db";
 import type { KeyedRoute, RouteDb } from "~/data/types";
 import { formatFare, notableConcession } from "~/lib/format";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { pick, stripStopCode, t, type Lang, type MessageKey } from "~/lib/i18n";
 import { kindOf, operatorShort, type Kind } from "~/lib/operators";
 import { frequent } from "~/stores/frequent";
@@ -342,6 +343,13 @@ export default function Search() {
   const wide = createWide();
 
   const empty = () => query().trim() === "";
+
+  usePageHead(() => {
+    const q = query().trim();
+    if (q === "") return appTitle(t("search", lang()), lang());
+    const quoted = lang() === "zh" ? `「${q}」` : `"${q}"`;
+    return appTitle(`${quoted} · ${t("search", lang())}`, lang());
+  });
 
   /** Every route, once per database; the list every tab starts from. */
   const everything = createMemo(() => allRoutes(db()));

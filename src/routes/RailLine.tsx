@@ -14,6 +14,7 @@ import { serviceSpan } from "~/data/schedule";
 import type { Bilingual, KeyedRoute } from "~/data/types";
 import { distanceM } from "~/lib/geo";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { plateStyle } from "~/lib/operators";
 import { useGeolocation } from "~/stores/geolocation";
 import { settings } from "~/stores/settings";
@@ -138,6 +139,12 @@ export default function RailLine() {
       }
     }
     return best && bestDistance <= AT_STATION_M ? best.id : null;
+  });
+
+  usePageHead(() => {
+    const l = line();
+    if (!l) return appTitle(t("notFoundLine", lang()), lang());
+    return appTitle(pick(lineName(l.code), lang()), lang());
   });
 
   return (

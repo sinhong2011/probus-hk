@@ -10,6 +10,7 @@ import { useDb } from "~/data/context";
 import { lightRailRoutes, lineName, lineStations, railLines, type RailLine } from "~/data/rail";
 import type { KeyedRoute } from "~/data/types";
 import { pick, t, type Lang } from "~/lib/i18n";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { OPERATORS, plateStyle } from "~/lib/operators";
 import { settings } from "~/stores/settings";
 
@@ -115,6 +116,8 @@ export default function Rail() {
 
   const lines = createMemo(() => railLines(db()));
   const light = createMemo(() => lightRailRoutes(db()));
+
+  usePageHead(() => appTitle(t("rail", lang()), lang()));
 
   return (
     <Page>

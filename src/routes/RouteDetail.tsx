@@ -61,6 +61,7 @@ import {
 import { minute, now } from "~/stores/clock";
 import { distanceM, formatDistance } from "~/lib/geo";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
+import { routeMetaDescription, routeTitle, usePageHead } from "~/lib/documentHead";
 import {
   lineColour,
   operatorLabel,
@@ -1586,6 +1587,17 @@ export default function RouteDetail() {
   const { position } = useGeolocation();
 
   const route = createMemo(() => routeAt(db(), params().key));
+
+  usePageHead(() => {
+    const r = route();
+    if (!r) return appTitle(t("notFoundRoute", lang()), lang());
+    const dest = pick(r.dest, lang());
+    return {
+      title: routeTitle(r.route, r.dest, lang()),
+      description: routeMetaDescription(r.route, dest, lang()),
+    };
+  });
+
   /*
    * When the route's day ends. Read through the clock so the warning arrives on
    * its own: a rider who opened the page at half past ten should not have to

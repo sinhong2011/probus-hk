@@ -296,6 +296,8 @@
   "arrive_about": "Arrive about",
   "clear_trip": "Clear",
   "app_name": "ProBus HK",
+  "meta_title_suffix": "Live Hong Kong arrivals",
+  "meta_description": "Ad-free real-time bus, minibus, MTR, light rail and ferry arrivals in Hong Kong.",
   "about": "About",
   "app_tagline": "Live Hong Kong arrivals. No account, no ads, no server of its own.",
   "version_label": "Version",

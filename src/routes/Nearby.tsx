@@ -48,6 +48,7 @@ import { live } from "~/data/live";
 import { routesMentioned } from "~/data/notices";
 import { useNotices } from "~/data/useNotices";
 import { distanceM, formatDistance, formatRange, walkMinutes, type LatLng } from "~/lib/geo";
+import { homeTitle, usePageHead } from "~/lib/documentHead";
 import { pick, stripStopCode, t, type Lang } from "~/lib/i18n";
 import { liveUpdatedAt } from "~/data/live";
 import { frequent } from "~/stores/frequent";
@@ -532,6 +533,8 @@ export default function Nearby() {
     { value: "stop", label: t("byStop", lang()) },
     { value: "routes", label: t("allRoutes", lang()) },
   ];
+
+  usePageHead(() => homeTitle(lang()));
 
   return (
     <Page>

@@ -2,6 +2,7 @@ import { useLinkProps } from "@tanstack/solid-router";
 import { Show } from "solid-js";
 import { SearchIcon } from "~/components/Icons";
 import { Page } from "~/components/Layout";
+import { appTitle, usePageHead } from "~/lib/documentHead";
 import { t, type MessageKey } from "~/lib/i18n";
 import { settings } from "~/stores/settings";
 
@@ -27,6 +28,8 @@ const TITLE: Record<Missing, MessageKey> = {
 export function NotFound(props: { kind?: Missing }) {
   const lang = () => settings.lang();
   const kind = () => props.kind ?? "page";
+
+  usePageHead(() => appTitle(t(TITLE[kind()], lang()), lang()));
 
   const body = (
     <div class="flex w-full max-w-sm flex-col items-center text-center lg:max-w-md">
