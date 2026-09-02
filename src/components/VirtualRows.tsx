@@ -196,7 +196,7 @@ export function VirtualRows<T>(props: {
                 row, and a whole list of rows springing in from four-fifths
                 size made the search screen shudder on every visit. */}
             <div
-              class={{ "motion-safe:app-rise": arriving() }}
+              class={["w-full", { "motion-safe:app-rise": arriving() }]}
               style={{ "animation-delay": `${Math.min(item.index - first(), 8) * 24}ms` }}
             >
               {props.children(props.items[item.index] as T, item.index)}

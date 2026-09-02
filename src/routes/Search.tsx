@@ -118,11 +118,18 @@ const SHOWN_CATEGORIES = CATEGORIES.slice(0, 6);
 function RouteItem(props: {
   route: KeyedRoute;
   lang: Lang;
+  /** Draws the seam above this row, edge to edge inside the card. */
+  seam?: boolean;
   /** Makes the row one a rider can take off the list it is on. */
   onRemove?: () => void;
 }) {
   return (
-    <div class="flex items-center">
+    <div
+      class={[
+        "flex w-full items-center",
+        props.seam ? "border-t border-border" : "",
+      ]}
+    >
       <a
         {...useLinkProps(routeLink(props.route.key))}
         class={[
@@ -223,11 +230,12 @@ function SheetHeader(props: {
  */
 function RouteList(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: string) => void }) {
   return (
-    <VirtualRows items={props.routes} estimate={64} divided>
-      {(route) => (
+    <VirtualRows items={props.routes} estimate={64}>
+      {(route, index) => (
         <RouteItem
           route={route}
           lang={props.lang}
+          seam={index > 0}
           onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
         />
       )}
@@ -249,16 +257,12 @@ function RouteRows(props: { routes: KeyedRoute[]; lang: Lang; onRemove?: (key: s
   return (
     <For each={props.routes}>
       {(route, index) => (
-        <>
-          <Show when={index() > 0}>
-            <Hairline />
-          </Show>
-          <RouteItem
-            route={route}
-            lang={props.lang}
-            onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
-          />
-        </>
+        <RouteItem
+          route={route}
+          lang={props.lang}
+          seam={index() > 0}
+          onRemove={props.onRemove ? () => props.onRemove?.(route.key) : undefined}
+        />
       )}
     </For>
   );
