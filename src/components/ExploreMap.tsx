@@ -787,36 +787,29 @@ export function ExploreMap(props: {
        */}
       <Show when={props.pinned}>
         <div
-          class="pointer-events-none absolute left-1/2 z-10"
+          class="pointer-events-none absolute left-1/2 z-20 size-16 -translate-x-1/2"
           style={{ top: `${(1 - (props.insetFraction ?? 0)) * 50}%` }}
         >
           <span
             class={[
-              "absolute -left-1 -top-0.5 h-1 w-2 rounded-full bg-black/35 blur-[1.5px]",
+              "absolute bottom-0 left-1/2 h-1 w-3.5 -translate-x-1/2 rounded-full bg-black/35 blur-[1.5px]",
               "motion-safe:transition-transform motion-safe:duration-state",
               lifted() ? "scale-75" : "",
             ]}
           />
-          <svg
-            width="30"
-            height="40"
-            viewBox="0 0 30 40"
+          <img
+            src="/icons/dragon.png"
+            alt=""
+            width={64}
+            height={64}
+            aria-hidden="true"
+            draggable={false}
             class={[
-              "absolute bottom-0 left-1/2 -translate-x-1/2",
+              "absolute bottom-0 left-1/2 block size-16 -translate-x-1/2 object-contain object-bottom drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]",
               "motion-safe:transition-transform motion-safe:duration-state",
               lifted() ? "-translate-y-2.5" : "",
             ]}
-            aria-hidden="true"
-          >
-            <path
-              d="M15 38.5 L9.5 22.5 A 11 11 0 1 1 20.5 22.5 Z"
-              fill="var(--primary)"
-              stroke="#ffffff"
-              stroke-width="2.2"
-              stroke-linejoin="round"
-            />
-            <circle cx="15" cy="12.5" r="4" fill="#ffffff" />
-          </svg>
+          />
         </div>
       </Show>
     </div>
