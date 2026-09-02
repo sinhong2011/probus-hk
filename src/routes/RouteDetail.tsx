@@ -370,18 +370,6 @@ function RideBand(props: {
                   {t("alertDestination", props.lang)}
                 </button>
               </div>
-              <Show when={sun()?.detail}>
-                {(detail) => (
-                  <p class="px-3.5 pb-2.5 text-[0.75rem] font-medium leading-snug text-subtle-foreground">
-                    {detail()}
-                  </p>
-                )}
-              </Show>
-              <Show when={sun()?.chip}>
-                <p class="px-3.5 pb-2.5 text-[0.7rem] font-medium text-faint-foreground">
-                  {t("sunHonesty", props.lang)}
-                </p>
-              </Show>
             </>
           )}
         </Show>
