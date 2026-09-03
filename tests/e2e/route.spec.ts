@@ -464,6 +464,7 @@ test("a closed dialog and a left screen both give the page its scroll back", asy
 });
 
 test("says how far up the road the bus still is", async ({ page }) => {
+  await mockTransit(page);
   await mockRunningBuses(page);
   // Off until asked for - see `settings.vehiclesAway`.
   await page.addInitScript(() => {
