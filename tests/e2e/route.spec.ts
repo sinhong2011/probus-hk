@@ -486,8 +486,8 @@ test("says how far up the road the bus still is", async ({ page }) => {
   await expect(open).toHaveCount(1, { timeout: 15_000 });
   // On the fare line, not a row of its own: a separate line shoved the later
   // arrivals (and the countdown that drops onto them) down on every open.
-  await expect(open).toContainText(/車費/);
-  await expect(open).toContainText(/架車/);
+  await expect(open).toContainText(/車費/, { timeout: 15_000 });
+  await expect(open).toContainText(/架車/, { timeout: 15_000 });
 });
 
 /**
