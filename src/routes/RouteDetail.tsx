@@ -608,7 +608,9 @@ function StopRow(props: {
   /**
    * How many stops short of this one the next bus still is, or `null` when
    * nothing live is coming. Counted in stops rather than metres because that
-   * is the unit a rider standing at a kerb can check for themselves.
+   * is the unit a rider standing at a kerb can check for themselves. Drawn on
+   * the fare line of an open row - a row of its own shoved the later arrivals
+   * (and the countdown that lands on them) down every open.
    */
   busAway: number | null;
   /**
@@ -1125,7 +1127,14 @@ function StopRow(props: {
               stops, but what a ride costs is half of what a rider is deciding
               between two stops with, and making them open a row to see it put
               the price behind a tap while the time sat in the open. */}
-          <Show when={fare() !== null || props.metres !== null || (!props.open && leadAt())}>
+          <Show
+            when={
+              fare() !== null ||
+              props.metres !== null ||
+              (!props.open && leadAt()) ||
+              props.busAway !== null
+            }
+          >
             {/* Set off from the name rather than tucked under it: the tags
                 give the line a shape of its own, and at the list's own
                 line-spacing it read as a second line of the stop's name. */}
@@ -1185,6 +1194,31 @@ function StopRow(props: {
                     <span class="tnum shrink-0 text-faint-foreground">{clockTime(at())}</span>
                   </>
                 )}
+              </Show>
+
+              {/*
+               * Where the bus still is, on the fare line rather than a row of
+               * its own. A line under the fare pushed the later arrivals -
+               * and the countdown that drops onto them - down every time the
+               * panel opened, so the open row no longer looked like the
+               * closed one. Beside the fare it costs no height, and the
+               * countdown keeps the place it had while the row was shut.
+               *
+               * Inferred rather than reported, so it is off until a rider
+               * turns it on in settings - see `settings.showVehicles`.
+               */}
+              <Show when={props.busAway !== null}>
+                <Show when={fare() !== null || props.metres !== null}>
+                  <span class="shrink-0 text-faint-foreground">·</span>
+                </Show>
+                {/* Same pin trick: the glyph centres on the line, the words
+                    keep the fare's baseline. */}
+                <span class="self-center shrink-0 text-muted-foreground">
+                  <VehicleIcon size={11} />
+                </span>
+                <span class="min-w-0 truncate text-muted-foreground">
+                  {awayLabel(props.busAway as number, props.lang)}
+                </span>
               </Show>
             </span>
           </Show>
@@ -1355,32 +1389,10 @@ function StopRow(props: {
             />
           </Show>
 
-          {/*
-           * Where the bus actually is, in the one unit that needs no map: a
-           * rider at a kerb can count stops, and "two stops away" is the
-           * answer they would get from looking up the road if the road were
-           * straight. The countdown says when; this says where, and the two
-           * disagreeing is itself worth seeing - a bus three stops away with
-           * one minute on the clock is a bus stuck in traffic.
-           *
-           * Inferred rather than reported, so it is off until a rider turns it
-           * on in settings - see `settings.showVehicles`.
-           */}
-          <Show when={props.busAway !== null}>
-            {/* No pop on the way in: the count changes as the bus moves, and
-                a line that flinches every time it is re-stated draws the eye
-                back to a number that has barely changed. */}
-            {/* In the row's own grey, not the accent: the accent is for where
-                the rider is, and a bus three stops out is a fact about the
-                road, not a thing to be drawn to. */}
-            <div class="flex items-center gap-1.5 px-3.5 pb-1.5 pl-[2.125rem] text-[0.75rem] font-semibold text-muted-foreground">
-              <VehicleIcon size={12} />
-              <span>{awayLabel(props.busAway as number, props.lang)}</span>
-            </div>
-          </Show>
-
           {/* Clock on the left, including the next bus; the wait under the
-              countdown it continues. */}
+              countdown it continues. Starts under the fare line - not under a
+              bus-away row - so the countdown that drops onto the lead wait
+              lands where the closed row already showed it. */}
           <LaterArrivals
             class="px-3.5 pb-2 pl-[2.125rem]"
             etas={shown() ?? []}
