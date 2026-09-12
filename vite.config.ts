@@ -170,12 +170,14 @@ export default defineConfig({
     alias: [
       {
         find: /^solid-js$/,
-        replacement: fileURLToPath(new URL("./node_modules/solid-js/dist/dev.js", import.meta.url)),
+        replacement: fileURLToPath(
+          new URL("./node_modules/solid-js/dist/solid.dev.js", import.meta.url),
+        ),
       },
       {
         find: /^@solidjs\/web$/,
         replacement: fileURLToPath(
-          new URL("./node_modules/@solidjs/web/dist/dev.js", import.meta.url),
+          new URL("./node_modules/@solidjs/web/dist/web.dev.js", import.meta.url),
         ),
       },
     ],

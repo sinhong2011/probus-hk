@@ -188,9 +188,9 @@ test("opening a star lands on its stop, not the nearest one", async ({ page }) =
   await card.click();
   await expect(page).toHaveURL(/[?&]stop=2(?:&|$)/);
   // The starred stop opens, not whichever stop geolocation would have picked.
-  await expect(
-    page.locator('[data-stop-seq="2"] .app-reveal[data-open="true"]'),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-stop-seq="2"] .app-reveal[data-open="true"]')).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.locator('[data-stop-seq="2"]')).toContainText("天虹小學");
 });
 
