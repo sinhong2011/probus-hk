@@ -176,6 +176,24 @@ test("an open swipe closes on a tap, without following the route", async ({ page
   await expect(page).toHaveURL(/\/starred/);
 });
 
+test("opening a star lands on its stop, not the nearest one", async ({ page }) => {
+  // Second stop on the route (天虹小學), not the first / nearest.
+  await star(page, 1);
+  await page.goto("/starred");
+
+  const card = page.locator('a[href^="/route/"]');
+  await expect(card).toContainText("天虹小學", { timeout: 15_000 });
+  await expect(card).toHaveAttribute("href", /[?&]stop=2(?:&|$)/);
+
+  await card.click();
+  await expect(page).toHaveURL(/[?&]stop=2(?:&|$)/);
+  // The starred stop opens, not whichever stop geolocation would have picked.
+  await expect(
+    page.locator('[data-stop-seq="2"] .app-reveal[data-open="true"]'),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-stop-seq="2"]')).toContainText("天虹小學");
+});
+
 test("a star can be moved to another stop on its route", async ({ page }) => {
   await star(page, 1);
   await page.goto("/starred");

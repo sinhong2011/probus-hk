@@ -280,7 +280,7 @@ function StarredRow(props: {
               <>
                 <RoutePlate route={route().route} co={route().co} size="xs" muted={dim()} />
                 <a
-                  {...useLinkProps(routeLink(route().key))}
+                  {...useLinkProps(routeLink(route().key, props.entry.item.seq))}
                   class="flex min-w-0 grow flex-col gap-0.5"
                 >
                   <span class="flex min-w-0 items-center gap-1.5">
