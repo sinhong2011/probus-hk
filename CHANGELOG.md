@@ -4,6 +4,13 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.5.1](https://github.com/sinhong2011/probus-hk/compare/v0.5.0...v0.5.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* open the starred stop when entering its route from starred ([a264b12](https://github.com/sinhong2011/probus-hk/commit/a264b12c0b311277268ba4eb58b012e20bef4006))
+
 ## [0.5.0](https://github.com/sinhong2011/probus-hk/compare/v0.4.2...v0.5.0) (2026-09-02)
 
 
