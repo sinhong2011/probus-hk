@@ -24,6 +24,19 @@ export interface CachedDb {
 }
 
 /**
+ * The window event a newer copy of the route database is announced on.
+ *
+ * The running app holds the database in a signal, and this is how a download
+ * that finished in the background - a daily revalidate, or the rider pressing
+ * "update now" - hands the new copy over without a page reload.
+ */
+export const DB_UPDATED_EVENT = "probus:db-updated";
+
+export function announceRouteDb(cached: CachedDb) {
+  window.dispatchEvent(new CustomEvent<CachedDb>(DB_UPDATED_EVENT, { detail: cached }));
+}
+
+/**
  * One store, one key, holding the whole route database.
  *
  * `idb` is a promise wrapper over the native API and nothing more - the same
@@ -118,7 +131,7 @@ async function revalidate(cached: CachedDb): Promise<void> {
   // Only worth a round trip once a day; the upstream crawler runs daily.
   if (Date.now() - cached.fetchedAt < 24 * 60 * 60 * 1000) return;
   const fresh = await download(cached.etag);
-  if (fresh.fetchedAt !== cached.fetchedAt) window.dispatchEvent(new Event("probus:db-updated"));
+  if (fresh.fetchedAt !== cached.fetchedAt) announceRouteDb(fresh);
 }
 
 async function download(etag: string | null): Promise<CachedDb> {
@@ -337,7 +350,9 @@ export function nextRouteChars(db: RouteDb, query: string): Set<string> {
  * "update now" control in settings.
  */
 export async function refreshRouteDb(): Promise<CachedDb> {
-  return download(null);
+  const next = await download(null);
+  announceRouteDb(next);
+  return next;
 }
 
 /**
@@ -345,9 +360,8 @@ export async function refreshRouteDb(): Promise<CachedDb> {
  *
  * The store rather than the whole IndexedDB: the connection is shared and
  * long-lived, and deleting the database under it would block on this tab's own
- * open handle. The caller is expected to reload - the app read the database
- * once at start-up, and every screen is still holding the copy this just
- * deleted from disk.
+ * open handle. The session keeps the copy it already has in memory; only the
+ * next cold start pays for a download.
  */
 export async function clearRouteDb(): Promise<void> {
   const store = await idb();

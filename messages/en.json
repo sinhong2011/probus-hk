@@ -50,6 +50,7 @@
   "offline_data": "Offline data",
   "route_database": "Route database",
   "update_now": "Update now",
+  "update_now_done": "Route data updated",
   "downloaded": "Downloaded - stored on this device",
   "delete_offline": "Delete offline data",
   "delete_offline_confirm": "Tap again to delete",

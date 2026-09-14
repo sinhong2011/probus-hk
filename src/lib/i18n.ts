@@ -67,6 +67,7 @@ const MESSAGES = {
   offlineData: m.offline_data,
   routeDatabase: m.route_database,
   updateNow: m.update_now,
+  updateNowDone: m.update_now_done,
   downloaded: m.downloaded,
   deleteOffline: m.delete_offline,
   deleteOfflineConfirm: m.delete_offline_confirm,

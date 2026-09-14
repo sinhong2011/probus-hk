@@ -248,10 +248,10 @@ export default function SettingsSheet() {
     try {
       clearEtaCache();
       await refreshRouteDb();
-      // The database is read once at start-up, so a reload is the honest way to
-      // adopt a newer copy rather than leaving half the app on stale data.
-      location.reload();
+      toast.show(t("updateNowDone", lang()), t("routeDatabase", lang()));
     } catch {
+      // Stay on the sheet. A reload would throw the error away with the page.
+    } finally {
       setBusy(false);
     }
   };
@@ -279,11 +279,9 @@ export default function SettingsSheet() {
     try {
       await clearRouteDb();
       toast.show(t("deleteOfflineDone", lang()), t("routeDatabase", lang()));
-      // Every screen is still holding the copy this just deleted from disk,
-      // and the database is read once at start-up - the same reason "update
-      // now" reloads rather than trying to swap it under the running app.
-      location.reload();
     } catch {
+      // Stay on the sheet; the in-memory copy is still what the app is using.
+    } finally {
       setBusy(false);
     }
   };

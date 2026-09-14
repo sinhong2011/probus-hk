@@ -38,6 +38,26 @@ test("auto theme defers to the system rather than forcing one", async ({ page })
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
 });
 
+test("updating the route database keeps the settings sheet open", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible({ timeout: 10_000 });
+
+  let reloaded = false;
+  page.once("load", () => {
+    reloaded = true;
+  });
+
+  await page.getByRole("button", { name: "即刻更新" }).click();
+  await expect(page.getByText("路線資料已經更新咗")).toBeVisible({ timeout: 10_000 });
+
+  // The sheet is still the same panel, not a leftover from after a reload.
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();
+  await expect(page.getByText("載緊路線資料")).toHaveCount(0);
+  expect(reloaded).toBe(false);
+
+  await page.getByRole("radio", { name: "EN" }).click();
+  await expect(page.getByRole("radio", { name: "EN" })).toHaveAttribute("aria-checked", "true");
+});
+
 test("reports what is stored for offline use", async ({ page }) => {
   await expect(page.getByText("路線資料庫")).toBeVisible({ timeout: 10_000 });
   // The fixture holds 6 routes; the count must come from the data, not a guess.
