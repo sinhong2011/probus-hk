@@ -1,0 +1,48 @@
+# WebDAV + S3 on a home server, for the app's remote-sync sheet.
+#
+# Data lives on the `rogdisk` mount, not in a Docker volume: a compose down
+# must not take the backup with it. Override the mount with ROGDISK= if the
+# disk is somewhere else.
+#
+#   ROGDISK=/rogdisk docker compose -f dev/home-server/compose.yaml up -d
+#
+# Then in settings → Remote sync:
+#   WebDAV  http://<host>:6065/   user/password from .env
+#   S3      http://<host>:4566    bucket `probus`, keys `test` / `test`, path-style on
+name: probus-home
+
+services:
+  webdav:
+    image: hacdias/webdav:latest
+    container_name: probus-webdav
+    restart: unless-stopped
+    ports:
+      - "6065:6065"
+    environment:
+      WEBDAV_USER: ${WEBDAV_USER:-probus}
+      WEBDAV_PASSWORD: ${WEBDAV_PASSWORD:-probus}
+    volumes:
+      - ${ROGDISK:-/rogdisk}/probus/webdav:/data
+      - ./webdav.yml:/config.yml:ro
+    command: ["-c", "/config.yml"]
+
+  localstack:
+    image: localstack/localstack:4.12
+    container_name: probus-s3
+    restart: unless-stopped
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: us-east-1
+      EXTRA_CORS_ALLOWED_ORIGINS: "*"
+      EXTRA_CORS_ALLOWED_HEADERS: "*"
+      EXTRA_CORS_EXPOSE_HEADERS: etag,x-amz-request-id,x-amz-id-2
+    volumes:
+      - ${ROGDISK:-/rogdisk}/probus/s3:/var/lib/localstack
+      - ./ready.d:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
