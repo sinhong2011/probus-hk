@@ -123,3 +123,22 @@ describe("dismissed", () => {
     expect(memory.has("probus:dismissed")).toBe(true);
   });
 });
+
+describe("sync", () => {
+  it("stores the endpoint on this device and keeps it out of the backup file", async () => {
+    const { sync, installSyncEffects } = await import("~/stores/sync");
+    installSyncEffects();
+    flush();
+    sync.setKind("webdav");
+    sync.setWebdavUrl("https://cloud.example/dav/");
+    sync.setWebdavPassword("hunter2");
+    await settled();
+    expect(sync.kind()).toBe("webdav");
+    expect(memory.get("probus:db:sync")).toContain("hunter2");
+
+    const { exportBackup } = await import("~/lib/backup");
+    const payload = JSON.stringify(exportBackup());
+    expect(payload).not.toContain("hunter2");
+    expect(payload).not.toContain("webdavPassword");
+  });
+});

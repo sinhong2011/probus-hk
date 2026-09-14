@@ -114,3 +114,16 @@ test("a change in one tab reaches the others", async ({ context, page }) => {
   });
   await other.close();
 });
+
+test("remote sync opens WebDAV and S3 fields from settings", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await expect(page.getByRole("heading", { name: "遠端同步" })).toBeVisible();
+
+  await page.getByRole("radio", { name: "WebDAV" }).click();
+  await expect(page.getByText("網址", { exact: true })).toBeVisible();
+
+  await page.getByRole("radio", { name: "S3" }).click();
+  await expect(page.getByText("Endpoint", { exact: true })).toBeVisible();
+  await expect(page.getByText("Bucket", { exact: true })).toBeVisible();
+});

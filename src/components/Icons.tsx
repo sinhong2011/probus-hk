@@ -16,6 +16,7 @@ import IconBus from "~icons/lineicons/bus";
 import IconChevronLeft from "~icons/lineicons/chevron-left";
 import IconChevronRight from "~icons/lineicons/chevron-right";
 import IconCloudDownload from "~icons/lineicons/cloud-download";
+import IconCloudUpload from "~icons/lineicons/cloud-upload";
 import IconCheck from "~icons/lineicons/checkmark";
 import IconCog from "~icons/lineicons/cog";
 import IconExpand from "~icons/lineicons/expand-square-4";
@@ -247,6 +248,7 @@ export function BackspaceIcon(props: IconProps): JSX.Element {
   );
 }
 export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
+export const UploadCloudIcon = wrap(IconCloudUpload as IconComponent);
 export const BusIcon = wrap(IconBus as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
 export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);

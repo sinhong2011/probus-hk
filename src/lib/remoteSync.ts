@@ -1,0 +1,104 @@
+import { exportBackup, importBackup, type AppBackup, type BackupImportMode } from "./backup";
+
+/**
+ * Why a remote copy could not be read or written.
+ *
+ * The UI maps each of these to a sentence; the codes themselves stay out of
+ * the rider's way. `cors` is the one a self-hosted endpoint most often hits
+ * from a page: the request never left, or the browser hid the answer.
+ */
+export type RemoteSyncCode = "cors" | "auth" | "missing" | "invalid" | "http" | "incomplete";
+
+export class RemoteSyncError extends Error {
+  constructor(
+    readonly code: RemoteSyncCode,
+    cause?: unknown,
+  ) {
+    super(code, { cause });
+    this.name = "RemoteSyncError";
+  }
+}
+
+export function classifyHttp(status: number): RemoteSyncError {
+  if (status === 401 || status === 403) return new RemoteSyncError("auth");
+  if (status === 404) return new RemoteSyncError("missing");
+  return new RemoteSyncError("http");
+}
+
+export function classifyFetchFailure(error: unknown): RemoteSyncError {
+  if (error instanceof RemoteSyncError) return error;
+  if (error instanceof TypeError) return new RemoteSyncError("cors", error);
+  return new RemoteSyncError("http", error);
+}
+
+export const REMOTE_BACKUP_NAME = "probus-backup.json";
+
+export type SyncKind = "none" | "webdav" | "s3";
+
+export interface SyncConfig {
+  kind: SyncKind;
+  webdavUrl: string;
+  webdavUser: string;
+  webdavPassword: string;
+  s3Endpoint: string;
+  s3Region: string;
+  s3Bucket: string;
+  s3Key: string;
+  s3AccessKey: string;
+  s3SecretKey: string;
+  s3PathStyle: boolean;
+}
+
+export function syncReady(config: SyncConfig): boolean {
+  if (config.kind === "webdav") return config.webdavUrl.trim() !== "";
+  if (config.kind === "s3") {
+    return (
+      config.s3Endpoint.trim() !== "" &&
+      config.s3Bucket.trim() !== "" &&
+      config.s3AccessKey.trim() !== "" &&
+      config.s3SecretKey.trim() !== ""
+    );
+  }
+  return false;
+}
+
+/**
+ * Puts the current backup on the configured endpoint, replacing whatever
+ * file is already there. Credentials never travel with it.
+ */
+export async function pushRemote(config: SyncConfig): Promise<void> {
+  if (!syncReady(config)) throw new RemoteSyncError("incomplete");
+  const body = JSON.stringify(exportBackup());
+  if (config.kind === "webdav") {
+    const { putWebdav } = await import("./webdav");
+    await putWebdav(config, body);
+    return;
+  }
+  const { putS3 } = await import("./s3");
+  await putS3(config, body);
+}
+
+/**
+ * Reads the remote backup, or `null` when there is not one yet.
+ */
+export async function pullRemote(config: SyncConfig): Promise<AppBackup | null> {
+  if (!syncReady(config)) throw new RemoteSyncError("incomplete");
+  const text =
+    config.kind === "webdav"
+      ? await (await import("./webdav")).getWebdav(config)
+      : await (await import("./s3")).getS3(config);
+  if (text === null) return null;
+  try {
+    return JSON.parse(text) as AppBackup;
+  } catch (error) {
+    throw new RemoteSyncError("invalid", error);
+  }
+}
+
+export function applyRemoteBackup(raw: unknown, mode: BackupImportMode) {
+  try {
+    return importBackup(raw, mode);
+  } catch (error) {
+    throw new RemoteSyncError("invalid", error);
+  }
+}

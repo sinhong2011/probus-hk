@@ -36,6 +36,7 @@ import {
 import { alerts } from "~/stores/alerts";
 import { sheets } from "~/stores/sheets";
 import { starred } from "~/stores/starred";
+import { sync } from "~/stores/sync";
 import { trips } from "~/stores/trips";
 import { toast } from "~/stores/toast";
 
@@ -46,6 +47,7 @@ import { toast } from "~/stores/toast";
  * loads - one import, whichever way in the rider takes.
  */
 const RangeSheet = lazy(() => import("./RangeSheet"));
+const SyncSheet = lazy(() => import("./SyncSheet"));
 
 function Row(props: { title: string; subtitle?: string; children: unknown }) {
   return (
@@ -130,6 +132,7 @@ export default function SettingsSheet() {
   const lang = settings.lang;
   const wide = createWide();
   const [busy, setBusy] = createSignal(false);
+  const [syncOpen, setSyncOpen] = createSignal(false, { ownedWrite: true });
   const [permission, setPermission] = createSignal<NotifyPermission>(notifyPermission());
 
   // Re-read on every open rather than once at setup: the drawer outlives its
@@ -584,6 +587,26 @@ export default function SettingsSheet() {
                     onChange={importAppData}
                   />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSyncOpen(true)}
+                  class="app-tap flex w-full items-center gap-3 rounded-lg bg-card px-3.5 py-3 text-left"
+                >
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="text-[0.88rem] font-bold text-foreground">
+                      {t("remoteSync", lang())}
+                    </span>
+                    <span class="text-[0.75rem] font-medium text-subtle-foreground">
+                      {sync.kind() === "webdav"
+                        ? "WebDAV"
+                        : sync.kind() === "s3"
+                          ? "S3"
+                          : t("remoteSyncNotSet", lang())}
+                    </span>
+                  </div>
+                  <ChevronRightIcon size={12} class="text-faint-foreground" />
+                </button>
               </div>
             </Card>
           </Section>
@@ -773,6 +796,7 @@ export default function SettingsSheet() {
       <Show when={sheets.rangeWanted()} keyed>
         <RangeSheet nested />
       </Show>
+      <SyncSheet nested open={syncOpen()} onClose={() => setSyncOpen(false)} />
     </Drawer>
   );
 }
