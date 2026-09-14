@@ -182,7 +182,10 @@ test("remote sync remembers S3 endpoint fields after a reload", async ({ page })
     .poll(async () => page.evaluate(() => localStorage.getItem("probus:db:sync") ?? ""))
     .toContain("s3.test");
 
+  // `/settings` opens the drawer then redirects home, so a reload lands on
+  // nearby. Opening the address again is what a shared link would do too.
   await page.reload();
+  await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "設定" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("button", { name: /遠端同步/ })).toContainText("S3");
 
