@@ -400,6 +400,20 @@
   background: transparent;
   cursor: pointer;
 }
+/*
+ * Keyboard focus is the primary hairline, not the browser's black ring.
+ * `:focus` is cleared so a click that leaves a control armed - closing a
+ * nested sheet back onto its row - does not draw a second, darker box
+ * around a surface that already has an edge.
+ */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .app-range:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 4px;
