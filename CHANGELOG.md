@@ -4,6 +4,25 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.6.0](https://github.com/sinhong2011/probus-hk/compare/v0.5.1...v0.6.0) (2026-09-14)
+
+
+### Features
+
+* add WebDAV and S3 remote backup sync ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([18dc088](https://github.com/sinhong2011/probus-hk/commit/18dc0889f3ae07fc5e082520d0399f66af4a6c1b))
+* add opt-in auto sync for WebDAV and S3 ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([da2aded](https://github.com/sinhong2011/probus-hk/commit/da2aded5cdc1c5da93785946780f46001070d374))
+* add home-server WebDAV and LocalStack with data on /rogdisk ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([8a485c1](https://github.com/sinhong2011/probus-hk/commit/8a485c10af2c23aeaae9a02cbbbd08f36eecc1ae))
+* add an eye toggle on remote-sync password fields ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([d8e224c](https://github.com/sinhong2011/probus-hk/commit/d8e224c580c08877acbf28d501c3c803034171dd))
+* refresh the route database in place without reloading the page ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([b8f11cb](https://github.com/sinhong2011/probus-hk/commit/b8f11cb5575c6527a496abc008094335bad8eb43))
+
+
+### Bug Fixes
+
+* keep settings open when the nested sync sheet closes ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([6342e15](https://github.com/sinhong2011/probus-hk/commit/6342e15daa2177f18bad72d9d782bd2eae471f10))
+* fix S3 SigV4 object-key encoding ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([a2942f3](https://github.com/sinhong2011/probus-hk/commit/a2942f3354c969ddfe756fb8fbba3d7ba67d400b))
+* keep the password eye as a bare icon, not a pressed chip ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([281753f](https://github.com/sinhong2011/probus-hk/commit/281753f73750fbe892ef8a08552afbd4a4f3490a))
+* use the primary focus ring instead of the browser's black outline ([#42](https://github.com/sinhong2011/probus-hk/issues/42)) ([fd917aa](https://github.com/sinhong2011/probus-hk/commit/fd917aad70b0df27eaf4cf0dc5d4bb62499bb859))
+
 ## [0.5.1](https://github.com/sinhong2011/probus-hk/compare/v0.5.0...v0.5.1) (2026-09-13)
 
 

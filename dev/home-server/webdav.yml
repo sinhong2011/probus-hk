@@ -1,0 +1,19 @@
+# hacdias/webdav. CORS is on so the browser app can PUT/GET the backup;
+# credentials stay false so a wildcard origin is legal. Writes go to /data,
+# which compose binds to $ROGDISK/probus/webdav.
+address: 0.0.0.0
+port: 6065
+directory: /data
+permissions: CRUD
+
+cors:
+  enabled: true
+  credentials: false
+  allow_private_network: true
+  allowed_hosts:
+    - "*"
+
+users:
+  - username: "{env}WEBDAV_USER"
+    password: "{env}WEBDAV_PASSWORD"
+    permissions: CRUD

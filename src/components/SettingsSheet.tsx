@@ -36,6 +36,7 @@ import {
 import { alerts } from "~/stores/alerts";
 import { sheets } from "~/stores/sheets";
 import { starred } from "~/stores/starred";
+import { sync } from "~/stores/sync";
 import { trips } from "~/stores/trips";
 import { toast } from "~/stores/toast";
 
@@ -46,6 +47,7 @@ import { toast } from "~/stores/toast";
  * loads - one import, whichever way in the rider takes.
  */
 const RangeSheet = lazy(() => import("./RangeSheet"));
+const SyncSheet = lazy(() => import("./SyncSheet"));
 
 function Row(props: { title: string; subtitle?: string; children: unknown }) {
   return (
@@ -130,7 +132,21 @@ export default function SettingsSheet() {
   const lang = settings.lang;
   const wide = createWide();
   const [busy, setBusy] = createSignal(false);
+  const [syncOpen, setSyncOpen] = createSignal(false, { ownedWrite: true });
   const [permission, setPermission] = createSignal<NotifyPermission>(notifyPermission());
+
+  /*
+   * A nested sheet's dismiss (scrim, Escape, a drag) is also a pointer
+   * outside the settings card. The parent hears it a beat later, after the
+   * nested one has already left `openDrawers`, and would put settings away
+   * too. Ignore that echo.
+   */
+  let ignoreCloseUntil = 0;
+  const nestedOpen = () => syncOpen() || (sheets.rangeOpen() && sheets.rangeNested());
+  const closeSync = () => {
+    setSyncOpen(false);
+    ignoreCloseUntil = Date.now() + 500;
+  };
 
   // Re-read on every open rather than once at setup: the drawer outlives its
   // openings, and the rider may have changed it in the browser between them.
@@ -138,6 +154,14 @@ export default function SettingsSheet() {
     () => sheets.settingsOpen(),
     (open) => {
       if (open) setPermission(notifyPermission());
+      else setSyncOpen(false);
+    },
+  );
+
+  createEffect(
+    () => sheets.rangeOpen() && sheets.rangeNested(),
+    (open, was) => {
+      if (was && !open) ignoreCloseUntil = Date.now() + 500;
     },
   );
 
@@ -248,10 +272,10 @@ export default function SettingsSheet() {
     try {
       clearEtaCache();
       await refreshRouteDb();
-      // The database is read once at start-up, so a reload is the honest way to
-      // adopt a newer copy rather than leaving half the app on stale data.
-      location.reload();
+      toast.show(t("updateNowDone", lang()), t("routeDatabase", lang()));
     } catch {
+      // Stay on the sheet. A reload would throw the error away with the page.
+    } finally {
       setBusy(false);
     }
   };
@@ -279,11 +303,9 @@ export default function SettingsSheet() {
     try {
       await clearRouteDb();
       toast.show(t("deleteOfflineDone", lang()), t("routeDatabase", lang()));
-      // Every screen is still holding the copy this just deleted from disk,
-      // and the database is read once at start-up - the same reason "update
-      // now" reloads rather than trying to swap it under the running app.
-      location.reload();
     } catch {
+      // Stay on the sheet; the in-memory copy is still what the app is using.
+    } finally {
       setBusy(false);
     }
   };
@@ -291,7 +313,10 @@ export default function SettingsSheet() {
   return (
     <Drawer
       open={sheets.settingsOpen()}
-      onClose={() => sheets.closeSettings()}
+      onClose={() => {
+        if (nestedOpen() || Date.now() < ignoreCloseUntil) return;
+        sheets.closeSettings();
+      }}
       modal
       side={wide() ? "right" : "bottom"}
       scroll={false}
@@ -586,6 +611,29 @@ export default function SettingsSheet() {
                     onChange={importAppData}
                   />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSyncOpen(true)}
+                  class="app-tap flex w-full items-center gap-3 rounded-lg bg-card px-3.5 py-3 text-left"
+                >
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="text-[0.88rem] font-bold text-foreground">
+                      {t("remoteSync", lang())}
+                    </span>
+                    <span class="text-[0.75rem] font-medium text-subtle-foreground">
+                      {sync.kind() === "none"
+                        ? t("remoteSyncNotSet", lang())
+                        : [
+                            sync.kind() === "webdav" ? "WebDAV" : "S3",
+                            sync.auto() ? t("remoteSyncAutoOn", lang()) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    </span>
+                  </div>
+                  <ChevronRightIcon size={12} class="text-faint-foreground" />
+                </button>
               </div>
             </Card>
           </Section>
@@ -775,6 +823,7 @@ export default function SettingsSheet() {
       <Show when={sheets.rangeWanted()} keyed>
         <RangeSheet nested />
       </Show>
+      <SyncSheet nested open={syncOpen()} onClose={closeSync} />
     </Drawer>
   );
 }

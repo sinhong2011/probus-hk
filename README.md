@@ -67,6 +67,38 @@ Translations live in `messages/{zh,en}.json` and are compiled by Paraglide:
 bun run messages
 ```
 
+### Home server (WebDAV + S3)
+
+Remote sync talks to a WebDAV folder or an S3-compatible bucket from the
+browser. On a machine with Docker and a disk mounted at `/rogdisk`:
+
+```sh
+# optional: copy and set WEBDAV_PASSWORD
+cp dev/home-server/.env.example dev/home-server/.env
+
+./scripts/home-server.sh
+```
+
+Everything written stays on that disk, not in a Docker volume:
+
+| Path                     | What                                                   |
+| ------------------------ | ------------------------------------------------------ |
+| `/rogdisk/probus/webdav` | hacdias/webdav files (`probus-backup.json` lands here) |
+| `/rogdisk/probus/s3`     | LocalStack S3                                          |
+
+A different mount: `ROGDISK=/somewhere ./scripts/home-server.sh`.
+
+In **Remote sync**:
+
+|          | WebDAV                            | S3                                 |
+| -------- | --------------------------------- | ---------------------------------- |
+| Endpoint | `http://<host>:6065/`             | `http://<host>:4566`               |
+| Account  | `WEBDAV_USER` / `WEBDAV_PASSWORD` | access key `test`, secret `test`   |
+| Extra    | —                                 | bucket `probus`, path-style **on** |
+
+CORS is already allowed. The page and the endpoint must share a scheme:
+`vp dev` over HTTP can talk to these HTTP ports; an HTTPS deploy cannot.
+
 ## How it works
 
 - **Data** — the route, stop and fare database comes from
