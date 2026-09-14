@@ -60,7 +60,7 @@ function Field(props: {
             }
             aria-pressed={visible() ? "true" : "false"}
             onClick={() => setVisible((on) => !on)}
-            class="app-press mr-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-faint-foreground transition-colors duration-state"
+            class="app-bare app-press mr-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-faint-foreground"
           >
             <Show when={visible()} fallback={<EyeIcon size={15} />}>
               <EyeOffIcon size={15} />
