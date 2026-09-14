@@ -1044,6 +1044,31 @@
   }
 
   /*
+   * Segmented radios still need the reserved 1px the rule above just dropped.
+   * Zeroing it grew the selected label's content box by 2px (border-box) so
+   * the sliding pill - measured from that button - no longer matched the
+   * neighbours, and the digit sat off-centre inside the white shape. Keeping
+   * a transparent hairline leaves border-color the only thing that changes.
+   *
+   * iOS also paints a native button's inner padding unless appearance is none,
+   * which is the other way the same label missed the middle of the pill.
+   * Utilities lose to these unlayered surface rules, so the reset lives here.
+   */
+  .app-segmented > button[role="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: 0;
+  }
+  button[role="radio"][data-pill-active],
+  button[role="radio"][data-pill-active][aria-checked="true"] {
+    border-width: 1px;
+    border-color: transparent;
+  }
+
+  /*
    * A dense pad of controls - the route-number dial - draws its edge once,
    * around the pad, and not around each of its keys: twenty-five hairlines
    * in a grid read as graph paper rather than as a set of keys, and the pad

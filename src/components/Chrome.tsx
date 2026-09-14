@@ -322,7 +322,7 @@ export function Segmented<T extends string | number>(props: {
       role="radiogroup"
       aria-label={props.label}
       class={[
-        "relative flex items-center bg-secondary p-[3px]",
+        "app-segmented relative flex items-center bg-secondary p-[3px]",
         props.pill ? "rounded-full" : "rounded-lg",
         { "w-full": Boolean(props.fill) },
       ]}
@@ -356,7 +356,7 @@ export function Segmented<T extends string | number>(props: {
                 // Weight stays put: bolding the chosen label grew its box,
                 // and a heading that wrapped around a wider control was the
                 // whole list jumping.
-                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 font-bold leading-none transition-colors duration-state",
+                "app-press relative z-10 flex items-center justify-center whitespace-nowrap px-2.5 py-0 font-bold leading-none transition-colors duration-state",
                 props.fill ? "grow basis-0" : "shrink-0",
                 props.dense ? "h-6 text-[0.75rem]" : "h-7 text-[0.81rem]",
                 props.pill ? "rounded-full" : "rounded-md",
@@ -366,9 +366,11 @@ export function Segmented<T extends string | number>(props: {
                 },
               ]}
             >
-              <Show when={option.Icon} fallback={option.label}>
-                {(Icon) => Icon()({ size: 14 })}
-              </Show>
+              <span class="flex h-full items-center justify-center">
+                <Show when={option.Icon} fallback={option.label}>
+                  {(Icon) => Icon()({ size: 14 })}
+                </Show>
+              </span>
             </button>
           );
         }}
