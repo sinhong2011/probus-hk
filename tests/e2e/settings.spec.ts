@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { mockTransit } from "./support/mock";
 
 test.beforeEach(async ({ page }) => {
@@ -149,6 +149,19 @@ const cors = {
   "Access-Control-Allow-Headers": "*",
 };
 
+/** The banner must be the topmost hit at its own centre, not under the nested sheet. */
+async function expectToastInFront(page: Page, text: string) {
+  const line = page.locator("[aria-live=assertive]").getByText(text);
+  await expect(line).toBeVisible({ timeout: 10_000 });
+  const inFront = await line.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    const banner = el.closest("[aria-live=assertive]");
+    return Boolean(banner && hit && banner.contains(hit));
+  });
+  expect(inFront).toBe(true);
+}
+
 test("a focused sync field uses the wrapper edge, not a second 2px ring", async ({ page }) => {
   await page.getByRole("button", { name: /遠端同步/ }).click();
   await page.getByRole("radio", { name: "WebDAV" }).click();
@@ -176,14 +189,7 @@ test("check connection succeeds when the folder answers even without a backup", 
   await page.getByRole("radio", { name: "WebDAV" }).click();
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.getByRole("button", { name: "測試連線" }).click();
-  const banner = page.locator("[aria-live=assertive]");
-  await expect(banner.getByText("連到咗")).toBeVisible({ timeout: 10_000 });
-  const toastZ = await banner.evaluate((el) => Number(getComputedStyle(el).zIndex));
-  const sheetZ = await page
-    .locator("[data-drawer-nested]")
-    .last()
-    .evaluate((el) => Number(getComputedStyle(el).zIndex));
-  expect(toastZ).toBeGreaterThan(sheetZ);
+  await expectToastInFront(page, "連到咗");
 });
 
 test("remote sync uploads and downloads a WebDAV backup without storing the password in it", async ({
@@ -223,13 +229,13 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
   await expect(password).toHaveValue("hunter2");
 
   await page.getByRole("button", { name: "上傳" }).click();
-  await expect(page.getByText("已經上傳咗")).toBeVisible({ timeout: 10_000 });
+  await expectToastInFront(page, "已經上傳咗");
   expect(uploadedUrl).toBe("https://dav.test/files/Probus/probus-backup.json");
   expect(uploaded).toContain('"version":1');
   expect(uploaded).not.toContain("hunter2");
 
   await page.getByRole("button", { name: "下載" }).click();
-  await expect(page.getByText("已經合併咗遠端備份")).toBeVisible({ timeout: 10_000 });
+  await expectToastInFront(page, "已經合併咗遠端備份");
 });
 
 test("auto sync uploads when it is turned on and names itself on the settings row", async ({

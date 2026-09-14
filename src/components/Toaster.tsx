@@ -1,4 +1,5 @@
 import { For } from "solid-js";
+import { Portal } from "@solidjs/web";
 import { AlarmIcon, CloseIcon } from "./Icons";
 import { toast } from "~/stores/toast";
 import { t, type Lang } from "~/lib/i18n";
@@ -10,58 +11,64 @@ import { t, type Lang } from "~/lib/i18n";
  * confirmation of something the rider just did, it is an interruption, and the
  * top of the screen is where interruptions belong. It is also the one place a
  * notification can land on iOS Safari, which grants the system channel to
- * installed apps only. `z-[80]` is above a nested drawer (`z-[70]`), so a
- * confirmation from 遠端同步 is not trapped behind the sheet that asked for it.
+ * installed apps only.
+ *
+ * Drawers portal onto `document.body` at `z-40` / nested `z-70`. A toast that
+ * stays inside `#root` can have a larger z-index and still paint under that
+ * scrim - the two stacking contexts never meet. This portal puts the banner
+ * on the body with them, above the nested 遠端同步 sheet that asked for it.
  */
 export function Toaster(props: { lang: Lang }) {
   return (
-    <div
-      class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-[80] flex flex-col items-center gap-2 px-4"
-      aria-live="assertive"
-    >
-      <For each={toast.items()}>
-        {(item) => (
-          <div
-            class={[
-              "pointer-events-auto flex w-full max-w-[26rem] items-center gap-3 rounded-2xl px-3.5 py-3 shadow-card motion-safe:app-rise",
-              {
-                "bg-primary-muted": item.tone === "alert",
-                "bg-card": item.tone !== "alert",
-              },
-            ]}
-          >
-            <span
+    <Portal mount={document.body}>
+      <div
+        class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-[80] flex flex-col items-center gap-2 px-4"
+        aria-live="assertive"
+      >
+        <For each={toast.items()}>
+          {(item) => (
+            <div
               class={[
-                "flex size-8 shrink-0 items-center justify-center rounded-full",
+                "pointer-events-auto flex w-full max-w-[26rem] items-center gap-3 rounded-2xl px-3.5 py-3 shadow-card motion-safe:app-rise",
                 {
-                  "bg-primary text-primary-foreground": item.tone === "alert",
-                  "bg-secondary text-muted-foreground": item.tone !== "alert",
+                  "bg-primary-muted": item.tone === "alert",
+                  "bg-card": item.tone !== "alert",
                 },
               ]}
             >
-              <AlarmIcon size={15} />
-            </span>
+              <span
+                class={[
+                  "flex size-8 shrink-0 items-center justify-center rounded-full",
+                  {
+                    "bg-primary text-primary-foreground": item.tone === "alert",
+                    "bg-secondary text-muted-foreground": item.tone !== "alert",
+                  },
+                ]}
+              >
+                <AlarmIcon size={15} />
+              </span>
 
-            <div class="flex min-w-0 grow flex-col gap-0.5">
-              <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
-                {item.title}
-              </span>
-              <span class="truncate text-[0.81rem] font-semibold text-muted-foreground">
-                {item.body}
-              </span>
+              <div class="flex min-w-0 grow flex-col gap-0.5">
+                <span class="truncate text-[0.88rem] font-bold tracking-[-0.01em] text-foreground">
+                  {item.title}
+                </span>
+                <span class="truncate text-[0.81rem] font-semibold text-muted-foreground">
+                  {item.body}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                aria-label={t("close", props.lang)}
+                onClick={() => toast.dismiss(item.id)}
+                class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+              >
+                <CloseIcon size={12} />
+              </button>
             </div>
-
-            <button
-              type="button"
-              aria-label={t("close", props.lang)}
-              onClick={() => toast.dismiss(item.id)}
-              class="app-press flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
-            >
-              <CloseIcon size={12} />
-            </button>
-          </div>
-        )}
-      </For>
-    </div>
+          )}
+        </For>
+      </div>
+    </Portal>
   );
 }
