@@ -1,7 +1,7 @@
 import { Show, createSignal } from "solid-js";
 import { Card, Hairline, Reveal, SectionLabel, Segmented, Toggle } from "~/components/Chrome";
 import { Drawer, DrawerHeader } from "~/components/Drawer";
-import { DownloadCloudIcon, UploadCloudIcon } from "~/components/Icons";
+import { DownloadCloudIcon, EyeIcon, EyeOffIcon, UploadCloudIcon } from "~/components/Icons";
 import { Section } from "~/components/Layout";
 import { t } from "~/lib/i18n";
 import {
@@ -28,20 +28,47 @@ function Field(props: {
   autocomplete?: string;
   name?: string;
 }) {
+  const [visible, setVisible] = createSignal(false, { ownedWrite: true });
+  const secret = () => props.type === "password";
+  const inputType = () => {
+    if (secret()) return visible() ? "text" : "password";
+    return props.type ?? "text";
+  };
+
   return (
-    <label class="flex flex-col gap-1 px-3.5 py-2.5">
-      <span class="text-[0.75rem] font-semibold text-subtle-foreground">{props.label}</span>
-      <input
-        type={props.type ?? "text"}
-        name={props.name}
-        value={props.value}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
-        placeholder={props.placeholder}
-        autocomplete={props.autocomplete ?? "off"}
-        spellcheck={false}
-        class="h-10 rounded-xl border border-border bg-card px-3 text-[0.88rem] font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-faint-foreground focus-visible:border-primary"
-      />
-    </label>
+    <div class="flex flex-col gap-1 px-3.5 py-2.5">
+      <label for={props.name} class="text-[0.75rem] font-semibold text-subtle-foreground">
+        {props.label}
+      </label>
+      <div class="flex h-10 items-center rounded-xl border border-border bg-card focus-within:border-primary">
+        <input
+          id={props.name}
+          type={inputType()}
+          name={props.name}
+          value={props.value}
+          onInput={(event) => props.onInput(event.currentTarget.value)}
+          placeholder={props.placeholder}
+          autocomplete={props.autocomplete ?? "off"}
+          spellcheck={false}
+          class="h-full min-w-0 grow bg-transparent px-3 text-[0.88rem] font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-faint-foreground"
+        />
+        <Show when={secret()}>
+          <button
+            type="button"
+            aria-label={
+              visible() ? t("hidePassword", settings.lang()) : t("showPassword", settings.lang())
+            }
+            aria-pressed={visible() ? "true" : "false"}
+            onClick={() => setVisible((on) => !on)}
+            class="app-press mr-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-faint-foreground transition-colors duration-state"
+          >
+            <Show when={visible()} fallback={<EyeIcon size={15} />}>
+              <EyeOffIcon size={15} />
+            </Show>
+          </button>
+        </Show>
+      </div>
+    </div>
   );
 }
 

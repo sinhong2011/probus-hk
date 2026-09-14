@@ -160,7 +160,12 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
   await page.getByRole("radio", { name: "WebDAV" }).click();
   await page.getByLabel("網址").fill("https://dav.test/files/");
   await page.getByLabel("用戶名稱").fill("you");
-  await page.getByLabel("密碼").fill("hunter2");
+  const password = page.locator("#webdav-password");
+  await password.fill("hunter2");
+  await expect(password).toHaveAttribute("type", "password");
+  await password.locator("xpath=..").getByRole("button").click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue("hunter2");
 
   await page.getByRole("button", { name: "上傳" }).click();
   await expect(page.getByText("已經上傳咗")).toBeVisible({ timeout: 10_000 });

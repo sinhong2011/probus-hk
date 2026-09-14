@@ -345,6 +345,8 @@
   "webdav_url_hint": "The WebDAV path of the file or folder. A folder uses probus-backup.json.",
   "webdav_user": "Username",
   "webdav_password": "Password",
+  "show_password": "Show password",
+  "hide_password": "Hide password",
   "s3_endpoint": "Endpoint",
   "s3_region": "Region",
   "s3_bucket": "Bucket",

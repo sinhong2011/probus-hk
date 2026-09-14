@@ -345,6 +345,8 @@
   "webdav_url_hint": "檔案或者資料夾嘅 WebDAV 路徑。資料夾會自動用 probus-backup.json。",
   "webdav_user": "用戶名稱",
   "webdav_password": "密碼",
+  "show_password": "顯示密碼",
+  "hide_password": "隱藏密碼",
   "s3_endpoint": "Endpoint",
   "s3_region": "Region",
   "s3_bucket": "Bucket",

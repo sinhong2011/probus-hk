@@ -369,6 +369,8 @@ const MESSAGES = {
   webdavUrlHint: m.webdav_url_hint,
   webdavUser: m.webdav_user,
   webdavPassword: m.webdav_password,
+  showPassword: m.show_password,
+  hidePassword: m.hide_password,
   s3Endpoint: m.s3_endpoint,
   s3Region: m.s3_region,
   s3Bucket: m.s3_bucket,

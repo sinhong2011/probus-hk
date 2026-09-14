@@ -17,6 +17,7 @@ import IconChevronLeft from "~icons/lineicons/chevron-left";
 import IconChevronRight from "~icons/lineicons/chevron-right";
 import IconCloudDownload from "~icons/lineicons/cloud-download";
 import IconCloudUpload from "~icons/lineicons/cloud-upload";
+import IconEye from "~icons/lineicons/eye";
 import IconCheck from "~icons/lineicons/checkmark";
 import IconCog from "~icons/lineicons/cog";
 import IconExpand from "~icons/lineicons/expand-square-4";
@@ -249,6 +250,39 @@ export function BackspaceIcon(props: IconProps): JSX.Element {
 }
 export const DownloadCloudIcon = wrap(IconCloudDownload as IconComponent);
 export const UploadCloudIcon = wrap(IconCloudUpload as IconComponent);
+export const EyeIcon = wrap(IconEye as IconComponent);
+
+/**
+ * The same eye with a slash through it: hide what the neighbour reveals.
+ * Lineicons only ships the open eye.
+ */
+export function EyeOffIcon(props: IconProps): JSX.Element {
+  const size = () => `${props.size ?? 22}px`;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 25 24"
+      width={size()}
+      height={size()}
+      class={props.class}
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ "flex-shrink": 0 }}
+    >
+      <g fill-rule="evenodd" clip-rule="evenodd">
+        <path d="M12.023 7.625a4.375 4.375 0 1 0 0 8.75a4.375 4.375 0 0 0 0-8.75M9.148 12a2.875 2.875 0 1 1 5.75 0a2.875 2.875 0 0 1-5.75 0" />
+        <path d="M12.023 4.5c-4.312 0-8.025 2.556-9.722 6.235a3.02 3.02 0 0 0 0 2.53c1.697 3.679 5.41 6.235 9.722 6.235s8.026-2.556 9.723-6.235c.37-.802.37-1.728 0-2.53c-1.697-3.679-5.41-6.235-9.723-6.235m-8.36 6.863C5.125 8.194 8.32 6 12.023 6c3.704 0 6.899 2.194 8.36 5.363c.187.404.187.87 0 1.274C18.923 15.806 15.728 18 12.024 18s-6.898-2.194-8.36-5.363a1.52 1.52 0 0 1 0-1.274" />
+      </g>
+      <path
+        d="M4.2 19.4 L20.4 4.6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      />
+    </svg>
+  );
+}
 export const BusIcon = wrap(IconBus as IconComponent);
 export const RouteIcon = wrap(IconRoute as IconComponent);
 export const MegaphoneIcon = wrap(IconMegaphone as IconComponent);
