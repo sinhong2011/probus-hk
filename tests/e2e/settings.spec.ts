@@ -241,6 +241,7 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
 test("auto sync uploads when it is turned on and names itself on the settings row", async ({
   page,
 }) => {
+  const putUrls: string[] = [];
   let uploaded: string | undefined;
   await page.route("https://dav.test/**", async (route) => {
     const request = route.request();
@@ -249,6 +250,7 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
       return;
     }
     if (request.method() === "PUT") {
+      putUrls.push(request.url());
       uploaded = request.postData() ?? "";
       await route.fulfill({ status: 201, headers: cors, body: "" });
       return;
@@ -268,7 +270,14 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   await expect.poll(() => uploaded, { timeout: 10_000 }).toBeTruthy();
   expect(uploaded).toContain('"version":1');
   expect(uploaded).not.toContain("secret");
+  expect(putUrls).toEqual(["https://dav.test/files/probus-backup.json"]);
   await expect(page.getByText("仲未同步過")).toHaveCount(0);
+
+  await page.getByLabel("遠端資料夾（選填）").pressSequentially("Probus", { delay: 40 });
+  await expect
+    .poll(() => putUrls.at(-1), { timeout: 5_000 })
+    .toBe("https://dav.test/files/Probus/probus-backup.json");
+  expect(putUrls.some((url) => /\/files\/P(?:r(?:o(?:b(?:u)?)?)?)?\//.test(url))).toBe(false);
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();
