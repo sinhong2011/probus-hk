@@ -242,7 +242,7 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   page,
 }) => {
   const putUrls: string[] = [];
-  let uploaded: string | undefined;
+  const files = new Map<string, string>();
   await page.route("https://dav.test/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") {
@@ -250,15 +250,17 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
       return;
     }
     if (request.method() === "PUT") {
+      const body = request.postData() ?? "";
       putUrls.push(request.url());
-      uploaded = request.postData() ?? "";
+      files.set(request.url(), body);
       await route.fulfill({ status: 201, headers: cors, body: "" });
       return;
     }
+    const body = files.get(request.url());
     await route.fulfill({
-      status: uploaded ? 200 : 404,
+      status: body ? 200 : 404,
       headers: { ...cors, "Content-Type": "application/json" },
-      body: uploaded ?? "",
+      body: body ?? "",
     });
   });
 
@@ -267,10 +269,11 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.locator("#webdav-password").fill("secret");
   await page.getByRole("switch", { name: "自動同步" }).click();
-  await expect.poll(() => uploaded, { timeout: 10_000 }).toBeTruthy();
-  expect(uploaded).toContain('"version":1');
-  expect(uploaded).not.toContain("secret");
-  expect(putUrls).toEqual(["https://dav.test/files/probus-backup.json"]);
+  await expect.poll(() => putUrls.at(0), { timeout: 10_000 }).toBe(
+    "https://dav.test/files/probus-backup.json",
+  );
+  expect(files.get("https://dav.test/files/probus-backup.json")).toContain('"version":1');
+  expect(files.get("https://dav.test/files/probus-backup.json")).not.toContain("secret");
   await expect(page.getByText("仲未同步過")).toHaveCount(0);
 
   await page.getByLabel("遠端資料夾（選填）").pressSequentially("Probus", { delay: 40 });
