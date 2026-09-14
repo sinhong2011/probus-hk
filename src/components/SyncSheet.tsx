@@ -109,7 +109,7 @@ function errorMessage(error: unknown, lang: "zh" | "en"): string {
 export default function SyncSheet(props: { open: boolean; onClose: () => void; nested?: boolean }) {
   const lang = settings.lang;
   const wide = createWide();
-  const [busy, setBusy] = createSignal(false);
+  const [busy, setBusy] = createSignal<"probe" | "pull" | "push" | false>(false);
 
   const locale = () => (lang() === "zh" ? zhHK : enUS);
   const last = () => {
@@ -120,7 +120,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
 
   const probe = async () => {
     if (busy()) return;
-    setBusy(true);
+    setBusy("probe");
     try {
       await withRemoteLock(() => probeRemote(sync.snapshot()));
       toast.show(t("remoteSyncOk", lang()), t("remoteSync", lang()));
@@ -133,7 +133,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
 
   const push = async () => {
     if (busy()) return;
-    setBusy(true);
+    setBusy("push");
     try {
       await withRemoteLock(() => pushRemote(sync.snapshot()));
       sync.markSynced();
@@ -147,7 +147,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
 
   const pull = async () => {
     if (busy()) return;
-    setBusy(true);
+    setBusy("pull");
     try {
       const remote = await withRemoteLock(async () => {
         const next = await pullRemote(sync.snapshot());
@@ -348,11 +348,11 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                 </span>
                 <button
                   type="button"
-                  disabled={busy() || !syncReady(sync.snapshot())}
+                  disabled={Boolean(busy()) || !syncReady(sync.snapshot())}
                   onClick={() => void probe()}
-                  class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                  class="app-press flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
                 >
-                  <span class={{ "motion-safe:animate-spin": busy() }}>
+                  <span class={{ "motion-safe:animate-spin": busy() === "probe" }}>
                     <LinkIcon size={15} />
                   </span>
                   {t("remoteSyncCheck", lang())}
@@ -360,22 +360,24 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={busy() || !syncReady(sync.snapshot())}
+                    disabled={Boolean(busy()) || !syncReady(sync.snapshot())}
                     onClick={() => void pull()}
-                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                    class="app-press flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
                   >
-                    <span class={{ "motion-safe:animate-spin": busy() }}>
+                    <span class={{ "motion-safe:animate-spin": busy() === "pull" }}>
                       <DownloadCloudIcon size={15} />
                     </span>
                     {t("remoteSyncPull", lang())}
                   </button>
                   <button
                     type="button"
-                    disabled={busy() || !syncReady(sync.snapshot())}
+                    disabled={Boolean(busy()) || !syncReady(sync.snapshot())}
                     onClick={() => void push()}
-                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                    class="app-press flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
                   >
-                    <UploadCloudIcon size={15} />
+                    <span class={{ "motion-safe:animate-spin": busy() === "push" }}>
+                      <UploadCloudIcon size={15} />
+                    </span>
                     {t("remoteSyncPush", lang())}
                   </button>
                 </div>

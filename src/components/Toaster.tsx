@@ -10,13 +10,13 @@ import { t, type Lang } from "~/lib/i18n";
  * confirmation of something the rider just did, it is an interruption, and the
  * top of the screen is where interruptions belong. It is also the one place a
  * notification can land on iOS Safari, which grants the system channel to
- * installed apps only. `z-[60]` is above every drawer (`z-50`), so a
- * confirmation from a sheet is not trapped behind the sheet that asked for it.
+ * installed apps only. `z-[80]` is above a nested drawer (`z-[70]`), so a
+ * confirmation from 遠端同步 is not trapped behind the sheet that asked for it.
  */
 export function Toaster(props: { lang: Lang }) {
   return (
     <div
-      class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4"
+      class="pt-safe-top pointer-events-none fixed inset-x-0 top-0 z-[80] flex flex-col items-center gap-2 px-4"
       aria-live="assertive"
     >
       <For each={toast.items()}>

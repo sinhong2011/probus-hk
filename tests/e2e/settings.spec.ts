@@ -176,7 +176,14 @@ test("check connection succeeds when the folder answers even without a backup", 
   await page.getByRole("radio", { name: "WebDAV" }).click();
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.getByRole("button", { name: "測試連線" }).click();
-  await expect(page.getByText("連到咗")).toBeVisible({ timeout: 10_000 });
+  const banner = page.locator("[aria-live=assertive]");
+  await expect(banner.getByText("連到咗")).toBeVisible({ timeout: 10_000 });
+  const toastZ = await banner.evaluate((el) => Number(getComputedStyle(el).zIndex));
+  const sheetZ = await page
+    .locator("[data-drawer-nested]")
+    .last()
+    .evaluate((el) => Number(getComputedStyle(el).zIndex));
+  expect(toastZ).toBeGreaterThan(sheetZ);
 });
 
 test("remote sync uploads and downloads a WebDAV backup without storing the password in it", async ({
