@@ -4,6 +4,21 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.6.1](https://github.com/sinhong2011/probus-hk/compare/v0.6.0...v0.6.1) (2026-09-14)
+
+
+### Features
+
+* add an optional WebDAV remote folder; the backup is always probus-backup.json
+* add a Check connection button that probes WebDAV and S3 without writing
+
+
+### Bug Fixes
+
+* center labels inside segmented control pills
+* treat the WebDAV URL as a folder path only
+* drop the doubled 2px focus ring on text fields
+
 ## [0.6.0](https://github.com/sinhong2011/probus-hk/compare/v0.5.1...v0.6.0) (2026-09-14)
 
 

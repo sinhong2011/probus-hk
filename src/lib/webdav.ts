@@ -9,23 +9,42 @@ import {
 /**
  * The file URL a WebDAV endpoint is asked about.
  *
- * A directory (a trailing slash) has the backup name appended, so a rider
- * who pastes their Nextcloud folder still lands on one file rather than a
- * collection the app cannot PUT to.
+ * The rider's URL is a folder, never a file: the backup is always
+ * `probus-backup.json` under that folder (and an optional subfolder). A
+ * trailing `.json` on an older stored URL is treated as a leftover filename
+ * and dropped, so a custom name cannot sneak back in.
  */
-export function webdavFileUrl(url: string): string {
+export function webdavFileUrl(url: string, folder = ""): string {
   const trimmed = url.trim();
   if (!trimmed) throw new RemoteSyncError("incomplete");
   const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
     const parsed = new URL(withProtocol);
-    if (parsed.pathname.endsWith("/")) {
-      parsed.pathname = `${parsed.pathname}${REMOTE_BACKUP_NAME}`;
-    }
+    parsed.pathname = `${asFolderPath(parsed.pathname, folder)}${REMOTE_BACKUP_NAME}`;
     return parsed.href;
   } catch (error) {
     throw new RemoteSyncError("invalid", error);
   }
+}
+
+function asFolderPath(pathname: string, folder: string): string {
+  let dir = pathname || "/";
+  if (!dir.endsWith("/")) {
+    const last = dir.slice(dir.lastIndexOf("/") + 1);
+    if (last === REMOTE_BACKUP_NAME || /\.json$/i.test(last)) {
+      dir = dir.slice(0, -last.length);
+    } else {
+      dir = `${dir}/`;
+    }
+  }
+  if (!dir.endsWith("/")) dir = `${dir}/`;
+  const extra = folder
+    .trim()
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("/");
+  return extra ? `${dir}${extra}/` : dir;
 }
 
 export function webdavAuthHeader(user: string, password: string): string {
@@ -44,7 +63,7 @@ function headers(config: SyncConfig): HeadersInit {
 }
 
 async function send(config: SyncConfig, init: RequestInit): Promise<Response> {
-  const url = webdavFileUrl(config.webdavUrl);
+  const url = webdavFileUrl(config.webdavUrl, config.webdavFolder);
   try {
     return await fetch(url, {
       ...init,

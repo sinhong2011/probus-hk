@@ -131,12 +131,14 @@ describe("sync", () => {
     flush();
     sync.setKind("webdav");
     sync.setWebdavUrl("https://cloud.example/dav/");
+    sync.setWebdavFolder("Probus");
     sync.setWebdavPassword("hunter2");
     sync.setAuto(true);
     await settled();
     expect(sync.kind()).toBe("webdav");
     expect(sync.auto()).toBe(true);
     expect(memory.get("probus:db:sync")).toContain("hunter2");
+    expect(memory.get("probus:db:sync")).toContain("Probus");
     expect(memory.get("probus:db:sync")).toContain('"auto":true');
 
     const { exportBackup } = await import("~/lib/backup");

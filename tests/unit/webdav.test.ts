@@ -6,6 +6,7 @@ import type { SyncConfig } from "~/lib/remoteSync";
 const dav: SyncConfig = {
   kind: "webdav",
   webdavUrl: "https://cloud.example/remote.php/dav/files/you/",
+  webdavFolder: "",
   webdavUser: "you",
   webdavPassword: "secret",
   s3Endpoint: "",
@@ -18,12 +19,24 @@ const dav: SyncConfig = {
 };
 
 describe("webdavFileUrl", () => {
-  it("appends the backup name to a directory and leaves a file alone", () => {
+  it("treats the URL as a folder and always uses the backup name", () => {
     expect(webdavFileUrl("https://cloud.example/dav/files/you/")).toBe(
       `https://cloud.example/dav/files/you/${REMOTE_BACKUP_NAME}`,
     );
+    expect(webdavFileUrl("https://cloud.example/dav/files/you")).toBe(
+      `https://cloud.example/dav/files/you/${REMOTE_BACKUP_NAME}`,
+    );
     expect(webdavFileUrl("https://cloud.example/dav/files/you/mine.json")).toBe(
-      "https://cloud.example/dav/files/you/mine.json",
+      `https://cloud.example/dav/files/you/${REMOTE_BACKUP_NAME}`,
+    );
+  });
+
+  it("joins an optional remote folder under the URL", () => {
+    expect(webdavFileUrl("https://cloud.example/dav/files/you/", "Probus")).toBe(
+      `https://cloud.example/dav/files/you/Probus/${REMOTE_BACKUP_NAME}`,
+    );
+    expect(webdavFileUrl("https://cloud.example/dav/files/you", "/Backups/Probus/")).toBe(
+      `https://cloud.example/dav/files/you/Backups/Probus/${REMOTE_BACKUP_NAME}`,
     );
   });
 
@@ -57,6 +70,14 @@ describe("webdav fetch", () => {
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe(webdavAuthHeader("you", "secret"));
     expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("PUTs under the optional remote folder", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await putWebdav({ ...dav, webdavFolder: "Probus" }, '{"version":1}');
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`https://cloud.example/remote.php/dav/files/you/Probus/${REMOTE_BACKUP_NAME}`);
   });
 
   it("returns null when the file is not there yet", async () => {

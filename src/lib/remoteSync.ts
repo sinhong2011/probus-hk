@@ -37,7 +37,10 @@ export type SyncKind = "none" | "webdav" | "s3";
 
 export interface SyncConfig {
   kind: SyncKind;
+  /** WebDAV folder URL. The backup filename is never taken from this path. */
   webdavUrl: string;
+  /** Optional path under `webdavUrl`. Empty means the folder URL itself. */
+  webdavFolder: string;
   webdavUser: string;
   webdavPassword: string;
   s3Endpoint: string;
@@ -76,6 +79,23 @@ export async function pushRemote(config: SyncConfig): Promise<void> {
   }
   const { putS3 } = await import("./s3");
   await putS3(config, body);
+}
+
+/**
+ * Asks whether the endpoint will talk to this origin with these credentials.
+ *
+ * A missing file is still a connection: the folder is there, nothing has
+ * been written yet. A body that is not JSON is the same - we reached it.
+ * Does not merge or upload.
+ */
+export async function probeRemote(config: SyncConfig): Promise<void> {
+  if (!syncReady(config)) throw new RemoteSyncError("incomplete");
+  try {
+    await pullRemote(config);
+  } catch (error) {
+    if (error instanceof RemoteSyncError && error.code === "invalid") return;
+    throw error;
+  }
 }
 
 /**

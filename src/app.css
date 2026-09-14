@@ -414,6 +414,18 @@
   outline-offset: 2px;
 }
 
+/*
+ * A typed field already wears a hairline - the wrapper, which turns primary
+ * on focus-within. The 2px ring on top of that is a second box, the same
+ * doubled frame the black outline used to be. Buttons and rows keep the ring;
+ * they have no other edge that moves.
+ */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 .app-range:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 4px;
@@ -1041,6 +1053,31 @@
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  /*
+   * Segmented radios still need the reserved 1px the rule above just dropped.
+   * Zeroing it grew the selected label's content box by 2px (border-box) so
+   * the sliding pill - measured from that button - no longer matched the
+   * neighbours, and the digit sat off-centre inside the white shape. Keeping
+   * a transparent hairline leaves border-color the only thing that changes.
+   *
+   * iOS also paints a native button's inner padding unless appearance is none,
+   * which is the other way the same label missed the middle of the pill.
+   * Utilities lose to these unlayered surface rules, so the reset lives here.
+   */
+  .app-segmented > button[role="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: 0;
+  }
+  button[role="radio"][data-pill-active],
+  button[role="radio"][data-pill-active][aria-checked="true"] {
+    border-width: 1px;
+    border-color: transparent;
   }
 
   /*
