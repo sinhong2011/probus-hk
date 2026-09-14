@@ -126,6 +126,19 @@ test("remote sync opens WebDAV and S3 fields from settings", async ({ page }) =>
   await page.getByRole("radio", { name: "S3" }).click();
   await expect(page.getByText("Endpoint", { exact: true })).toBeVisible();
   await expect(page.getByText("Bucket", { exact: true })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "遠端同步" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();
+
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await expect(page.getByRole("heading", { name: "遠端同步" })).toBeVisible();
+  await page
+    .locator("[data-drawer-overlay]")
+    .last()
+    .click({ position: { x: 8, y: 8 } });
+  await expect(page.getByRole("heading", { name: "遠端同步" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();
 });
 
 const cors = {

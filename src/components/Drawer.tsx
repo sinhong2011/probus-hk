@@ -161,19 +161,23 @@ export function Drawer(props: DrawerProps) {
     <>
       <Show when={props.modal}>
         <Sheet.Overlay
-          class="fixed inset-0 z-40 bg-black/55"
+          data-drawer-nested={props.nested ? "" : undefined}
+          class={`fixed inset-0 bg-black/55 ${props.nested ? "z-[60]" : "z-40"}`}
           style={{ "backdrop-filter": "blur(2px)", "-webkit-backdrop-filter": "blur(2px)" }}
         />
       </Show>
       <Sheet.Content
         aria-label={props.label}
+        data-drawer-nested={props.nested ? "" : undefined}
         class={[
           /* Over everything on the page, the tab bar included (it is z-30):
              a drawer is the frontmost thing while it is up, whatever it is
              over, as shadcn's is. A nested one is over the drawer it is in -
              by z-index, not by order, because its portal lands in the body
-             before its parent's does. */
-          props.nested ? "z-50" : "z-40",
+             before its parent's does. Settings on a phone also sits at z-50,
+             so the nested sheet has to clear that or a tap on the scrim hits
+             the parent and puts both away. */
+          props.nested ? "z-[70]" : "z-40",
           "flex flex-col outline-none",
           /* Where it lives, and the inset it keeps from the edges of it: a
              panel's own edges, or the window's - clear of the home indicator
@@ -243,6 +247,20 @@ export function Drawer(props: DrawerProps) {
       open={props.open}
       onOpenChange={(open) => {
         if (!open) props.onClose();
+      }}
+      onPointerDownOutside={(event) => {
+        /*
+         * Nested overlay and content are portaled to the body, so they are
+         * not inside this drawer's card. The nested one leaves `openDrawers`
+         * on the same pointer that dismissed it; this drawer is then top,
+         * the tap is "outside", and without this it would follow the nested
+         * one down. The nested parts keep `data-drawer-nested` through their
+         * closing transition so the ghost tap still finds them.
+         */
+        const target = event.target;
+        if (!props.nested && target instanceof Element && target.closest("[data-drawer-nested]")) {
+          event.preventDefault();
+        }
       }}
       modal={props.modal ?? false}
       direction={side()}

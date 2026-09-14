@@ -135,12 +135,33 @@ export default function SettingsSheet() {
   const [syncOpen, setSyncOpen] = createSignal(false, { ownedWrite: true });
   const [permission, setPermission] = createSignal<NotifyPermission>(notifyPermission());
 
+  /*
+   * A nested sheet's dismiss (scrim, Escape, a drag) is also a pointer
+   * outside the settings card. The parent hears it a beat later, after the
+   * nested one has already left `openDrawers`, and would put settings away
+   * too. Ignore that echo.
+   */
+  let ignoreCloseUntil = 0;
+  const nestedOpen = () => syncOpen() || (sheets.rangeOpen() && sheets.rangeNested());
+  const closeSync = () => {
+    setSyncOpen(false);
+    ignoreCloseUntil = Date.now() + 500;
+  };
+
   // Re-read on every open rather than once at setup: the drawer outlives its
   // openings, and the rider may have changed it in the browser between them.
   createEffect(
     () => sheets.settingsOpen(),
     (open) => {
       if (open) setPermission(notifyPermission());
+      else setSyncOpen(false);
+    },
+  );
+
+  createEffect(
+    () => sheets.rangeOpen() && sheets.rangeNested(),
+    (open, was) => {
+      if (was && !open) ignoreCloseUntil = Date.now() + 500;
     },
   );
 
@@ -292,7 +313,10 @@ export default function SettingsSheet() {
   return (
     <Drawer
       open={sheets.settingsOpen()}
-      onClose={() => sheets.closeSettings()}
+      onClose={() => {
+        if (nestedOpen() || Date.now() < ignoreCloseUntil) return;
+        sheets.closeSettings();
+      }}
       modal
       side={wide() ? "right" : "bottom"}
       scroll={false}
@@ -796,7 +820,7 @@ export default function SettingsSheet() {
       <Show when={sheets.rangeWanted()} keyed>
         <RangeSheet nested />
       </Show>
-      <SyncSheet nested open={syncOpen()} onClose={() => setSyncOpen(false)} />
+      <SyncSheet nested open={syncOpen()} onClose={closeSync} />
     </Drawer>
   );
 }
