@@ -37,7 +37,10 @@ export type SyncKind = "none" | "webdav" | "s3";
 
 export interface SyncConfig {
   kind: SyncKind;
+  /** WebDAV folder URL. The backup filename is never taken from this path. */
   webdavUrl: string;
+  /** Optional path under `webdavUrl`. Empty means the folder URL itself. */
+  webdavFolder: string;
   webdavUser: string;
   webdavPassword: string;
   s3Endpoint: string;

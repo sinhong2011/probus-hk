@@ -371,6 +371,7 @@ const MESSAGES = {
   remoteSyncAutoFailed: m.remote_sync_auto_failed,
   webdavUrl: m.webdav_url,
   webdavUrlHint: m.webdav_url_hint,
+  webdavFolder: m.webdav_folder,
   webdavUser: m.webdav_user,
   webdavPassword: m.webdav_password,
   showPassword: m.show_password,

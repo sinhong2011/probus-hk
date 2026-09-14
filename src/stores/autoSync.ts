@@ -81,7 +81,7 @@ export function installAutoSyncEffects() {
       const enabled = sync.auto() && syncReady(config);
       return {
         enabled,
-        target: `${config.kind}\0${config.webdavUrl}\0${config.s3Endpoint}\0${config.s3Bucket}\0${config.s3Key}`,
+        target: `${config.kind}\0${config.webdavUrl}\0${config.webdavFolder}\0${config.s3Endpoint}\0${config.s3Bucket}\0${config.s3Key}`,
         stamp: enabled ? backupFingerprint(exportBackup()) : "",
       };
     },

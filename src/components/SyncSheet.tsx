@@ -200,6 +200,14 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                 />
                 <Hairline />
                 <Field
+                  label={t("webdavFolder", lang())}
+                  value={sync.webdavFolder()}
+                  onInput={sync.setWebdavFolder}
+                  name="webdav-folder"
+                  placeholder="Probus"
+                />
+                <Hairline />
+                <Field
                   label={t("webdavUser", lang())}
                   value={sync.webdavUser()}
                   onInput={sync.setWebdavUser}

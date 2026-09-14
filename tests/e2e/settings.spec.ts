@@ -151,6 +151,7 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
   page,
 }) => {
   let uploaded: string | undefined;
+  let uploadedUrl: string | undefined;
   await page.route("https://dav.test/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") {
@@ -158,6 +159,7 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
       return;
     }
     if (request.method() === "PUT") {
+      uploadedUrl = request.url();
       uploaded = request.postData() ?? "";
       await route.fulfill({ status: 201, headers: cors, body: "" });
       return;
@@ -171,7 +173,8 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
 
   await page.getByRole("button", { name: /遠端同步/ }).click();
   await page.getByRole("radio", { name: "WebDAV" }).click();
-  await page.getByLabel("網址").fill("https://dav.test/files/");
+  await page.getByLabel("資料夾網址").fill("https://dav.test/files/custom.json");
+  await page.getByLabel("遠端資料夾（選填）").fill("Probus");
   await page.getByLabel("用戶名稱").fill("you");
   const password = page.locator("#webdav-password");
   await password.fill("hunter2");
@@ -182,6 +185,7 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
 
   await page.getByRole("button", { name: "上傳" }).click();
   await expect(page.getByText("已經上傳咗")).toBeVisible({ timeout: 10_000 });
+  expect(uploadedUrl).toBe("https://dav.test/files/Probus/probus-backup.json");
   expect(uploaded).toContain('"version":1');
   expect(uploaded).not.toContain("hunter2");
 
@@ -213,7 +217,7 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
 
   await page.getByRole("button", { name: /遠端同步/ }).click();
   await page.getByRole("radio", { name: "WebDAV" }).click();
-  await page.getByLabel("網址").fill("https://dav.test/files/");
+  await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.locator("#webdav-password").fill("secret");
   await page.getByRole("switch", { name: "自動同步" }).click();
   await expect.poll(() => uploaded, { timeout: 10_000 }).toBeTruthy();

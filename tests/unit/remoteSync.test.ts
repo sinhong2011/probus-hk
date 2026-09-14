@@ -11,6 +11,7 @@ import type { AppBackup } from "~/lib/backup";
 const empty: SyncConfig = {
   kind: "none",
   webdavUrl: "",
+  webdavFolder: "",
   webdavUser: "",
   webdavPassword: "",
   s3Endpoint: "",

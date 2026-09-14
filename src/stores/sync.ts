@@ -13,6 +13,7 @@ interface Persisted extends SyncConfig {
 const DEFAULTS: Persisted = {
   kind: "none",
   webdavUrl: "",
+  webdavFolder: "",
   webdavUser: "",
   webdavPassword: "",
   s3Endpoint: "",
@@ -53,6 +54,7 @@ function field<K extends keyof Persisted>(key: K) {
 
 const [kind, setKind] = field("kind");
 const [webdavUrl, setWebdavUrl] = field("webdavUrl");
+const [webdavFolder, setWebdavFolder] = field("webdavFolder");
 const [webdavUser, setWebdavUser] = field("webdavUser");
 const [webdavPassword, setWebdavPassword] = field("webdavPassword");
 const [s3Endpoint, setS3Endpoint] = field("s3Endpoint");
@@ -69,6 +71,7 @@ export function snapshotSync(): SyncConfig {
   return {
     kind: kind(),
     webdavUrl: webdavUrl(),
+    webdavFolder: webdavFolder(),
     webdavUser: webdavUser(),
     webdavPassword: webdavPassword(),
     s3Endpoint: s3Endpoint(),
@@ -86,6 +89,8 @@ export const sync = {
   setKind,
   webdavUrl,
   setWebdavUrl,
+  webdavFolder,
+  setWebdavFolder,
   webdavUser,
   setWebdavUser,
   webdavPassword,

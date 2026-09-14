@@ -5,6 +5,7 @@ import { REMOTE_BACKUP_NAME, type SyncConfig } from "~/lib/remoteSync";
 const target: SyncConfig = {
   kind: "s3",
   webdavUrl: "",
+  webdavFolder: "",
   webdavUser: "",
   webdavPassword: "",
   s3Endpoint: "https://s3.amazonaws.com",
