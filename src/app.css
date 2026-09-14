@@ -423,6 +423,7 @@
 input:focus-visible,
 textarea:focus-visible {
   outline: none;
+  outline-offset: 0;
 }
 
 .app-range:focus-visible {

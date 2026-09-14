@@ -155,7 +155,9 @@ test("a focused sync field uses the wrapper edge, not a second 2px ring", async 
   const field = page.getByLabel("資料夾網址");
   await field.click();
   await expect(field).toBeFocused();
-  await expect(field).toHaveCSS("outline-width", "0px");
+  // `outline: none` leaves the UA width at `medium` (3px); the style is what
+  // actually paints, and the wrapper hairline is the only edge that should.
+  await expect(field).toHaveCSS("outline-style", "none");
 });
 
 test("check connection succeeds when the folder answers even without a backup", async ({
