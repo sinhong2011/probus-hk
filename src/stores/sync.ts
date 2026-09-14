@@ -6,6 +6,8 @@ export type { SyncConfig, SyncKind };
 
 interface Persisted extends SyncConfig {
   lastSyncedAt: number | null;
+  /** Merge-then-push after local changes and when the app comes back. */
+  auto: boolean;
 }
 
 const DEFAULTS: Persisted = {
@@ -21,6 +23,7 @@ const DEFAULTS: Persisted = {
   s3SecretKey: "",
   s3PathStyle: true,
   lastSyncedAt: null,
+  auto: false,
 };
 
 type Row = { id: "sync" } & Partial<Persisted>;
@@ -60,6 +63,7 @@ const [s3AccessKey, setS3AccessKey] = field("s3AccessKey");
 const [s3SecretKey, setS3SecretKey] = field("s3SecretKey");
 const [s3PathStyle, setS3PathStyle] = field("s3PathStyle");
 const [lastSyncedAt, setLastSyncedAt] = field("lastSyncedAt");
+const [auto, setAuto] = field("auto");
 
 export function snapshotSync(): SyncConfig {
   return {
@@ -102,6 +106,8 @@ export const sync = {
   setS3PathStyle,
   lastSyncedAt,
   markSynced: () => setLastSyncedAt(Date.now()),
+  auto,
+  setAuto,
   snapshot: snapshotSync,
 };
 

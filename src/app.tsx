@@ -11,6 +11,7 @@ import { installStarredEffects } from "~/stores/starred";
 import { installSearchEffects } from "~/stores/searches";
 import { installTripEffects } from "~/stores/trips";
 import { installSettingsEffects } from "~/stores/settings";
+import { installAutoSyncEffects } from "~/stores/autoSync";
 import { installSyncEffects } from "~/stores/sync";
 import { installDismissedEffects } from "~/stores/dismissed";
 
@@ -28,6 +29,7 @@ import { installDismissedEffects } from "~/stores/dismissed";
 export function App() {
   installSettingsEffects();
   installSyncEffects();
+  installAutoSyncEffects();
   installDismissedEffects();
   installStarredEffects();
   installTripEffects();

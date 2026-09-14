@@ -189,6 +189,43 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
   await expect(page.getByText("已經合併咗遠端備份")).toBeVisible({ timeout: 10_000 });
 });
 
+test("auto sync uploads when it is turned on and names itself on the settings row", async ({
+  page,
+}) => {
+  let uploaded: string | undefined;
+  await page.route("https://dav.test/**", async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: cors, body: "" });
+      return;
+    }
+    if (request.method() === "PUT") {
+      uploaded = request.postData() ?? "";
+      await route.fulfill({ status: 201, headers: cors, body: "" });
+      return;
+    }
+    await route.fulfill({
+      status: uploaded ? 200 : 404,
+      headers: { ...cors, "Content-Type": "application/json" },
+      body: uploaded ?? "",
+    });
+  });
+
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await page.getByRole("radio", { name: "WebDAV" }).click();
+  await page.getByLabel("網址").fill("https://dav.test/files/");
+  await page.locator("#webdav-password").fill("secret");
+  await page.getByRole("switch", { name: "自動同步" }).click();
+  await expect.poll(() => uploaded, { timeout: 10_000 }).toBeTruthy();
+  expect(uploaded).toContain('"version":1');
+  expect(uploaded).not.toContain("secret");
+  await expect(page.getByText("仲未同步過")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /遠端同步/ })).toContainText("自動");
+});
+
 test("remote sync remembers S3 endpoint fields after a reload", async ({ page }) => {
   await page.getByRole("button", { name: /遠端同步/ }).click();
   await page.getByRole("radio", { name: "S3" }).click();

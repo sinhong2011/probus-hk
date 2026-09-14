@@ -622,11 +622,14 @@ export default function SettingsSheet() {
                       {t("remoteSync", lang())}
                     </span>
                     <span class="text-[0.75rem] font-medium text-subtle-foreground">
-                      {sync.kind() === "webdav"
-                        ? "WebDAV"
-                        : sync.kind() === "s3"
-                          ? "S3"
-                          : t("remoteSyncNotSet", lang())}
+                      {sync.kind() === "none"
+                        ? t("remoteSyncNotSet", lang())
+                        : [
+                            sync.kind() === "webdav" ? "WebDAV" : "S3",
+                            sync.auto() ? t("remoteSyncAutoOn", lang()) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                     </span>
                   </div>
                   <ChevronRightIcon size={12} class="text-faint-foreground" />

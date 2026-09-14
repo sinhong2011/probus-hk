@@ -10,6 +10,7 @@ import {
   pullRemote,
   pushRemote,
   syncReady,
+  withRemoteLock,
   type SyncKind,
 } from "~/lib/remoteSync";
 import { createWide } from "~/lib/wide";
@@ -114,7 +115,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
     if (busy()) return;
     setBusy(true);
     try {
-      await pushRemote(sync.snapshot());
+      await withRemoteLock(() => pushRemote(sync.snapshot()));
       sync.markSynced();
       toast.show(t("remoteSyncPushed", lang()), t("remoteSync", lang()));
     } catch (error) {
@@ -128,12 +129,15 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
     if (busy()) return;
     setBusy(true);
     try {
-      const remote = await pullRemote(sync.snapshot());
+      const remote = await withRemoteLock(async () => {
+        const next = await pullRemote(sync.snapshot());
+        if (next) applyRemoteBackup(next, "merge");
+        return next;
+      });
       if (!remote) {
         toast.show(t("remoteSyncMissing", lang()), t("remoteSync", lang()));
         return;
       }
-      applyRemoteBackup(remote, "merge");
       sync.markSynced();
       toast.show(t("remoteSyncPulled", lang()), t("remoteSync", lang()));
     } catch (error) {
@@ -292,31 +296,50 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
           </Reveal>
 
           <Show when={sync.kind() !== "none"}>
-            <div class="flex flex-col gap-2">
-              <span class="tnum px-1 text-[0.75rem] font-medium text-subtle-foreground">
-                {last()}
-              </span>
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={busy() || !syncReady(sync.snapshot())}
-                  onClick={() => void pull()}
-                  class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
-                >
-                  <span class={{ "motion-safe:animate-spin": busy() }}>
-                    <DownloadCloudIcon size={15} />
-                  </span>
-                  {t("remoteSyncPull", lang())}
-                </button>
-                <button
-                  type="button"
-                  disabled={busy() || !syncReady(sync.snapshot())}
-                  onClick={() => void push()}
-                  class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
-                >
-                  <UploadCloudIcon size={15} />
-                  {t("remoteSyncPush", lang())}
-                </button>
+            <div class="flex flex-col gap-3">
+              <Card raised>
+                <div class="flex items-center gap-3 px-3.5 py-3">
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="text-[0.88rem] font-bold text-foreground">
+                      {t("remoteSyncAuto", lang())}
+                    </span>
+                    <span class="text-[0.75rem] font-medium text-subtle-foreground">
+                      {t("remoteSyncAutoHint", lang())}
+                    </span>
+                  </div>
+                  <Toggle
+                    label={t("remoteSyncAuto", lang())}
+                    checked={sync.auto()}
+                    onChange={sync.setAuto}
+                  />
+                </div>
+              </Card>
+              <div class="flex flex-col gap-2">
+                <span class="tnum px-1 text-[0.75rem] font-medium text-subtle-foreground">
+                  {last()}
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy() || !syncReady(sync.snapshot())}
+                    onClick={() => void pull()}
+                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                  >
+                    <span class={{ "motion-safe:animate-spin": busy() }}>
+                      <DownloadCloudIcon size={15} />
+                    </span>
+                    {t("remoteSyncPull", lang())}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy() || !syncReady(sync.snapshot())}
+                    onClick={() => void push()}
+                    class="flex h-10 grow items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                  >
+                    <UploadCloudIcon size={15} />
+                    {t("remoteSyncPush", lang())}
+                  </button>
+                </div>
               </div>
             </div>
           </Show>

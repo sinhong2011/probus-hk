@@ -102,3 +102,53 @@ export function applyRemoteBackup(raw: unknown, mode: BackupImportMode) {
     throw new RemoteSyncError("invalid", error);
   }
 }
+
+/**
+ * The backup as a string that ignores `exportedAt`. Every export stamps the
+ * clock, so comparing the files themselves would say they differ when nothing
+ * a rider stored has.
+ */
+export function backupFingerprint(backup: AppBackup): string {
+  return JSON.stringify({
+    version: backup.version,
+    settings: backup.settings,
+    starred: backup.starred,
+    alerts: backup.alerts,
+    searches: backup.searches,
+    trips: backup.trips,
+    frequent: backup.frequent,
+    dismissed: backup.dismissed,
+  });
+}
+
+/*
+ * Push and pull share one gate so a manual upload and an automatic cycle
+ * cannot interleave: the second waits, then sees the file the first wrote.
+ */
+let lock: Promise<unknown> = Promise.resolve();
+
+export function withRemoteLock<T>(work: () => Promise<T>): Promise<T> {
+  const run = lock.then(work, work);
+  lock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+/**
+ * Brings the remote copy in (merge), then writes the union back if the two
+ * still differ. A missing remote file is the first upload, not an error.
+ */
+export async function cycleRemote(
+  config: SyncConfig,
+): Promise<"unchanged" | "pushed" | "pulled" | "both"> {
+  if (!syncReady(config)) throw new RemoteSyncError("incomplete");
+  const remote = await pullRemote(config);
+  if (remote) applyRemoteBackup(remote, "merge");
+  const local = backupFingerprint(exportBackup());
+  const remoteFp = remote ? backupFingerprint(remote) : null;
+  if (remoteFp === local) return remote ? "pulled" : "unchanged";
+  await pushRemote(config);
+  return remote ? "both" : "pushed";
+}
