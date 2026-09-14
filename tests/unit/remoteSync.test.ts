@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RemoteSyncError, classifyHttp, syncReady, type SyncConfig } from "~/lib/remoteSync";
 
 const empty: SyncConfig = {
@@ -50,5 +50,22 @@ describe("classifyHttp", () => {
     expect(classifyHttp(401).code).toBe("auth");
     expect(classifyHttp(404).code).toBe("missing");
     expect(classifyHttp(500).code).toBe("http");
+  });
+});
+
+describe("pullRemote", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("treats a remote file that is not JSON as invalid", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("not json", { status: 200 })),
+    );
+    const { pullRemote } = await import("~/lib/remoteSync");
+    await expect(
+      pullRemote({ ...empty, kind: "webdav", webdavUrl: "https://cloud.example/dav/file.json" }),
+    ).rejects.toMatchObject({ code: "invalid" });
   });
 });

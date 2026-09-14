@@ -74,8 +74,13 @@ export function s3ObjectKey(config: SyncConfig): string {
  * Where the object lives: path-style `endpoint/bucket/key`, or virtual-hosted
  * `bucket.endpoint/key`. Path-style is the default because R2, MinIO and
  * most custom gateways expect it; Amazon's own hosts can do either.
+ *
+ * SigV4 signs the already-encoded URI. The URL parser's `.pathname` is the
+ * decoded form, so a key with a space would sign `/a b.json` and then GET
+ * `/a%20b.json` - a mismatch every compatible host rejects. The canonical
+ * path is therefore kept beside the URL, not reread from it.
  */
-export function s3ObjectUrl(config: SyncConfig): URL {
+export function s3ObjectTarget(config: SyncConfig): { url: URL; canonicalUri: string } {
   const endpoint = config.s3Endpoint.trim();
   if (!endpoint) throw new RemoteSyncError("incomplete");
   const withProtocol = /^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;
@@ -87,15 +92,20 @@ export function s3ObjectUrl(config: SyncConfig): URL {
   }
   const bucket = config.s3Bucket.trim();
   if (!bucket) throw new RemoteSyncError("incomplete");
-  const key = s3ObjectKey(config);
-  const encodedKey = awsUriEncode(key, false);
+  const encodedKey = awsUriEncode(s3ObjectKey(config), false);
   if (config.s3PathStyle) {
-    origin.pathname = `/${awsUriEncode(bucket, false)}/${encodedKey}`;
-    return origin;
+    const canonicalUri = `/${awsUriEncode(bucket, false)}/${encodedKey}`;
+    origin.pathname = canonicalUri;
+    return { url: origin, canonicalUri };
   }
   origin.host = `${bucket}.${origin.host}`;
-  origin.pathname = `/${encodedKey}`;
-  return origin;
+  const canonicalUri = `/${encodedKey}`;
+  origin.pathname = canonicalUri;
+  return { url: origin, canonicalUri };
+}
+
+export function s3ObjectUrl(config: SyncConfig): URL {
+  return s3ObjectTarget(config).url;
 }
 
 function amzDate(now: Date): { date: string; stamp: string } {
@@ -108,26 +118,27 @@ async function signedHeaders(
   method: "GET" | "PUT",
   body: string,
   now: Date,
-): Promise<{ url: URL; headers: Record<string, string> }> {
+): Promise<{ url: URL; headers: Record<string, string>; canonicalUri: string }> {
   if (!config.s3AccessKey.trim() || !config.s3SecretKey.trim()) {
     throw new RemoteSyncError("incomplete");
   }
-  const url = s3ObjectUrl(config);
+  const { url, canonicalUri } = s3ObjectTarget(config);
   const region = s3Region(config);
   const { date, stamp } = amzDate(now);
   const payloadHash = await sha256Hex(body);
   const host = url.host;
+  // Host is signed from the URL, never set on the request: browsers treat it
+  // as a forbidden header and a fetch that tries to send it can fail outright.
+  const put = method === "PUT";
   const canonicalHeaders =
-    `host:${host}\n` + `x-amz-content-sha256:${payloadHash}\n` + `x-amz-date:${date}\n`;
-  const signed = "host;x-amz-content-sha256;x-amz-date";
-  const canonical = [
-    method,
-    url.pathname || "/",
-    url.searchParams.toString(),
-    canonicalHeaders,
-    signed,
-    payloadHash,
-  ].join("\n");
+    (put ? "content-type:application/json\n" : "") +
+    `host:${host}\n` +
+    `x-amz-content-sha256:${payloadHash}\n` +
+    `x-amz-date:${date}\n`;
+  const signed = put
+    ? "content-type;host;x-amz-content-sha256;x-amz-date"
+    : "host;x-amz-content-sha256;x-amz-date";
+  const canonical = [method, canonicalUri, "", canonicalHeaders, signed, payloadHash].join("\n");
   const scope = `${stamp}/${region}/s3/aws4_request`;
   const stringToSign = ["AWS4-HMAC-SHA256", date, scope, await sha256Hex(canonical)].join("\n");
   const signature = toHex(
@@ -135,8 +146,9 @@ async function signedHeaders(
   );
   return {
     url,
+    canonicalUri,
     headers: {
-      host,
+      ...(put ? { "Content-Type": "application/json" } : {}),
       "x-amz-content-sha256": payloadHash,
       "x-amz-date": date,
       Authorization: `AWS4-HMAC-SHA256 Credential=${config.s3AccessKey}/${scope}, SignedHeaders=${signed}, Signature=${signature}`,
@@ -154,10 +166,7 @@ async function send(
   try {
     return await fetch(signed.url, {
       method,
-      headers: {
-        ...signed.headers,
-        ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
-      },
+      headers: signed.headers,
       ...(method === "PUT" ? { body } : {}),
     });
   } catch (error) {
@@ -183,12 +192,19 @@ export async function s3Authorization(
   method: "GET" | "PUT",
   body: string,
   now: Date,
-): Promise<{ url: string; authorization: string; amzDate: string; payloadHash: string }> {
+): Promise<{
+  url: string;
+  authorization: string;
+  amzDate: string;
+  payloadHash: string;
+  canonicalUri: string;
+}> {
   const signed = await signedHeaders(config, method, body, now);
   return {
     url: signed.url.href,
     authorization: signed.headers.Authorization ?? "",
     amzDate: signed.headers["x-amz-date"] ?? "",
     payloadHash: signed.headers["x-amz-content-sha256"] ?? "",
+    canonicalUri: signed.canonicalUri,
   };
 }

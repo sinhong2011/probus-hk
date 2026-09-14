@@ -26,18 +26,20 @@ function Field(props: {
   type?: "text" | "password" | "url";
   placeholder?: string;
   autocomplete?: string;
+  name?: string;
 }) {
   return (
     <label class="flex flex-col gap-1 px-3.5 py-2.5">
       <span class="text-[0.75rem] font-semibold text-subtle-foreground">{props.label}</span>
       <input
         type={props.type ?? "text"}
+        name={props.name}
         value={props.value}
         onInput={(event) => props.onInput(event.currentTarget.value)}
         placeholder={props.placeholder}
         autocomplete={props.autocomplete ?? "off"}
         spellcheck={false}
-        class="h-10 rounded-xl border border-border bg-card px-3 text-[0.88rem] font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-faint-foreground"
+        class="h-10 rounded-xl border border-border bg-card px-3 text-[0.88rem] font-semibold text-foreground outline-none placeholder:font-medium placeholder:text-faint-foreground focus-visible:border-primary"
       />
     </label>
   );
@@ -161,6 +163,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   value={sync.webdavUrl()}
                   onInput={sync.setWebdavUrl}
                   type="url"
+                  name="webdav-url"
                   placeholder="https://cloud.example/remote.php/dav/files/you/"
                   autocomplete="url"
                 />
@@ -169,6 +172,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   label={t("webdavUser", lang())}
                   value={sync.webdavUser()}
                   onInput={sync.setWebdavUser}
+                  name="webdav-user"
                   autocomplete="username"
                 />
                 <Hairline />
@@ -177,6 +181,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   value={sync.webdavPassword()}
                   onInput={sync.setWebdavPassword}
                   type="password"
+                  name="webdav-password"
                   autocomplete="current-password"
                 />
               </Card>
@@ -195,6 +200,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   value={sync.s3Endpoint()}
                   onInput={sync.setS3Endpoint}
                   type="url"
+                  name="s3-endpoint"
                   placeholder="https://s3.amazonaws.com"
                   autocomplete="url"
                 />
@@ -203,6 +209,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   label={t("s3Region", lang())}
                   value={sync.s3Region()}
                   onInput={sync.setS3Region}
+                  name="s3-region"
                   placeholder="us-east-1"
                 />
                 <Hairline />
@@ -210,12 +217,14 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   label={t("s3Bucket", lang())}
                   value={sync.s3Bucket()}
                   onInput={sync.setS3Bucket}
+                  name="s3-bucket"
                 />
                 <Hairline />
                 <Field
                   label={t("s3Key", lang())}
                   value={sync.s3Key()}
                   onInput={sync.setS3Key}
+                  name="s3-key"
                   placeholder="probus-backup.json"
                 />
                 <Hairline />
@@ -223,7 +232,8 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   label={t("s3AccessKey", lang())}
                   value={sync.s3AccessKey()}
                   onInput={sync.setS3AccessKey}
-                  autocomplete="username"
+                  name="s3-access-key"
+                  autocomplete="off"
                 />
                 <Hairline />
                 <Field
@@ -231,7 +241,8 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   value={sync.s3SecretKey()}
                   onInput={sync.setS3SecretKey}
                   type="password"
-                  autocomplete="current-password"
+                  name="s3-secret-key"
+                  autocomplete="off"
                 />
                 <Hairline />
                 <div class="flex items-center gap-3 px-3.5 py-3">

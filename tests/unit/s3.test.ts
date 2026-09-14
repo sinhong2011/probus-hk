@@ -41,6 +41,12 @@ describe("s3ObjectUrl", () => {
       "/rides/backups/probus.json",
     );
   });
+
+  it("percent-encodes a space in the object key on the wire", () => {
+    expect(s3ObjectUrl({ ...target, s3Key: "a b.json" }).href).toBe(
+      "https://s3.amazonaws.com/rides/a%20b.json",
+    );
+  });
 });
 
 describe("s3Authorization", () => {
@@ -58,6 +64,17 @@ describe("s3Authorization", () => {
     );
     expect(first.amzDate).toBe("20240102T030405Z");
     expect(first.payloadHash).toHaveLength(64);
+    expect(first.canonicalUri).toBe(`/${target.s3Bucket}/${REMOTE_BACKUP_NAME}`);
+  });
+
+  it("signs the encoded URI when the key has a space", async () => {
+    const now = new Date("2024-01-02T03:04:05Z");
+    const signed = await s3Authorization({ ...target, s3Key: "a b.json" }, "GET", "", now);
+    expect(signed.canonicalUri).toBe("/rides/a%20b.json");
+    expect(signed.url).toBe("https://s3.amazonaws.com/rides/a%20b.json");
+    expect(signed.payloadHash).toBe(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    );
   });
 
   it("PUTs the backup body to the object URL", async () => {
@@ -70,9 +87,10 @@ describe("s3Authorization", () => {
     expect(String(url)).toBe(`https://s3.amazonaws.com/rides/${REMOTE_BACKUP_NAME}`);
     expect(init.method).toBe("PUT");
     expect(init.body).toBe('{"version":1}');
-    expect(String((init.headers as Record<string, string>).Authorization)).toMatch(
-      /^AWS4-HMAC-SHA256 /,
-    );
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toMatch(/^AWS4-HMAC-SHA256 /);
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers.host ?? headers.Host).toBeUndefined();
   });
 
   it("treats a missing object as nothing rather than a failure", async () => {
@@ -82,5 +100,20 @@ describe("s3Authorization", () => {
     );
     const { getS3 } = await import("~/lib/s3");
     expect(await getS3(target)).toBeNull();
+  });
+
+  it("reads back the body it just wrote", async () => {
+    let stored: string | undefined;
+    vi.stubGlobal("fetch", async (_url: URL, init?: RequestInit) => {
+      if (init?.method === "PUT") {
+        stored = String(init.body);
+        return new Response(null, { status: 200 });
+      }
+      if (stored === undefined) return new Response("", { status: 404 });
+      return new Response(stored, { status: 200 });
+    });
+    const { getS3, putS3 } = await import("~/lib/s3");
+    await putS3(target, '{"version":1}');
+    expect(await getS3(target)).toBe('{"version":1}');
   });
 });

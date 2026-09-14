@@ -66,4 +66,18 @@ describe("webdav fetch", () => {
     );
     expect(await getWebdav(dav)).toBeNull();
   });
+
+  it("reads back the body it just wrote", async () => {
+    let stored: string | undefined;
+    vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") {
+        stored = String(init.body);
+        return new Response(null, { status: 201 });
+      }
+      if (stored === undefined) return new Response("", { status: 404 });
+      return new Response(stored, { status: 200 });
+    });
+    await putWebdav(dav, '{"version":1,"settings":{}}');
+    expect(await getWebdav(dav)).toBe('{"version":1,"settings":{}}');
+  });
 });

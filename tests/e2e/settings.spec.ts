@@ -127,3 +127,67 @@ test("remote sync opens WebDAV and S3 fields from settings", async ({ page }) =>
   await expect(page.getByText("Endpoint", { exact: true })).toBeVisible();
   await expect(page.getByText("Bucket", { exact: true })).toBeVisible();
 });
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, PUT, HEAD, OPTIONS",
+  "Access-Control-Allow-Headers": "*",
+};
+
+test("remote sync uploads and downloads a WebDAV backup without storing the password in it", async ({
+  page,
+}) => {
+  let uploaded: string | undefined;
+  await page.route("https://dav.test/**", async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: cors, body: "" });
+      return;
+    }
+    if (request.method() === "PUT") {
+      uploaded = request.postData() ?? "";
+      await route.fulfill({ status: 201, headers: cors, body: "" });
+      return;
+    }
+    await route.fulfill({
+      status: uploaded ? 200 : 404,
+      headers: { ...cors, "Content-Type": "application/json" },
+      body: uploaded ?? "",
+    });
+  });
+
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await page.getByRole("radio", { name: "WebDAV" }).click();
+  await page.getByLabel("網址").fill("https://dav.test/files/");
+  await page.getByLabel("用戶名稱").fill("you");
+  await page.getByLabel("密碼").fill("hunter2");
+
+  await page.getByRole("button", { name: "上傳" }).click();
+  await expect(page.getByText("已經上傳咗")).toBeVisible({ timeout: 10_000 });
+  expect(uploaded).toContain('"version":1');
+  expect(uploaded).not.toContain("hunter2");
+
+  await page.getByRole("button", { name: "下載" }).click();
+  await expect(page.getByText("已經合併咗遠端備份")).toBeVisible({ timeout: 10_000 });
+});
+
+test("remote sync remembers S3 endpoint fields after a reload", async ({ page }) => {
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await page.getByRole("radio", { name: "S3" }).click();
+  await page.getByLabel("Endpoint").fill("https://s3.test");
+  await page.getByLabel("Bucket").fill("rides");
+  await page.getByLabel("Access key").fill("AKIAEXAMPLE");
+
+  await expect
+    .poll(async () => page.evaluate(() => localStorage.getItem("probus:db:sync") ?? ""))
+    .toContain("s3.test");
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "設定" })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: /遠端同步/ })).toContainText("S3");
+
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await expect(page.getByLabel("Endpoint")).toHaveValue("https://s3.test");
+  await expect(page.getByLabel("Bucket")).toHaveValue("rides");
+  await expect(page.getByLabel("Access key")).toHaveValue("AKIAEXAMPLE");
+});
