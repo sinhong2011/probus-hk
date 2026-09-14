@@ -331,6 +331,8 @@
   "remote_sync_not_set": "Not set",
   "remote_sync_push": "Upload",
   "remote_sync_pull": "Download",
+  "remote_sync_check": "Check connection",
+  "remote_sync_ok": "Connected",
   "remote_sync_pushed": "Uploaded",
   "remote_sync_pulled": "Remote backup merged",
   "remote_sync_last": "Last synced",

@@ -82,6 +82,23 @@ export async function pushRemote(config: SyncConfig): Promise<void> {
 }
 
 /**
+ * Asks whether the endpoint will talk to this origin with these credentials.
+ *
+ * A missing file is still a connection: the folder is there, nothing has
+ * been written yet. A body that is not JSON is the same - we reached it.
+ * Does not merge or upload.
+ */
+export async function probeRemote(config: SyncConfig): Promise<void> {
+  if (!syncReady(config)) throw new RemoteSyncError("incomplete");
+  try {
+    await pullRemote(config);
+  } catch (error) {
+    if (error instanceof RemoteSyncError && error.code === "invalid") return;
+    throw error;
+  }
+}
+
+/**
  * Reads the remote backup, or `null` when there is not one yet.
  */
 export async function pullRemote(config: SyncConfig): Promise<AppBackup | null> {

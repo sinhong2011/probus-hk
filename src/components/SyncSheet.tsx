@@ -1,12 +1,19 @@
 import { Show, createSignal } from "solid-js";
 import { Card, Hairline, Reveal, SectionLabel, Segmented, Toggle } from "~/components/Chrome";
 import { Drawer, DrawerHeader } from "~/components/Drawer";
-import { DownloadCloudIcon, EyeIcon, EyeOffIcon, UploadCloudIcon } from "~/components/Icons";
+import {
+  DownloadCloudIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LinkIcon,
+  UploadCloudIcon,
+} from "~/components/Icons";
 import { Section } from "~/components/Layout";
 import { t } from "~/lib/i18n";
 import {
   RemoteSyncError,
   applyRemoteBackup,
+  probeRemote,
   pullRemote,
   pushRemote,
   syncReady,
@@ -109,6 +116,19 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
     const at = sync.lastSyncedAt();
     if (!at) return t("remoteSyncNever", lang());
     return `${t("remoteSyncLast", lang())} ${format(new Date(at), "MM-dd HH:mm", { locale: locale() })}`;
+  };
+
+  const probe = async () => {
+    if (busy()) return;
+    setBusy(true);
+    try {
+      await withRemoteLock(() => probeRemote(sync.snapshot()));
+      toast.show(t("remoteSyncOk", lang()), t("remoteSync", lang()));
+    } catch (error) {
+      toast.show(errorMessage(error, lang()), t("remoteSync", lang()));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const push = async () => {
@@ -326,6 +346,17 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                 <span class="tnum px-1 text-[0.75rem] font-medium text-subtle-foreground">
                   {last()}
                 </span>
+                <button
+                  type="button"
+                  disabled={busy() || !syncReady(sync.snapshot())}
+                  onClick={() => void probe()}
+                  class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-raised text-[0.88rem] font-bold text-muted-foreground disabled:opacity-50"
+                >
+                  <span class={{ "motion-safe:animate-spin": busy() }}>
+                    <LinkIcon size={15} />
+                  </span>
+                  {t("remoteSyncCheck", lang())}
+                </button>
                 <div class="flex items-center gap-2">
                   <button
                     type="button"

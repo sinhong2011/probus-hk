@@ -355,6 +355,8 @@ const MESSAGES = {
   remoteSyncNotSet: m.remote_sync_not_set,
   remoteSyncPush: m.remote_sync_push,
   remoteSyncPull: m.remote_sync_pull,
+  remoteSyncCheck: m.remote_sync_check,
+  remoteSyncOk: m.remote_sync_ok,
   remoteSyncPushed: m.remote_sync_pushed,
   remoteSyncPulled: m.remote_sync_pulled,
   remoteSyncLast: m.remote_sync_last,

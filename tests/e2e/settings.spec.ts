@@ -123,6 +123,7 @@ test("remote sync opens WebDAV and S3 fields from settings", async ({ page }) =>
   await page.getByRole("radio", { name: "WebDAV" }).click();
   await expect(page.getByText("資料夾網址", { exact: true })).toBeVisible();
   await expect(page.getByText("遠端資料夾（選填）", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "測試連線" })).toBeVisible();
 
   await page.getByRole("radio", { name: "S3" }).click();
   await expect(page.getByText("Endpoint", { exact: true })).toBeVisible();
@@ -147,6 +148,34 @@ const cors = {
   "Access-Control-Allow-Methods": "GET, PUT, HEAD, OPTIONS",
   "Access-Control-Allow-Headers": "*",
 };
+
+test("a focused sync field uses the wrapper edge, not a second 2px ring", async ({ page }) => {
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await page.getByRole("radio", { name: "WebDAV" }).click();
+  const field = page.getByLabel("資料夾網址");
+  await field.click();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveCSS("outline-width", "0px");
+});
+
+test("check connection succeeds when the folder answers even without a backup", async ({
+  page,
+}) => {
+  await page.route("https://dav.test/**", async (route) => {
+    const request = route.request();
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: cors, body: "" });
+      return;
+    }
+    await route.fulfill({ status: 404, headers: cors, body: "" });
+  });
+
+  await page.getByRole("button", { name: /遠端同步/ }).click();
+  await page.getByRole("radio", { name: "WebDAV" }).click();
+  await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
+  await page.getByRole("button", { name: "測試連線" }).click();
+  await expect(page.getByText("連到咗")).toBeVisible({ timeout: 10_000 });
+});
 
 test("remote sync uploads and downloads a WebDAV backup without storing the password in it", async ({
   page,

@@ -120,6 +120,44 @@ describe("cycleRemote", () => {
   });
 });
 
+describe("probeRemote", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const dav: SyncConfig = {
+    ...empty,
+    kind: "webdav",
+    webdavUrl: "https://cloud.example/dav/",
+  };
+
+  it("treats a missing file as a live connection", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 404 })),
+    );
+    const { probeRemote } = await import("~/lib/remoteSync");
+    await expect(probeRemote(dav)).resolves.toBeUndefined();
+  });
+
+  it("treats a body that is not JSON as a live connection", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("not json", { status: 200 })),
+    );
+    const { probeRemote } = await import("~/lib/remoteSync");
+    await expect(probeRemote(dav)).resolves.toBeUndefined();
+  });
+
+  it("does not write, and still fails on auth", async () => {
+    const fetch = vi.fn(async () => new Response("", { status: 401 }));
+    vi.stubGlobal("fetch", fetch);
+    const { probeRemote } = await import("~/lib/remoteSync");
+    await expect(probeRemote(dav)).rejects.toMatchObject({ code: "auth" });
+    expect(fetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  });
+});
+
 describe("pullRemote", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
