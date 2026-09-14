@@ -149,7 +149,7 @@ const cors = {
   "Access-Control-Allow-Headers": "*",
 };
 
-/** The banner must be the topmost hit at its own centre, not under the nested sheet. */
+/** The banner must be the topmost hit at its own center, not under the nested sheet. */
 async function expectToastInFront(page: Page, text: string) {
   const line = page.locator("[aria-live=assertive]").getByText(text);
   await expect(line).toBeVisible({ timeout: 10_000 });
