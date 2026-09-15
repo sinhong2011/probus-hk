@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { mockTransit } from "./support/mock";
 
 test.beforeEach(async ({ page }) => {
@@ -149,6 +149,19 @@ const cors = {
   "Access-Control-Allow-Headers": "*",
 };
 
+/** The banner must be the topmost hit at its own center, not under the nested sheet. */
+async function expectToastInFront(page: Page, text: string) {
+  const line = page.locator("[aria-live=assertive]").getByText(text);
+  await expect(line).toBeVisible({ timeout: 10_000 });
+  const inFront = await line.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    const banner = el.closest("[aria-live=assertive]");
+    return Boolean(banner && hit && banner.contains(hit));
+  });
+  expect(inFront).toBe(true);
+}
+
 test("a focused sync field uses the wrapper edge, not a second 2px ring", async ({ page }) => {
   await page.getByRole("button", { name: /遠端同步/ }).click();
   await page.getByRole("radio", { name: "WebDAV" }).click();
@@ -176,7 +189,7 @@ test("check connection succeeds when the folder answers even without a backup", 
   await page.getByRole("radio", { name: "WebDAV" }).click();
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.getByRole("button", { name: "測試連線" }).click();
-  await expect(page.getByText("連到咗")).toBeVisible({ timeout: 10_000 });
+  await expectToastInFront(page, "連到咗");
 });
 
 test("remote sync uploads and downloads a WebDAV backup without storing the password in it", async ({
@@ -216,19 +229,20 @@ test("remote sync uploads and downloads a WebDAV backup without storing the pass
   await expect(password).toHaveValue("hunter2");
 
   await page.getByRole("button", { name: "上傳" }).click();
-  await expect(page.getByText("已經上傳咗")).toBeVisible({ timeout: 10_000 });
+  await expectToastInFront(page, "已經上傳咗");
   expect(uploadedUrl).toBe("https://dav.test/files/Probus/probus-backup.json");
   expect(uploaded).toContain('"version":1');
   expect(uploaded).not.toContain("hunter2");
 
   await page.getByRole("button", { name: "下載" }).click();
-  await expect(page.getByText("已經合併咗遠端備份")).toBeVisible({ timeout: 10_000 });
+  await expectToastInFront(page, "已經合併咗遠端備份");
 });
 
 test("auto sync uploads when it is turned on and names itself on the settings row", async ({
   page,
 }) => {
-  let uploaded: string | undefined;
+  const putUrls: string[] = [];
+  const files = new Map<string, string>();
   await page.route("https://dav.test/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") {
@@ -236,14 +250,17 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
       return;
     }
     if (request.method() === "PUT") {
-      uploaded = request.postData() ?? "";
+      const body = request.postData() ?? "";
+      putUrls.push(request.url());
+      files.set(request.url(), body);
       await route.fulfill({ status: 201, headers: cors, body: "" });
       return;
     }
+    const body = files.get(request.url());
     await route.fulfill({
-      status: uploaded ? 200 : 404,
+      status: body ? 200 : 404,
       headers: { ...cors, "Content-Type": "application/json" },
-      body: uploaded ?? "",
+      body: body ?? "",
     });
   });
 
@@ -252,10 +269,20 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.locator("#webdav-password").fill("secret");
   await page.getByRole("switch", { name: "自動同步" }).click();
-  await expect.poll(() => uploaded, { timeout: 10_000 }).toBeTruthy();
-  expect(uploaded).toContain('"version":1');
-  expect(uploaded).not.toContain("secret");
+  await expect
+    .poll(() => putUrls.at(0), { timeout: 10_000 })
+    .toBe("https://dav.test/files/probus-backup.json");
+  expect(files.get("https://dav.test/files/probus-backup.json")).toContain('"version":1');
+  expect(files.get("https://dav.test/files/probus-backup.json")).not.toContain("secret");
   await expect(page.getByText("仲未同步過")).toHaveCount(0);
+
+  await page.getByLabel("遠端資料夾（選填）").pressSequentially("Probus", { delay: 40 });
+  expect(putUrls).toEqual(["https://dav.test/files/probus-backup.json"]);
+  await page.getByLabel("用戶名稱").click();
+  await expect
+    .poll(() => putUrls.at(-1), { timeout: 5_000 })
+    .toBe("https://dav.test/files/Probus/probus-backup.json");
+  expect(putUrls.some((url) => /\/files\/P(?:r(?:o(?:b(?:u)?)?)?)?\//.test(url))).toBe(false);
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "設定" })).toBeVisible();

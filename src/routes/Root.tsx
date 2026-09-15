@@ -484,9 +484,9 @@ export function Root() {
               you drilled into. Outside the drawer wrapper so the phone bar can
               slide off the viewport when a sheet replaces it. */}
           <TabBar lang={settings.lang()} />
-          {/* Same reason as the tab bar: a modal drawer scales the wrapper,
-              and a toast trapped in that containing block would sit behind
-              the scrim - exactly when a confirmation from settings is due. */}
+          {/* Outside the scaled wrapper, then portaled onto the body in
+              Toaster itself, so a confirmation is not trapped under a nested
+              sheet's scrim. */}
           <Toaster lang={settings.lang()} />
         </Loading>
       </DbProvider>
