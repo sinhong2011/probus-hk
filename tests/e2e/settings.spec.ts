@@ -277,6 +277,8 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   await expect(page.getByText("仲未同步過")).toHaveCount(0);
 
   await page.getByLabel("遠端資料夾（選填）").pressSequentially("Probus", { delay: 40 });
+  expect(putUrls).toEqual(["https://dav.test/files/probus-backup.json"]);
+  await page.getByLabel("用戶名稱").click();
   await expect
     .poll(() => putUrls.at(-1), { timeout: 5_000 })
     .toBe("https://dav.test/files/Probus/probus-backup.json");

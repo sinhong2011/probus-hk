@@ -14,8 +14,6 @@ import { toast } from "./toast";
 
 /** Wait after the last local change so a run of stars becomes one upload. */
 export const AUTO_SYNC_DEBOUNCE_MS = 12_000;
-/** Wait after the last keystroke on the endpoint so "Probus" is not P, Pr, Pro. */
-export const AUTO_SYNC_TARGET_DEBOUNCE_MS = 2_000;
 /** After a failure, leave the endpoint alone until this has passed. */
 export const AUTO_SYNC_BACKOFF_MS = 120_000;
 
@@ -36,24 +34,45 @@ function errorMessage(error: unknown): string {
   return t(key, settings.lang());
 }
 
+let runCycle: () => void = () => {};
+let editingEndpoint = false;
+
+/**
+ * The endpoint fields are being typed. Hide/online must not flush a
+ * half-written folder as P or Pr.
+ */
+export function pauseAutoSyncForEdit() {
+  editingEndpoint = true;
+}
+
+/**
+ * The rider left the field. The path is the one they meant; cycle now.
+ */
+export function finishAutoSyncEdit() {
+  editingEndpoint = false;
+  runCycle();
+}
+
+/** Close of the sheet, or anything else that means the path is finished. */
+export function commitAutoSync() {
+  runCycle();
+}
+
 /**
  * Keeps the remote file in step without a tap, when the rider has asked.
  *
  * Off until they turn it on: the copy stays on this device otherwise. On, a
  * cycle is merge-then-push - the same two verbs as the buttons - so another
- * phone's stars come in before this one writes. It runs when auto becomes
- * ready, when the tab is seen again, when the network returns, and a short
- * wait after the last local change. Success is silent; a failure is a toast,
- * then a pause so a dead endpoint is not hammered.
- *
- * Endpoint fields are typed one character at a time. A host that creates the
- * parent folder of a PUT (Alist does) would otherwise grow P, Pr, Pro, Prob
- * under the URL. Those edits wait until the path has settled, and a cycle
- * already in flight is dropped if the target moved.
+ * phone's stars come in before this one writes. It runs when auto is turned
+ * on, when the tab is seen again, when the network returns, when they leave
+ * an endpoint field, and a short wait after the last local change. Typing
+ * the folder does not upload: a host that creates the parent of a PUT
+ * (Alist does) would otherwise grow P, Pr, Pro under the URL. Success is
+ * silent; a failure is a toast, then a pause so a dead endpoint is not
+ * hammered.
  */
 export function installAutoSyncEffects() {
   let timer: number | undefined;
-  let pending: "target" | "stamp" | undefined;
   let epoch = 0;
   let backoffUntil = 0;
 
@@ -61,15 +80,15 @@ export function installAutoSyncEffects() {
     if (timer === undefined) return;
     window.clearTimeout(timer);
     timer = undefined;
-    pending = undefined;
   };
 
   const run = async () => {
     const mine = epoch;
+    if (editingEndpoint) return;
     if (Date.now() < backoffUntil) return;
     try {
       await withRemoteLock(async () => {
-        if (mine !== epoch) return;
+        if (mine !== epoch || editingEndpoint) return;
         const config = sync.snapshot();
         if (!sync.auto() || !syncReady(config)) return;
         await cycleRemote(config);
@@ -83,69 +102,72 @@ export function installAutoSyncEffects() {
     }
   };
 
-  const schedule = (reason: "target" | "stamp") => {
+  runCycle = () => {
+    void run();
+  };
+
+  const schedule = () => {
     clearTimer();
-    pending = reason;
-    const wait = reason === "target" ? AUTO_SYNC_TARGET_DEBOUNCE_MS : AUTO_SYNC_DEBOUNCE_MS;
     timer = window.setTimeout(() => {
       timer = undefined;
-      pending = undefined;
       void run();
-    }, wait);
+    }, AUTO_SYNC_DEBOUNCE_MS);
   };
 
   createEffect(
     () => {
       const config = sync.snapshot();
-      const enabled = sync.auto() && syncReady(config);
+      const auto = sync.auto();
+      const ready = syncReady(config);
       return {
-        enabled,
+        auto,
+        ready,
         target: `${config.kind}\0${config.webdavUrl}\0${config.webdavFolder}\0${config.s3Endpoint}\0${config.s3Bucket}\0${config.s3Key}`,
-        stamp: enabled ? backupFingerprint(exportBackup()) : "",
+        stamp: auto && ready ? backupFingerprint(exportBackup()) : "",
       };
     },
     (state, prev) => {
-      if (!state.enabled) {
-        epoch += 1;
-        clearTimer();
+      if (!state.auto || !state.ready) {
+        if (!state.auto) {
+          epoch += 1;
+          clearTimer();
+        }
         return;
       }
-      if (!prev?.enabled) {
+      if (!prev?.auto) {
         clearTimer();
         void run();
         return;
       }
       if (state.target !== prev.target) {
         epoch += 1;
-        schedule("target");
         return;
       }
-      if (state.stamp !== prev.stamp) schedule("stamp");
+      if (state.stamp !== prev.stamp) schedule();
     },
   );
 
   const onVisibility = () => {
+    if (editingEndpoint) return;
     if (document.hidden) {
       if (timer === undefined) return;
-      // A half-typed folder must not flush as P or Pr the moment the sheet
-      // is covered. Local data waiting to upload still goes out on hide.
-      if (pending === "target") return;
       clearTimer();
       void run();
       return;
     }
-    if (pending === "target") return;
     void run();
   };
 
   const onOnline = () => {
-    if (pending === "target") return;
+    if (editingEndpoint) return;
     void run();
   };
 
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("online", onOnline);
   onCleanup(() => {
+    runCycle = () => {};
+    editingEndpoint = false;
     clearTimer();
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("online", onOnline);

@@ -21,6 +21,7 @@ import {
   type SyncKind,
 } from "~/lib/remoteSync";
 import { createWide } from "~/lib/wide";
+import { finishAutoSyncEdit, pauseAutoSyncForEdit } from "~/stores/autoSync";
 import { settings } from "~/stores/settings";
 import { sync } from "~/stores/sync";
 import { toast } from "~/stores/toast";
@@ -35,6 +36,8 @@ function Field(props: {
   placeholder?: string;
   autocomplete?: string;
   name?: string;
+  /** URL / folder / object key: leaving the field is what commits auto-sync. */
+  path?: boolean;
 }) {
   const [visible, setVisible] = createSignal(false, { ownedWrite: true });
   const secret = () => props.type === "password";
@@ -55,6 +58,12 @@ function Field(props: {
           name={props.name}
           value={props.value}
           onInput={(event) => props.onInput(event.currentTarget.value)}
+          onFocus={() => {
+            if (props.path) pauseAutoSyncForEdit();
+          }}
+          onBlur={() => {
+            if (props.path) finishAutoSyncEdit();
+          }}
           placeholder={props.placeholder}
           autocomplete={props.autocomplete ?? "off"}
           spellcheck={false}
@@ -170,7 +179,10 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
   return (
     <Drawer
       open={props.open}
-      onClose={props.onClose}
+      onClose={() => {
+        finishAutoSyncEdit();
+        props.onClose();
+      }}
       nested={props.nested}
       modal
       side={wide() ? "right" : "bottom"}
@@ -217,6 +229,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   name="webdav-url"
                   placeholder="https://cloud.example/remote.php/dav/files/you/"
                   autocomplete="url"
+                  path
                 />
                 <Hairline />
                 <Field
@@ -225,6 +238,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   onInput={sync.setWebdavFolder}
                   name="webdav-folder"
                   placeholder="Probus"
+                  path
                 />
                 <Hairline />
                 <Field
@@ -262,6 +276,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   name="s3-endpoint"
                   placeholder="https://s3.amazonaws.com"
                   autocomplete="url"
+                  path
                 />
                 <Hairline />
                 <Field
@@ -277,6 +292,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   value={sync.s3Bucket()}
                   onInput={sync.setS3Bucket}
                   name="s3-bucket"
+                  path
                 />
                 <Hairline />
                 <Field
@@ -285,6 +301,7 @@ export default function SyncSheet(props: { open: boolean; onClose: () => void; n
                   onInput={sync.setS3Key}
                   name="s3-key"
                   placeholder="probus-backup.json"
+                  path
                 />
                 <Hairline />
                 <Field
