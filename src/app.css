@@ -982,6 +982,24 @@ textarea:focus-visible {
   }
 
   /*
+   * A switch is a track with a thumb, not a glass chip. The global
+   * `button.bg-primary` liquid-glass rule was painting the on-track as a
+   * translucent gradient with a blur and a glow - on Safari that read as a
+   * fuzzy oval under a thumb that no longer fit inside the padded track,
+   * because the hairline also ate 2px of travel. Solid fill, no rim, no
+   * shadow: the track colour is the state and the thumb stays inside it.
+   */
+  button[role="switch"] {
+    border-width: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  button[role="switch"][aria-checked="true"] {
+    background: var(--primary);
+  }
+
+  /*
    * Choosing is a change of state, so it moves. The transition is declared
    * on the role rather than on the chosen rule, because a property only
    * animates when the state being left declares it too - set only on the
@@ -992,7 +1010,8 @@ textarea:focus-visible {
    * travel.
    */
   button[aria-pressed],
-  button[role="radio"] {
+  button[role="radio"],
+  button[role="switch"] {
     transition:
       background-color var(--duration-state) var(--ease-out),
       background-image var(--duration-state) var(--ease-out),

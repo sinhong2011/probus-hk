@@ -4,6 +4,14 @@ Kept by [release-please](https://github.com/googleapis/release-please) from the
 commits on `main`. The entry below was written by hand to open the file; every
 entry after it is generated.
 
+## [0.6.3](https://github.com/sinhong2011/probus-hk/compare/v0.6.2...v0.6.3) (2026-09-15)
+
+
+### Bug Fixes
+
+* stop liquid-glass from painting a glow on switch toggles
+* keep switch tracks from flex-shrinking so the on-thumb stays inside
+
 ## [0.6.2](https://github.com/sinhong2011/probus-hk/compare/v0.6.1...v0.6.2) (2026-09-15)
 
 
