@@ -269,9 +269,9 @@ test("auto sync uploads when it is turned on and names itself on the settings ro
   await page.getByLabel("資料夾網址").fill("https://dav.test/files/");
   await page.locator("#webdav-password").fill("secret");
   await page.getByRole("switch", { name: "自動同步" }).click();
-  await expect.poll(() => putUrls.at(0), { timeout: 10_000 }).toBe(
-    "https://dav.test/files/probus-backup.json",
-  );
+  await expect
+    .poll(() => putUrls.at(0), { timeout: 10_000 })
+    .toBe("https://dav.test/files/probus-backup.json");
   expect(files.get("https://dav.test/files/probus-backup.json")).toContain('"version":1');
   expect(files.get("https://dav.test/files/probus-backup.json")).not.toContain("secret");
   await expect(page.getByText("仲未同步過")).toHaveCount(0);
