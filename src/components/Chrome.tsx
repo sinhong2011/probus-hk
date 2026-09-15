@@ -388,7 +388,10 @@ export function Toggle(props: { checked: boolean; onChange: (v: boolean) => void
       aria-label={props.label}
       onClick={() => props.onChange(!props.checked)}
       class={[
-        "flex h-[1.7rem] w-[2.9rem] items-center rounded-full p-[2.5px] transition-colors duration-200",
+        /* shrink-0: a settings row is a flex line whose label column grows, and
+           without this the track was crushed below w-[2.9rem] so the on-thumb
+           translated past the end of a near-circular well. */
+        "flex h-[1.7rem] w-[2.9rem] shrink-0 items-center rounded-full p-[2.5px] transition-colors duration-200",
         /* The off track is a well cut into whatever the toggle sits on - a
            raised card in settings - so it cannot share that card's surface. */
         { "bg-primary": props.checked, "bg-card": !props.checked },
