@@ -10,6 +10,10 @@
 # while the version is still 0.x, is held to the minor instead. A commit
 # subject that carries no type is left out of the notes and moves nothing, so
 # a release that does not appear is a release nothing asked for.
+#
+# bootstrap-sha is v0.6.3. Releases through that tag were cut by hand, and
+# without a release pull request to stop at, release-please walked the whole
+# history and opened 0.7.0 as a restatement of work already shipped.
 name: release-please
 
 on:
